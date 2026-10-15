@@ -764,3 +764,30 @@ footer {
     transition: none !important;
   }
 }
+
+.compat-entry {
+  margin: 18px 0;
+}
+.compat-entry button {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #637a78;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.compat-entry button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.compat-entry p {
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0.75;
+  margin: 9px 0;
+}

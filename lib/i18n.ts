@@ -3,6 +3,15 @@ import type { UILanguage } from './types';
 // Keep the original internal errors stable: retry classification and diagnostics
 // use them. Localize at the presentation boundary, never model text or subtitles.
 const english = {
+  兼容播放器: 'Compatibility player',
+  '已采集 {captured} · 已翻译 {ready}':
+    'Captured {captured} · Translated {ready}',
+  打开播放器: 'Open player',
+  兼容播放器已打开: 'Compatibility player opened.',
+  '正在准备…': 'Preparing…',
+  用兼容播放器翻译: 'Translate in compatibility player',
+  '采集标签页画面与声音，原标签页静音，在新窗口缓冲播放。首次准备约需一分钟或更久。':
+    'Capture this tab’s picture and audio, silence the source, and watch a buffered translation in a new window. Initial preparation may take a minute or longer.',
   媒体资源: 'Media stream',
   '媒体资源已发现，暂未找到可控制的网页播放器':
     'Media detected. A controllable in-page player has not been found yet.',

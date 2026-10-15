@@ -1,3 +1,4 @@
+import { compatError, type CompatState } from '../../lib/compat';
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -77,6 +78,7 @@ function App() {
   const [videos, setVideos] = useState<MediaCandidate[]>([]);
   const [selected, setSelected] = useState('');
   const [session, setSession] = useState<PlaybackSession | null>(null);
+  const [compat, setCompat] = useState<CompatState | null>(null);
   const [files, setFiles] = useState<LocalFileStatus>(EMPTY_FILE_STATUS);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
@@ -122,6 +124,7 @@ function App() {
       .catch((e) => setError(e.message))
       .finally(() => setLoaded(true));
     void call<PlaybackSession | null>('session:get').then(setSession);
+    void call<CompatState | null>('compat:get').then(setCompat);
     void call<LocalFileStatus>('files:status')
       .then(setFiles)
       .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
@@ -143,6 +146,10 @@ function App() {
       changes: Record<string, chrome.storage.StorageChange>,
       area: string,
     ) => {
+      if (area === 'session' && changes.compatSession)
+        setCompat(
+          (changes.compatSession.newValue as CompatState | undefined) ?? null,
+        );
       if (area === 'local' && changes.settings)
         setSettings((old) => ({
           ...old,
@@ -549,7 +556,7 @@ function App() {
                 {t('先连接百炼账户')}
                 <ArrowRight size={16} />
               </button>
-            ) : session ? (
+            ) : session || compat ? (
               <button
                 className="stop"
                 disabled={!!busy}
@@ -557,6 +564,7 @@ function App() {
                   act('stop', async () => {
                     await call('session:stop');
                     setSession(null);
+                    setCompat(null);
                   })
                 }
               >
@@ -585,6 +593,62 @@ function App() {
                 {t('开始翻译')}
                 <ArrowRight size={16} />
               </button>
+            )}
+            {!session && !compat && settings.hasKey && (
+              <section className="compat-entry">
+                <button
+                  className="secondary"
+                  disabled={
+                    !!busy ||
+                    !candidate ||
+                    candidate.detectionOnly ||
+                    candidate.protected ||
+                    candidate.ad
+                  }
+                  onClick={() =>
+                    act('compat', async () => {
+                      setCompat(
+                        await call<CompatState>('compat:start', {
+                          candidate,
+                          language,
+                        }),
+                      );
+                      setNotice(t('兼容播放器已打开'));
+                    })
+                  }
+                >
+                  <Video size={17} />
+                  {busy === 'compat' ? t('正在准备…') : t('用兼容播放器翻译')}
+                </button>
+                <p>
+                  {t(
+                    '采集标签页画面与声音，原标签页静音，在新窗口缓冲播放。首次准备约需一分钟或更久。',
+                  )}
+                </p>
+              </section>
+            )}
+            {compat && (
+              <section className="compat-entry">
+                <strong>{t('兼容播放器')}</strong>
+                <p>
+                  {t('已采集 {captured} · 已翻译 {ready}', {
+                    captured: time(compat.capturedThrough),
+                    ready: time(compat.readyThrough),
+                  })}
+                </p>
+                <button
+                  onClick={() =>
+                    void act('focus', async () => {
+                      await call('compat:focus');
+                    })
+                  }
+                >
+                  {t('打开播放器')}
+                </button>
+                {compat.error && (
+                  <p role="alert">{compatError(compat.error, locale)}</p>
+                )}
+              </section>
             )}
             {session ? (
               <section className="session-section">
@@ -785,7 +849,10 @@ function App() {
         </section>
         {(error || session?.error) && (
           <div className="feedback error" role="alert">
-            {localizeMessage(error || session?.error || '', locale)}
+            {compatError(
+              localizeMessage(error || session?.error || '', locale),
+              locale,
+            )}
           </div>
         )}
         {notice && (

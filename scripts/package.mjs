@@ -34,6 +34,10 @@ try {
       'range-source-verification.json',
       'discovery-verification.json',
       'generic-live-verification.json',
+      'capture-verification.json',
+      'capture-buffer-verification.json',
+      'capture-tencent-verification.json',
+      'capture-tencent-player-1100.png',
     ],
     { cwd: output },
   );
@@ -72,6 +76,10 @@ try {
     'range-source-verification.json',
     'discovery-verification.json',
     'generic-live-verification.json',
+    'capture-verification.json',
+    'capture-buffer-verification.json',
+    'capture-tencent-verification.json',
+      'capture-tencent-player-1100.png',
   ])
     await fs.copyFile(
       path.join(output, file),

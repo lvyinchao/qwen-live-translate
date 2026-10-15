@@ -1,0 +1,107 @@
+{
+  "autoplay": "Chrome default policy",
+  "at": "2026-10-15T13:28:12.027Z",
+  "scope": "Real Chrome tabCapture audio/video and real Qwen original-voice translation of a controlled speech video; not Tencent/iQIYI/Youku live-site acceptance",
+  "checks": [
+    "Real tabCapture acquired both tracks; original source output is suppressed by Chrome.",
+    "Real translated WAV plays beside captured video on its media clock.",
+    "Turning subtitles off removes the caption immediately.",
+    "Pause stops the compatibility picture and translation.",
+    "1.5x speed and fullscreen work; 480px and 1100px layouts do not overflow.",
+    "Stop restores source mute, volume, rate and original pause state.",
+    "Translated chunks persist locally and stop requests one merged result.",
+    "Restart gets a new recording epoch; closing the previous viewer leaves the new capture alive."
+  ],
+  "errors": [],
+  "sourceDuration": 6,
+  "sessionId": "8b375972-b5d7-4560-a3b5-10e52adddda2",
+  "firstWaitMs": 15822,
+  "state": {
+    "id": "8b375972-b5d7-4560-a3b5-10e52adddda2",
+    "candidate": {
+      "title": "Capture speech fixture",
+      "site": "generic",
+      "currentTime": 0.003808,
+      "duration": 6,
+      "protected": false
+    },
+    "language": "zh",
+    "uiLanguage": "en",
+    "phase": "ended",
+    "capturedThrough": 6.093999999999999,
+    "readyThrough": 6.093999999999999,
+    "position": 0.115505,
+    "chunks": 6,
+    "bytes": 478894,
+    "sourcePaused": false,
+    "inputRms": 0.1573782354994424,
+    "utterances": 3
+  },
+  "playback": {
+    "video": 0.390915,
+    "originalVolume": 0,
+    "dubVolume": 1,
+    "metrics": [
+      {
+        "videoTime": 0.01711,
+        "audioTime": 0,
+        "sourceStart": 0,
+        "sourceEnd": 0.7,
+        "truncated": false,
+        "rate": 1.3714285714285714,
+        "at": 14466.700000047684
+      }
+    ],
+    "caption": "Hello. 你好。"
+  },
+  "rate": 1.5,
+  "restored": {
+    "muted": false,
+    "volume": 0.6,
+    "rate": 1,
+    "paused": true
+  },
+  "files": {
+    "pending": 0,
+    "staged": 3,
+    "saved": 1,
+    "saving": false,
+    "lastDownloadId": 1,
+    "lastFilename": "Qwen Video Dub/5d04a1ce798b00af-Capture speech fixture/zh-original-auto-v1/0000000000-0000006094-merged-c3b44627dccb.zip"
+  },
+  "metrics": [
+    {
+      "videoTime": 0.01711,
+      "audioTime": 0,
+      "sourceStart": 0,
+      "sourceEnd": 0.7,
+      "truncated": false,
+      "rate": 1.3714285714285714,
+      "at": 14466.700000047684
+    },
+    {
+      "videoTime": 0.739031,
+      "audioTime": 0,
+      "sourceStart": 0.7,
+      "sourceEnd": 3.04,
+      "truncated": false,
+      "rate": 1,
+      "at": 15193
+    },
+    {
+      "videoTime": 0.853676,
+      "audioTime": 0.036706,
+      "sourceStart": 0.7,
+      "sourceEnd": 3.04,
+      "truncated": false,
+      "rate": 1.5,
+      "at": 15851.600000143051
+    }
+  ],
+  "startErrorsMs": [
+    17.11,
+    39.031000000000034,
+    153.67600000000004
+  ],
+  "pass": true
+}

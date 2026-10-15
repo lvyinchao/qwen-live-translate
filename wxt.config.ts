@@ -5,12 +5,13 @@ export default defineConfig({
   manifest: {
     name: 'Qwen Video Dub',
     description:
-      'Watch videos in their original player with synchronized translated audio and bilingual subtitles. Use your own Model Studio account.',
+      'Watch synchronized translated video in its original player or a buffered compatibility player. Use your own Model Studio account.',
     minimum_chrome_version: '116',
     permissions: [
       'storage',
       'downloads',
       'activeTab',
+      'tabCapture',
       'tabs',
       'scripting',
       'webRequest',

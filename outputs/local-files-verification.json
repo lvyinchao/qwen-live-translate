@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-15T11:52:44.953Z",
+  "at": "2026-10-15T13:28:56.814Z",
   "scope": "Real Chrome OPFS migration, quiet chunk staging and one merged download using an existing real translated WAV; no new model call",
   "checks": [
     "Legacy 0.1.2 queued windows migrated to two actual OPFS WAV chunks; no download request or save prompt during staging, even with downloads denied",

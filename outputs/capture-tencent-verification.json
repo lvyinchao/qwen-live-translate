@@ -1,0 +1,202 @@
+{
+  "site": "https://v.qq.com/x/cover/mzc00200803dr6b/z4102cn0lk3.html",
+  "autoplay": "test autoplay allowance",
+  "at": "2026-10-15T13:23:14.247Z",
+  "scope": "Anonymous real Tencent page tabCapture with real Qwen voice translation; short segment only, not 20-minute acceptance",
+  "checks": [
+    "Real tabCapture acquired both tracks; original source output is suppressed by Chrome.",
+    "Real translated WAV plays beside captured video on its media clock.",
+    "Turning subtitles off removes the caption immediately.",
+    "Pause stops the compatibility picture and translation.",
+    "1.5x speed and fullscreen work; 480px and 1100px layouts do not overflow.",
+    "Stop restores source mute, volume, rate and original pause state.",
+    "Translated chunks persist locally and stop requests one merged result."
+  ],
+  "errors": [],
+  "sourceDuration": 2814.9319999999984,
+  "sessionId": "a7578f34-17ac-472a-8721-b8b6f7de545c",
+  "firstWaitMs": 65838,
+  "state": {
+    "id": "a7578f34-17ac-472a-8721-b8b6f7de545c",
+    "candidate": {
+      "title": "兰香如故_05_电视剧_高清完整版视频在线观看_腾讯视频",
+      "site": "tencent",
+      "currentTime": 300,
+      "duration": 2814.9319999999984,
+      "protected": false
+    },
+    "language": "en",
+    "uiLanguage": "en",
+    "phase": "recording",
+    "capturedThrough": 62.455000000000005,
+    "readyThrough": 30,
+    "position": 0,
+    "chunks": 59,
+    "bytes": 11975166,
+    "sourcePaused": false,
+    "inputRms": 0.05858374736687611,
+    "utterances": 12
+  },
+  "playback": {
+    "video": 0.876851,
+    "originalVolume": 0,
+    "dubVolume": 1,
+    "metrics": [
+      {
+        "videoTime": 0.526308,
+        "audioTime": 0.172226,
+        "sourceStart": 0.3,
+        "sourceEnd": 1.6,
+        "truncated": false,
+        "rate": 1.3538461538461537,
+        "at": 65037.299999952316
+      },
+      {
+        "videoTime": 0.548126,
+        "audioTime": 0.33524,
+        "sourceStart": 0.3,
+        "sourceEnd": 1.6,
+        "truncated": false,
+        "rate": 1.3538461538461537,
+        "at": 65058.700000047684
+      },
+      {
+        "videoTime": 0.704752,
+        "audioTime": 0.501266,
+        "sourceStart": 0.3,
+        "sourceEnd": 1.6,
+        "truncated": false,
+        "rate": 1.3538461538461537,
+        "at": 65236.40000009537
+      }
+    ],
+    "caption": "却是个睁眼瞎 But he's a blind man. "
+  },
+  "rate": 1.5,
+  "restored": {
+    "muted": false,
+    "volume": 0.6,
+    "rate": 1,
+    "paused": true
+  },
+  "files": {
+    "pending": 1,
+    "staged": 13,
+    "saved": 0,
+    "saving": true
+  },
+  "metrics": [
+    {
+      "videoTime": 0.526308,
+      "audioTime": 0.172226,
+      "sourceStart": 0.3,
+      "sourceEnd": 1.6,
+      "truncated": false,
+      "rate": 1.3538461538461537,
+      "at": 65037.299999952316
+    },
+    {
+      "videoTime": 0.548126,
+      "audioTime": 0.33524,
+      "sourceStart": 0.3,
+      "sourceEnd": 1.6,
+      "truncated": false,
+      "rate": 1.3538461538461537,
+      "at": 65058.700000047684
+    },
+    {
+      "videoTime": 0.704752,
+      "audioTime": 0.501266,
+      "sourceStart": 0.3,
+      "sourceEnd": 1.6,
+      "truncated": false,
+      "rate": 1.3538461538461537,
+      "at": 65236.40000009537
+    },
+    {
+      "videoTime": 2.389349,
+      "audioTime": 0,
+      "sourceStart": 2.208,
+      "sourceEnd": 4.736,
+      "truncated": false,
+      "rate": 1.5,
+      "at": 68449.20000004768
+    },
+    {
+      "videoTime": 2.463048,
+      "audioTime": 0.250537,
+      "sourceStart": 2.208,
+      "sourceEnd": 4.736,
+      "truncated": false,
+      "rate": 1.5,
+      "at": 68501.70000004768
+    },
+    {
+      "videoTime": 9.32606,
+      "audioTime": 1.209904,
+      "sourceStart": 8.408,
+      "sourceEnd": 9.568,
+      "truncated": true,
+      "rate": 2,
+      "at": 73073.29999995232
+    },
+    {
+      "videoTime": 9.547985,
+      "audioTime": 1.51872,
+      "sourceStart": 8.408,
+      "sourceEnd": 9.568,
+      "truncated": true,
+      "rate": 2,
+      "at": 73219.09999990463
+    },
+    {
+      "videoTime": 9.821664,
+      "audioTime": 0.169316,
+      "sourceStart": 9.656,
+      "sourceEnd": 11.232,
+      "truncated": false,
+      "rate": 1.979695431472083,
+      "at": 73402.79999995232
+    },
+    {
+      "videoTime": 10.026465,
+      "audioTime": 0.487924,
+      "sourceStart": 9.656,
+      "sourceEnd": 11.232,
+      "truncated": false,
+      "rate": 1.979695431472083,
+      "at": 73538.59999990463
+    },
+    {
+      "videoTime": 11.812077,
+      "audioTime": 0,
+      "sourceStart": 11.648,
+      "sourceEnd": 12.608,
+      "truncated": true,
+      "rate": 2,
+      "at": 74735.29999995232
+    },
+    {
+      "videoTime": 11.819928,
+      "audioTime": 0.223405,
+      "sourceStart": 11.648,
+      "sourceEnd": 12.608,
+      "truncated": true,
+      "rate": 2,
+      "at": 74738.40000009537
+    },
+    {
+      "videoTime": 12.004968,
+      "audioTime": 0.473473,
+      "sourceStart": 11.648,
+      "sourceEnd": 12.608,
+      "truncated": true,
+      "rate": 2,
+      "at": 74859.29999995232
+    }
+  ],
+  "startErrorsMs": [
+    181.349
+  ],
+  "pass": true
+}
