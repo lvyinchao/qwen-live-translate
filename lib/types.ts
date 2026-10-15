@@ -81,17 +81,20 @@ export interface PlaybackSession {
     'id' | 'start' | 'end' | 'sourceText' | 'text' | 'speaker' | 'skipped'
   >[];
 }
+export type UILanguage = 'en' | 'zh';
 export interface Settings {
   apiKey: string;
   workspace: string;
   region: 'cn-beijing' | 'ap-southeast-1';
   language: string;
+  uiLanguage: UILanguage;
 }
 export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   workspace: '',
   region: 'cn-beijing',
   language: 'zh',
+  uiLanguage: 'en',
 };
 export const MODEL = 'qwen3.8-livetranslate-flash-realtime';
 export const VOICE = 'original-auto-v1';

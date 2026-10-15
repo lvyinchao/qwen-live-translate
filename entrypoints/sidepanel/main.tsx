@@ -27,6 +27,14 @@ import {
   type Result,
   type Settings,
 } from '../../lib/types';
+import {
+  languageName,
+  localizeMessage,
+  normalizeUILanguage,
+  t as translate,
+  type MessageKey,
+} from '../../lib/i18n';
+import type { UILanguage } from '../../lib/types';
 import './style.css';
 
 async function call<T = unknown>(
@@ -51,7 +59,7 @@ const phaseNames = {
   paused: '已暂停',
   ended: '已结束',
   error: '需要处理',
-};
+} as const;
 type PublicSettings = Omit<Settings, 'apiKey'> & { hasKey: boolean };
 function App() {
   const [view, setView] = useState<'videos' | 'settings'>('videos');
@@ -59,6 +67,10 @@ function App() {
     ...DEFAULT_SETTINGS,
     hasKey: false,
   });
+  const locale = settings.uiLanguage;
+  const t = (key: MessageKey, values?: Record<string, string | number>) =>
+    translate(locale, key, values);
+  const [loaded, setLoaded] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [language, setLanguage] = useState('zh');
   const [videos, setVideos] = useState<MediaCandidate[]>([]);
@@ -111,7 +123,8 @@ function App() {
         setSettings(s);
         setLanguage(s.language);
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoaded(true));
     void call<PlaybackSession | null>('session:get').then(setSession);
     void scan().catch((e) => setError(e.message));
     const listener = (m: any) => {
@@ -121,11 +134,42 @@ function App() {
     const activated = () => void scan().catch(() => {});
     chrome.runtime.onMessage.addListener(listener);
     chrome.tabs.onActivated.addListener(activated);
+    const onSettings = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      if (area === 'local' && changes.settings)
+        setSettings((old) => ({
+          ...old,
+          uiLanguage: normalizeUILanguage(
+            (changes.settings!.newValue as Partial<Settings> | undefined)
+              ?.uiLanguage,
+          ),
+        }));
+    };
+    chrome.storage.onChanged.addListener(onSettings);
     return () => {
       chrome.runtime.onMessage.removeListener(listener);
       chrome.tabs.onActivated.removeListener(activated);
+      chrome.storage.onChanged.removeListener(onSettings);
     };
   }, []);
+  useEffect(() => {
+    document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
+    document.title = translate(locale, '听译 · 视频译音');
+  }, [locale]);
+  const changeLocale = (next: UILanguage) => {
+    const previous = locale;
+    setSettings((old) => ({ ...old, uiLanguage: next }));
+    void act('locale', async () => {
+      try {
+        await call('ui:set', { language: next });
+      } catch (e) {
+        setSettings((old) => ({ ...old, uiLanguage: previous }));
+        throw e;
+      }
+    });
+  };
   const candidate = videos.find((v) => v.id === selected);
   const mix = (
     changes: Partial<
@@ -148,6 +192,7 @@ function App() {
         workspace: settings.workspace,
         region: settings.region,
         language,
+        uiLanguage: locale,
       },
     });
     setSettings(next);
@@ -164,12 +209,15 @@ function App() {
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download = '听译-播放诊断.json';
+    a.download =
+      locale === 'zh'
+        ? '听译-播放诊断.json'
+        : 'qwen-dub-playback-diagnostics.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     setNotice('播放诊断已导出，不含密钥和媒体地址');
   };
-  const status = session ? phaseNames[session.phase] : '未开始';
+  const status = t(session ? phaseNames[session.phase] : '未开始');
   return (
     <div className="app">
       <header className="header">
@@ -178,52 +226,69 @@ function App() {
             <AudioLines size={23} />
           </span>
           <div>
-            <strong>听译</strong>
+            <strong>{t('听译')}</strong>
             <span>QWEN VIDEO DUB</span>
           </div>
         </div>
-        <button
-          className={`icon-button ${view === 'settings' ? 'active' : ''}`}
-          aria-label="打开设置"
-          onClick={() => {
-            setView(view === 'settings' ? 'videos' : 'settings');
-            setError('');
-            setNotice('');
-          }}
-        >
-          <Settings2 size={19} />
-        </button>
+        <div className="header-actions">
+          <select
+            className="locale-select"
+            aria-label={t('界面语言')}
+            value={locale}
+            disabled={!loaded || !!busy}
+            onChange={(e) => changeLocale(e.target.value as UILanguage)}
+          >
+            <option value="en">English</option>
+            <option value="zh">简体中文</option>
+          </select>
+          <button
+            className={`icon-button ${view === 'settings' ? 'active' : ''}`}
+            aria-label={t('打开设置')}
+            onClick={() => {
+              setView(view === 'settings' ? 'videos' : 'settings');
+              setError('');
+              setNotice('');
+            }}
+          >
+            <Settings2 size={19} />
+          </button>
+        </div>
       </header>
       <div className="modebar">
         <span
           className={`status-dot ${session?.phase === 'playing' ? 'live' : ''}`}
         />
         <span>{status}</span>
-        <span className="modebar-end">原网页 · 同步译音</span>
+        <span className="modebar-end">{t('原网页 · 同步译音')}</span>
       </div>
       <main>
         {view === 'settings' ? (
           <>
             <button className="back" onClick={() => setView('videos')}>
               <ChevronLeft size={16} />
-              返回视频
+              {t('返回视频')}
             </button>
             <div className="section-heading">
-              <h1>连接你的百炼</h1>
+              <h1>{t('连接你的百炼')}</h1>
               <KeyRound size={20} />
             </div>
             <p className="description">
-              使用自己的账户调用模型。凭据只保存在本机，不会提供给视频网页。
+              {t(
+                '使用自己的账户调用模型。凭据只保存在本机，不会提供给视频网页。',
+              )}
             </p>
             <section className="settings-form">
               <label htmlFor="api-key">
-                API Key <span>{settings.hasKey ? '已保存' : '待填写'}</span>
+                API Key{' '}
+                <span>{settings.hasKey ? t('已保存') : t('待填写')}</span>
               </label>
               <input
                 id="api-key"
                 type="password"
                 autoComplete="off"
-                placeholder={settings.hasKey ? '留空保留已保存的 Key' : 'sk-…'}
+                placeholder={
+                  settings.hasKey ? t('留空保留已保存的 Key') : 'sk-…'
+                }
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
@@ -231,13 +296,13 @@ function App() {
               <input
                 id="workspace"
                 autoComplete="off"
-                placeholder="百炼业务空间 ID"
+                placeholder={t('百炼业务空间 ID')}
                 value={settings.workspace}
                 onChange={(e) =>
                   setSettings({ ...settings, workspace: e.target.value })
                 }
               />
-              <label htmlFor="region">服务地域</label>
+              <label htmlFor="region">{t('服务地域')}</label>
               <select
                 id="region"
                 value={settings.region}
@@ -248,8 +313,8 @@ function App() {
                   })
                 }
               >
-                <option value="cn-beijing">华北 2 · 北京</option>
-                <option value="ap-southeast-1">新加坡</option>
+                <option value="cn-beijing">{t('华北 2 · 北京')}</option>
+                <option value="ap-southeast-1">{t('新加坡')}</option>
               </select>
               <button
                 className="primary"
@@ -263,7 +328,7 @@ function App() {
                 ) : (
                   <Check size={17} />
                 )}
-                保存配置
+                {t('保存配置')}
               </button>
               <button
                 className="secondary"
@@ -282,15 +347,16 @@ function App() {
                 ) : (
                   <AudioLines size={16} />
                 )}
-                验证连接
+                {t('验证连接')}
               </button>
             </section>
             <div className="model-note">
-              <span className="eyebrow">当前模型</span>
+              <span className="eyebrow">{t('当前模型')}</span>
               <strong>Qwen3.8 LiveTranslate</strong>
               <p>
-                支持 29
-                种语言译音，随原说话人复刻音色。费用由百炼账户按实际用量结算。
+                {t(
+                  '支持 29 种语言译音，随原说话人复刻音色。费用由百炼账户按实际用量结算。',
+                )}
               </p>
             </div>
             <button
@@ -298,7 +364,7 @@ function App() {
               disabled={!!busy}
               onClick={() => act('diagnostics', exportDiagnostics)}
             >
-              导出最近一次播放诊断
+              {t('导出最近一次播放诊断')}
             </button>
             <div className="settings-actions">
               <button
@@ -310,20 +376,20 @@ function App() {
                   })
                 }
               >
-                清除译音缓存
+                {t('清除译音缓存')}
               </button>
               <button
                 disabled={!!busy}
                 onClick={() =>
                   act('forget', async () => {
-                    await call('settings:forget');
-                    setSettings({ ...DEFAULT_SETTINGS, hasKey: false });
+                    const next = await call<PublicSettings>('settings:forget');
+                    setSettings(next);
                     setApiKey('');
                     setNotice('本机凭据已移除');
                   })
                 }
               >
-                移除凭据
+                {t('移除凭据')}
               </button>
             </div>
           </>
@@ -331,13 +397,13 @@ function App() {
           <>
             <div className="section-heading">
               <div>
-                <span className="eyebrow">当前页面</span>
-                <h1>选择要观看的视频</h1>
+                <span className="eyebrow">{t('当前页面')}</span>
+                <h1>{t('选择要观看的视频')}</h1>
               </div>
               <button
                 className="icon-button"
                 disabled={!!busy}
-                aria-label="重新扫描视频"
+                aria-label={t('重新扫描视频')}
                 onClick={() => act('scan', scan)}
               >
                 <RefreshCw
@@ -347,9 +413,9 @@ function App() {
               </button>
             </div>
             <p className="description">
-              保留熟悉的播放器，换一种语言听懂内容。
+              {t('保留熟悉的播放器，换一种语言听懂内容。')}
             </p>
-            <section className="video-list" aria-label="当前页面的视频">
+            <section className="video-list" aria-label={t('当前页面的视频')}>
               {videos.length ? (
                 videos.map((v) => (
                   <button
@@ -379,7 +445,7 @@ function App() {
                           ? 'YouTube'
                           : v.site === 'bilibili'
                             ? 'Bilibili'
-                            : '网页视频'}{' '}
+                            : t('网页视频')}{' '}
                         · {v.width} × {v.height}
                       </small>
                       <span
@@ -390,7 +456,7 @@ function App() {
                         ) : (
                           <span className="tiny-dot" />
                         )}
-                        {v.source ? '音轨已识别' : '等待识别音轨'}
+                        {v.source ? t('音轨已识别') : t('等待识别音轨')}
                       </span>
                     </span>
                     <span className="radio">
@@ -403,14 +469,18 @@ function App() {
                   <span>
                     <Video size={28} />
                   </span>
-                  <strong>让视频先出现</strong>
-                  <p>打开 YouTube 或 Bilibili 点播页面，播放几秒后重新扫描。</p>
+                  <strong>{t('让视频先出现')}</strong>
+                  <p>
+                    {t(
+                      '打开 YouTube 或 Bilibili 点播页面，播放几秒后重新扫描。',
+                    )}
+                  </p>
                   <button
                     className="text-button"
                     onClick={() => act('scan', scan)}
                   >
                     <RefreshCw size={13} />
-                    重新扫描
+                    {t('重新扫描')}
                   </button>
                 </div>
               )}
@@ -418,20 +488,21 @@ function App() {
             {candidate?.site === 'youtube' && (
               <p className="hint">
                 <CircleHelp size={14} />
-                YouTube
-                长视频尚未通过连续译音验收；遇到音轨播放验证限制时会停止翻译。
+                {t(
+                  'YouTube 长视频尚未通过连续译音验收；遇到音轨播放验证限制时会停止翻译。',
+                )}
               </p>
             )}
             {candidate && !candidate.source && (
               <p className="hint">
                 <CircleHelp size={14} />
-                先播放几秒，让浏览器发现音轨，再点击重新扫描。
+                {t('先播放几秒，让浏览器发现音轨，再点击重新扫描。')}
               </p>
             )}
             <section className="language-section">
               <label htmlFor="language">
                 <Languages size={17} />
-                翻译成
+                {t('翻译成')}
               </label>
               <select
                 id="language"
@@ -439,18 +510,20 @@ function App() {
                 disabled={!!session}
                 onChange={(e) => setLanguage(e.target.value)}
               >
-                {LANGUAGES.map(([code, name]) => (
+                {LANGUAGES.map(([code]) => (
                   <option key={code} value={code}>
-                    {name}
+                    {languageName(code, locale)}
                   </option>
                 ))}
               </select>
-              <span className="auto-source">自动识别原语言 · 保留原音色</span>
+              <span className="auto-source">
+                {t('自动识别原语言 · 保留原音色')}
+              </span>
             </section>
             {!settings.hasKey ? (
               <button className="primary" onClick={() => setView('settings')}>
                 <KeyRound size={17} />
-                先连接百炼账户
+                {t('先连接百炼账户')}
                 <ArrowRight size={16} />
               </button>
             ) : session ? (
@@ -465,7 +538,7 @@ function App() {
                 }
               >
                 <Square size={14} fill="currentColor" />
-                停止翻译
+                {t('停止翻译')}
               </button>
             ) : (
               <button
@@ -486,14 +559,14 @@ function App() {
                 ) : (
                   <Headphones size={18} />
                 )}
-                开始翻译
+                {t('开始翻译')}
                 <ArrowRight size={16} />
               </button>
             )}
             {session ? (
               <section className="session-section">
                 <div className="session-line">
-                  <strong>{phaseNames[session.phase]}</strong>
+                  <strong>{t(phaseNames[session.phase])}</strong>
                   <span>
                     {time(session.position)} /{' '}
                     {time(session.candidate.duration)}
@@ -513,24 +586,26 @@ function App() {
                 </div>
                 <div className="buffer-label">
                   <span>
-                    后续译音{' '}
-                    {Math.max(
-                      0,
-                      session.readyThrough - session.position,
-                    ).toFixed(0)}{' '}
-                    秒
+                    {t('后续译音 {seconds} 秒', {
+                      seconds: Math.max(
+                        0,
+                        session.readyThrough - session.position,
+                      ).toFixed(0),
+                    })}
                   </span>
-                  <span>{session.rate.toFixed(1)}× 播放</span>
+                  <span>
+                    {t('{rate}× 播放', { rate: session.rate.toFixed(1) })}
+                  </span>
                 </div>
                 {['preparing', 'buffering'].includes(session.phase) && (
                   <p className="hint">
-                    正在提前准备译音，就绪后会自动继续播放。
+                    {t('正在提前准备译音，就绪后会自动继续播放。')}
                   </p>
                 )}
                 <div className="mix-row">
                   <label htmlFor="original">
                     <Volume2 size={15} />
-                    原声
+                    {t('原声')}
                   </label>
                   <input
                     id="original"
@@ -548,7 +623,7 @@ function App() {
                 <div className="mix-row">
                   <label htmlFor="dub">
                     <Headphones size={15} />
-                    译音
+                    {t('译音')}
                   </label>
                   <input
                     id="dub"
@@ -564,7 +639,7 @@ function App() {
                 <label className="toggle-row">
                   <span>
                     <Subtitles size={16} />
-                    双语字幕
+                    {t('双语字幕')}
                   </span>
                   <input
                     type="checkbox"
@@ -574,13 +649,15 @@ function App() {
                 </label>
                 {session.skipped > 0 && (
                   <p className="skip-note">
-                    为跟随画面，已有 {session.skipped}{' '}
-                    处过长译音跳过尾部。完整译文仍可查看。
+                    {t(
+                      '为跟随画面，已有 {count} 处过长译音跳过尾部。完整译文仍可查看。',
+                      { count: session.skipped },
+                    )}
                   </p>
                 )}
                 {session.segments.length > 0 && (
                   <div className="transcript">
-                    <span className="eyebrow">译文片段</span>
+                    <span className="eyebrow">{t('译文片段')}</span>
                     {session.segments
                       .filter(
                         (s) =>
@@ -604,7 +681,7 @@ function App() {
                             <small>{s.sourceText}</small>
                             {s.skipped && (
                               <small className="skip-note">
-                                译音尾部已跳过
+                                {t('译音尾部已跳过')}
                               </small>
                             )}
                           </p>
@@ -617,8 +694,8 @@ function App() {
               <div className="how-it-works">
                 <span className="step-number">01</span>
                 <p>
-                  先准备一小段译音，再边看边翻译。
-                  <small>暂停、跳转和倍速，译音跟随视频。</small>
+                  {t('先准备一小段译音，再边看边翻译。')}
+                  <small>{t('暂停、跳转和倍速，译音跟随视频。')}</small>
                 </p>
               </div>
             )}
@@ -626,21 +703,26 @@ function App() {
         )}
         {(error || session?.error) && (
           <div className="feedback error" role="alert">
-            {error || session?.error}
+            {localizeMessage(error || session?.error || '', locale)}
           </div>
         )}
         {notice && (
           <div className="feedback success" role="status">
             <Check size={14} />
-            {notice}
+            {localizeMessage(notice, locale)}
           </div>
         )}
       </main>
       <footer>
         <span className="footer-mark">
-          <AudioLines size={12} />由 Qwen 提供译音
+          <AudioLines size={12} />
+          {t('由 Qwen 提供译音')}
         </span>
-        <span>自用预览版 · 0.1</span>
+        <span>
+          {t('自用预览版 · {version}', {
+            version: chrome.runtime.getManifest().version,
+          })}
+        </span>
       </footer>
     </div>
   );

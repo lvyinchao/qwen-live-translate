@@ -1,4 +1,5 @@
 import { acceptEngineState } from '../lib/session';
+import { normalizeUILanguage, t } from '../lib/i18n';
 import {
   inspectPlayerMain,
   mediaIdentity,
@@ -20,6 +21,7 @@ import {
   type MediaCandidate,
   type PlaybackSession,
   type Settings,
+  type UILanguage,
 } from '../lib/types';
 import { encode64 } from '../lib/audio';
 import { decode64 } from '../lib/audio';
@@ -54,6 +56,9 @@ export default defineBackground(() => {
       accessLevel: 'TRUSTED_CONTEXTS',
     });
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    await chrome.action.setTitle({
+      title: t((await loadSettings()).uiLanguage, '打开听译'),
+    });
     const saved = (await chrome.storage.session.get('activeSession'))
       .activeSession as PlaybackSession | undefined;
     const contexts = await chrome.runtime.getContexts({
@@ -94,12 +99,29 @@ export default defineBackground(() => {
       });
     await offscreenCreating;
   }
-  const loadSettings = async (): Promise<Settings> => ({
-    ...DEFAULT_SETTINGS,
-    ...((await chrome.storage.local.get('settings')).settings as
+  const loadSettings = async (): Promise<Settings> => {
+    const saved = (await chrome.storage.local.get('settings')).settings as
       | Partial<Settings>
-      | undefined),
-  });
+      | undefined;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...saved,
+      uiLanguage: normalizeUILanguage(saved?.uiLanguage),
+    };
+  };
+  async function publishLocale(language: UILanguage) {
+    await chrome.action.setTitle({ title: t(language, '打开听译') });
+    const tabs = await chrome.tabs.query({
+      url: ['*://*.youtube.com/*', '*://*.bilibili.com/*'],
+    });
+    await Promise.allSettled(
+      tabs
+        .filter((tab) => tab.id !== undefined)
+        .map((tab) =>
+          chrome.tabs.sendMessage(tab.id!, { type: 'ui:changed', language }),
+        ),
+    );
+  }
   async function toPlayer(type: string, data: Record<string, unknown> = {}) {
     if (!session) return;
     try {
@@ -387,6 +409,21 @@ export default defineBackground(() => {
       await initialized;
       const privileged = trusted(sender);
       switch (message.type) {
+        case 'ui:get':
+          // Content scripts can read only this presentation preference.
+          return (await loadSettings()).uiLanguage;
+        case 'ui:set': {
+          if (!privileged) throw new Error('不允许网页修改配置');
+          if (message.language !== 'en' && message.language !== 'zh')
+            throw new Error('无效的界面语言');
+          const next: Settings = {
+            ...(await loadSettings()),
+            uiLanguage: message.language,
+          };
+          await chrome.storage.local.set({ settings: next });
+          await publishLocale(next.uiLanguage);
+          return next.uiLanguage;
+        }
         case 'settings:get':
           if (!privileged) throw new Error('不允许网页读取配置');
           return publicSettings(await loadSettings());
@@ -402,14 +439,25 @@ export default defineBackground(() => {
           endpoint(next);
           if (!/^[a-z]{2,3}$/.test(next.language))
             throw new Error('无效的目标语言');
+          if (next.uiLanguage !== 'en' && next.uiLanguage !== 'zh')
+            throw new Error('无效的界面语言');
+          await chrome.storage.local.set({ settings: next });
+          if (next.uiLanguage !== current.uiLanguage)
+            await publishLocale(next.uiLanguage);
+          return publicSettings(next);
+        }
+        case 'settings:forget': {
+          if (!privileged) throw new Error('不允许网页修改配置');
+          await stop();
+          const current = await loadSettings();
+          const next = {
+            ...DEFAULT_SETTINGS,
+            language: current.language,
+            uiLanguage: current.uiLanguage,
+          };
           await chrome.storage.local.set({ settings: next });
           return publicSettings(next);
         }
-        case 'settings:forget':
-          if (!privileged) throw new Error('不允许网页修改配置');
-          await stop();
-          await chrome.storage.local.remove('settings');
-          return true;
         case 'settings:test':
           if (!privileged) throw new Error('不允许网页测试凭据');
           if (session) throw new Error('请先停止翻译再测试连接');

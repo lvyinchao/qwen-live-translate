@@ -3,9 +3,9 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: '听译 · Qwen Video Dub',
+    name: 'Qwen Video Dub',
     description:
-      '在原网页观看带有同步译音和双语字幕的视频。自用版，使用自己的百炼凭据。',
+      'Watch videos in their original player with synchronized translated audio and bilingual subtitles. Use your own Model Studio account.',
     minimum_chrome_version: '116',
     permissions: [
       'storage',
@@ -21,7 +21,7 @@ export default defineConfig({
     // Narrow HTTP host grants failed for extension-initiated WebSockets in the
     // real browser gate. Rules themselves remain exact-origin / exact-endpoint.
     host_permissions: ['<all_urls>'],
-    action: { default_title: '打开听译' },
+    action: { default_title: 'Open Qwen Video Dub' },
     side_panel: { default_path: 'sidepanel.html' },
     content_security_policy: {
       extension_pages:

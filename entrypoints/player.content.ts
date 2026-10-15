@@ -2,6 +2,8 @@ import { decode64 } from '../lib/audio';
 import { activeSegment, planDub, clockDiscontinuity } from '../lib/timeline';
 import { mediaIdentity } from '../lib/adapters';
 import type { PlaybackSession, TranslationSegment } from '../lib/types';
+import { normalizeUILanguage, t } from '../lib/i18n';
+import type { UILanguage } from '../lib/types';
 
 export default defineContentScript({
   matches: ['*://*.youtube.com/*', '*://*.bilibili.com/*'],
@@ -9,6 +11,15 @@ export default defineContentScript({
   runAt: 'document_start',
   main(ctx) {
     let player: Player | null = null;
+    let locale: UILanguage = 'en';
+    let localeVersion = 0;
+    void chrome.runtime
+      .sendMessage({ target: 'background', type: 'ui:get' })
+      .then((result) => {
+        if (result?.ok && localeVersion === 0)
+          locale = normalizeUILanguage(result.value);
+      })
+      .catch(() => {});
     class Player {
       video: HTMLVideoElement;
       session: PlaybackSession;
@@ -247,7 +258,10 @@ export default defineContentScript({
             await this.video.play();
           } catch {
             this.expectedPlay = false;
-            this.caption.textContent = '请点击视频播放按钮，继续观看';
+            this.caption.textContent = t(
+              locale,
+              '请点击视频播放按钮，继续观看',
+            );
           }
         }
       }
@@ -323,8 +337,13 @@ export default defineContentScript({
           this.audio.pause();
           this.caption.textContent =
             this.session.phase === 'error'
-              ? '翻译已停止，请查看侧边栏'
-              : `正在准备译音 · 已准备 ${Math.max(0, this.session.readyThrough - position).toFixed(0)} 秒`;
+              ? t(locale, '翻译已停止，请查看侧边栏')
+              : t(locale, '正在准备译音 · 已准备 {seconds} 秒', {
+                  seconds: Math.max(
+                    0,
+                    this.session.readyThrough - position,
+                  ).toFixed(0),
+                });
           return;
         }
         if (this.current && this.current.id !== segment?.id) {
@@ -392,7 +411,10 @@ export default defineContentScript({
               this.audioBlocked = true;
               this.userPaused = true;
               this.pauseVideo();
-              this.caption.textContent = '请点击视频一次，允许播放译音';
+              this.caption.textContent = t(
+                locale,
+                '请点击视频一次，允许播放译音',
+              );
               this.clock();
             })
             .finally(() => {
@@ -414,6 +436,13 @@ export default defineContentScript({
     }
     chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (sender.id !== chrome.runtime.id) return;
+      if (message.type === 'ui:changed') {
+        localeVersion++;
+        locale = normalizeUILanguage(message.language);
+        player?.tick();
+        respond({ ok: true });
+        return;
+      }
       if (message.type === 'player:highlight') {
         const v = Array.from(document.querySelectorAll('video')).find(
           (v) => v.dataset.qvdId === message.id,

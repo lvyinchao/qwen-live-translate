@@ -29,6 +29,7 @@ try {
       '原音色译音示例.wav',
       '音色试听说明.md',
       '验收数据.json',
+      'ui-verification.json',
     ],
     { cwd: output },
   );
@@ -45,6 +46,7 @@ try {
     'package.json',
     'package-lock.json',
     'tsconfig.json',
+    'vitest.config.ts',
     'wxt.config.ts',
     '.gitignore',
     'README.md',
@@ -61,6 +63,7 @@ try {
     '原声对照示例.wav',
     '原音色译音示例.wav',
     '音色试听说明.md',
+    'ui-verification.json',
   ])
     await fs.copyFile(
       path.join(output, file),

@@ -56,6 +56,7 @@ button svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   background: #fff;
   border-bottom: 1px solid #e4e8e2;
 }
@@ -79,6 +80,39 @@ button svg {
   font-size: 23px;
   letter-spacing: 3px;
   line-height: 1.2;
+}
+html[lang='en'] .brand strong {
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.locale-select {
+  width: 87px;
+  padding: 5px 3px;
+  border: 1px solid #dce3dc;
+  border-radius: 7px;
+  background: #fff;
+  color: #53685b;
+  font-size: 11px;
+}
+@media (max-width: 359px) {
+  .header {
+    padding: 0 18px;
+  }
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+  }
+  html[lang='en'] .brand strong {
+    font-size: 18px;
+  }
+  .locale-select {
+    width: 78px;
+  }
 }
 .brand div > span {
   display: block;
@@ -483,9 +517,17 @@ h1 {
   gap: 6px;
   font-size: 11px;
   min-width: 51px;
+  flex-shrink: 0;
+}
+.mix-row label svg {
+  flex-shrink: 0;
+}
+html[lang='en'] .mix-row label {
+  min-width: 86px;
 }
 .mix-row > span {
   width: 32px;
+  flex-shrink: 0;
   text-align: right;
   font-size: 10px;
   color: #82917f;

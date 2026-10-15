@@ -1,0 +1,208 @@
+import type { UILanguage } from './types';
+
+// Keep the original internal errors stable: retry classification and diagnostics
+// use them. Localize at the presentation boundary, never model text or subtitles.
+const english = {
+  听译: 'Qwen Dub',
+  '听译 · 视频译音': 'Qwen Video Dub',
+  打开听译: 'Open Qwen Video Dub',
+  界面语言: 'Interface language',
+  打开设置: 'Open settings',
+  未开始: 'Not started',
+  准备中: 'Preparing',
+  准备译音: 'Buffering',
+  正在翻译: 'Translating',
+  已暂停: 'Paused',
+  已结束: 'Ended',
+  需要处理: 'Needs attention',
+  '原网页 · 同步译音': 'In-page · Synced audio',
+  返回视频: 'Back to videos',
+  连接你的百炼: 'Connect Model Studio',
+  '使用自己的账户调用模型。凭据只保存在本机，不会提供给视频网页。':
+    'Use your own Alibaba Cloud Model Studio account. Credentials stay on this device and are never shared with video pages.',
+  已保存: 'Saved',
+  待填写: 'Required',
+  '留空保留已保存的 Key': 'Leave blank to keep the saved key',
+  '百炼业务空间 ID': 'Model Studio workspace ID',
+  服务地域: 'Service region',
+  '华北 2 · 北京': 'China North 2 · Beijing',
+  新加坡: 'Singapore',
+  保存配置: 'Save settings',
+  验证连接: 'Test connection',
+  当前模型: 'Current model',
+  '支持 29 种语言译音，随原说话人复刻音色。费用由百炼账户按实际用量结算。':
+    'Dub into 29 languages using the original speaker’s voice. Usage is billed to your Model Studio account.',
+  导出最近一次播放诊断: 'Export latest playback diagnostics',
+  清除译音缓存: 'Clear audio cache',
+  移除凭据: 'Remove credentials',
+  配置已保存在这台浏览器中: 'Settings saved in this browser.',
+  '播放诊断已导出，不含密钥和媒体地址':
+    'Diagnostics exported without credentials or media URLs.',
+  译音缓存已清除: 'Audio cache cleared.',
+  本机凭据已移除: 'Credentials removed from this device.',
+  当前页面: 'Current page',
+  选择要观看的视频: 'Choose a video',
+  重新扫描视频: 'Rescan videos',
+  '保留熟悉的播放器，换一种语言听懂内容。':
+    'Watch in the original player. Listen in another language.',
+  当前页面的视频: 'Videos on this page',
+  网页视频: 'Web video',
+  音轨已识别: 'Audio track found',
+  等待识别音轨: 'Waiting for audio track',
+  让视频先出现: 'Find a video first',
+  '打开 YouTube 或 Bilibili 点播页面，播放几秒后重新扫描。':
+    'Open a YouTube or Bilibili video, play a few seconds, then rescan.',
+  重新扫描: 'Rescan',
+  'YouTube 长视频尚未通过连续译音验收；遇到音轨播放验证限制时会停止翻译。':
+    'Continuous dubbing of long YouTube videos is not yet verified. Translation stops if audio playback verification blocks access.',
+  '先播放几秒，让浏览器发现音轨，再点击重新扫描。':
+    'Play a few seconds to let the browser find the audio track, then rescan.',
+  翻译成: 'Translate into',
+  '自动识别原语言 · 保留原音色': 'Auto-detect source · Original voice',
+  先连接百炼账户: 'Connect Model Studio first',
+  停止翻译: 'Stop translation',
+  开始翻译: 'Start translation',
+  '后续译音 {seconds} 秒': '{seconds}s of audio ready ahead',
+  '{rate}× 播放': '{rate}× playback',
+  '正在提前准备译音，就绪后会自动继续播放。':
+    'Preparing translated audio ahead. Playback resumes when ready.',
+  原声: 'Original',
+  译音: 'Translated',
+  双语字幕: 'Bilingual subtitles',
+  '为跟随画面，已有 {count} 处过长译音跳过尾部。完整译文仍可查看。':
+    'To keep up with the video, {count} long audio tails were skipped. Full translations remain available.',
+  译文片段: 'Transcript',
+  译音尾部已跳过: 'Audio tail skipped',
+  '先准备一小段译音，再边看边翻译。':
+    'Prepare a short buffer, then translate as you watch.',
+  '暂停、跳转和倍速，译音跟随视频。':
+    'Audio follows pauses, seeks and playback speed.',
+  '由 Qwen 提供译音': 'Audio by Qwen',
+  '自用预览版 · {version}': 'Personal preview · {version}',
+  '请点击视频播放按钮，继续观看': 'Click the video’s play button to continue.',
+  '翻译已停止，请查看侧边栏': 'Translation stopped. Check the sidebar.',
+  '正在准备译音 · 已准备 {seconds} 秒': 'Preparing audio · {seconds}s ready',
+  '请点击视频一次，允许播放译音':
+    'Click the video to allow translated audio playback.',
+  '操作未完成，请重试': 'The action could not be completed. Please try again.',
+  '已连接 Qwen3.8 LiveTranslate': 'Connected to Qwen3.8 LiveTranslate.',
+  无效的界面语言: 'Invalid interface language.',
+  不允许网页读取配置: 'Web pages cannot read extension settings.',
+  不允许网页修改配置: 'Web pages cannot change extension settings.',
+  不允许网页测试凭据: 'Web pages cannot test credentials.',
+  不允许网页触发扫描: 'Web pages cannot start a scan.',
+  不允许网页读取诊断: 'Web pages cannot read diagnostics.',
+  不允许网页触发选择: 'Web pages cannot select a player.',
+  不允许网页触发翻译: 'Web pages cannot start translation.',
+  不允许网页停止翻译: 'Web pages cannot stop translation.',
+  不允许网页安装鉴权规则: 'Web pages cannot install authentication rules.',
+  不允许网页修改鉴权规则: 'Web pages cannot change authentication rules.',
+  不允许网页修改请求规则: 'Web pages cannot change request rules.',
+  不允许网页清理缓存: 'Web pages cannot clear the cache.',
+  请先停止翻译再测试连接: 'Stop translation before testing the connection.',
+  无效的目标语言: 'Invalid target language.',
+  翻译任务已过期: 'This translation task has expired.',
+  '视频已变化，请重新扫描': 'The video has changed. Please rescan.',
+  '请等待广告结束，再选择正片':
+    'Wait for the ad to finish, then select the video.',
+  首版仅支持普通点播视频: 'This preview supports on-demand videos only.',
+  '尚未发现可预取的音轨。请先播放几秒，再重新扫描；本版本不会以滞后采集代替同步。':
+    'No audio track is available for prefetching. Play a few seconds, then rescan. This preview requires audio that can be read ahead for synchronized playback.',
+  请先在设置中填写百炼凭据:
+    'Enter your Model Studio credentials in settings first.',
+  '播放器已被页面替换，请重新扫描':
+    'The page replaced the player. Please rescan.',
+  媒体域名不在允许范围: 'This media domain is not allowed.',
+  '请先停止翻译，再清理缓存': 'Stop translation before clearing the cache.',
+  没有可预取的音轨: 'No audio track is available for prefetching.',
+  '音轨读取超时，请刷新视频后重新扫描':
+    'Audio loading timed out. Refresh the video and rescan.',
+  媒体资源没有可解码的音轨: 'The media has no decodable audio track.',
+  当前浏览器不支持这条音轨的编码格式:
+    'This browser does not support the audio track’s codec.',
+  '未读到该时间段的音频，请刷新资源地址后重试':
+    'No audio was found for this interval. Refresh the source and try again.',
+  '提前读取请求未通过 YouTube 音轨播放验证，当前版本无法继续。翻译已停止，原声设置已恢复；可以重载视频后再试。':
+    'YouTube audio playback verification blocked prefetching. Translation has stopped and original audio settings have been restored. Reload the video to try again.',
+  'SABR 请求字段不完整': 'Incomplete SABR request field.',
+  'SABR 请求字段过长': 'SABR request field is too long.',
+  'SABR 请求字段无效': 'Invalid SABR request field.',
+  '不支持的 SABR 请求字段': 'Unsupported SABR request field.',
+  'SABR 请求字段越界': 'SABR request field is out of bounds.',
+  'SABR 请求缺少播放器上下文': 'The SABR request is missing player context.',
+  当前译音片段超过缓存上限: 'This audio segment exceeds the cache limit.',
+  '请填写有效的百炼 Workspace ID': 'Enter a valid Model Studio workspace ID.',
+  请选择北京或新加坡地域: 'Choose the Beijing or Singapore region.',
+  '请填写有效的百炼 API Key': 'Enter a valid Model Studio API key.',
+  '译音 PCM 字节长度不完整':
+    'The translated PCM audio has an incomplete byte length.',
+  '翻译响应未完整完成，请重试当前片段':
+    'The translation response is incomplete. Retry this segment.',
+  '模型译音缺少可靠的源时间戳或消息关联，已停止本段以防音画错位':
+    'The model response lacks reliable source timestamps or message associations. This segment stopped to prevent audio drift.',
+  '检测到人声但没有获得完整译音，请重试':
+    'Speech was detected but no complete translated audio was received. Please retry.',
+  任务已取消: 'Task cancelled.',
+  '模型连接或响应超时，请检查地域、网络和模型权限':
+    'The model connection or response timed out. Check your region, network and model access.',
+  '百炼 WebSocket 连接失败：请检查 Key、Workspace、地域和模型访问权限':
+    'Model Studio WebSocket connection failed. Check your key, workspace, region and model access.',
+  '连接返回了不同模型，已停止':
+    'The connection returned a different model and has been stopped.',
+  '模型未确认启用原音色复刻，已停止翻译':
+    'The model did not confirm original voice cloning. Translation has stopped.',
+  'UMP 分片超过安全读取上限': 'The UMP fragment exceeds the safe read limit.',
+  '无效的 SABR 读取窗口': 'Invalid SABR read window.',
+  '播放器尚未提供完整 SABR 音轨信息，请播放几秒后重新扫描':
+    'The player has not provided complete SABR audio information. Play a few seconds, then rescan.',
+  'SABR 重定向到了未允许的媒体域名':
+    'SABR redirected to a media domain that is not allowed.',
+  '音轨属于广告或其他视频，已停止':
+    'The audio belongs to an ad or another video. Playback has stopped.',
+  'SABR 窗口超出读取上限': 'The SABR window exceeds the read limit.',
+} as const;
+
+export type MessageKey = keyof typeof english;
+export function normalizeUILanguage(value: unknown): UILanguage {
+  return value === 'zh' ? 'zh' : 'en';
+}
+export function t(
+  locale: UILanguage,
+  key: MessageKey,
+  values: Record<string, string | number> = {},
+): string {
+  const template = locale === 'zh' ? key : english[key];
+  return template.replace(/\{(\w+)\}/g, (token, name: string) =>
+    values[name] === undefined ? token : String(values[name]),
+  );
+}
+
+export function languageName(code: string, locale: UILanguage): string {
+  return new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code;
+}
+
+export function localizeMessage(message: string, locale: UILanguage): string {
+  if (locale === 'zh') return message;
+  if (Object.hasOwn(english, message)) return english[message as MessageKey];
+  return message
+    .replace(
+      /^翻译连接提前断开（(\d+)），本段未标记为完成$/,
+      'Translation disconnected early ($1). This segment was not marked complete.',
+    )
+    .replace(/^百炼限流：(.*)$/, 'Model Studio rate limit: $1')
+    .replace(
+      /^百炼返回错误：(.*)，请核对模型权限和配置$/,
+      'Model Studio error: $1. Check model access and settings.',
+    )
+    .replace(
+      /^YouTube SABR 读取失败（HTTP (\d+)），请刷新播放凭据后重试$/,
+      'YouTube SABR request failed (HTTP $1). Refresh playback credentials and retry.',
+    )
+    .replace(
+      /^音轨时间窗口不完整（需要 (.+)～(.+) 秒，取得 (.+)～(.+) 秒）$/,
+      'Incomplete audio window (requested $1–$2s, received $3–$4s).',
+    )
+    .replaceAll('[已隐藏密钥]', '[redacted key]')
+    .replaceAll('[已隐藏]', '[redacted]')
+    .replaceAll('[媒体地址]', '[media URL]');
+}
