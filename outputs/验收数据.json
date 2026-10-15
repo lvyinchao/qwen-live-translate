@@ -1,0 +1,1056 @@
+{
+  "generatedAt": "2026-10-15T10:25:48.947Z",
+  "measurement": "HTMLAudioElement playing/ended events compared with HTMLVideoElement.currentTime. Not hardware audio loopback. P95 excludes deliberate seek entries and segments with truncated tails; skip ratio is reported separately.",
+  "cost": "Beijing listed audio input/output and text output rates; provider-reported counters, taking the last/max cumulative snapshot per connection (verified against actual output duration), not summing snapshots. Estimate only, not a reconciled bill. Hourly figure normalized by uploaded source seconds and includes warmup/retry overhead.",
+  "voice": {
+    "ok": true,
+    "enableVoiceClone": true,
+    "frequency": "always",
+    "voice": "default",
+    "audioSegments": 14,
+    "sessionFinished": true,
+    "perceptualSimilarityVerified": false
+  },
+  "ui": {
+    "errors": [],
+    "screens": [
+      {
+        "width": 360,
+        "overflow": false
+      },
+      {
+        "width": 480,
+        "overflow": false
+      }
+    ],
+    "masked": true,
+    "webPageSecretRead": "not available",
+    "contentScriptStorage": {
+      "blocked": true,
+      "keyReadable": false
+    }
+  },
+  "cases": [
+    {
+      "file": "gate-bili-en-zh-original.json",
+      "url": "https://www.bilibili.com/video/BV13rsaeaEgE/",
+      "ok": true,
+      "firstReadyMs": 34930,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 32452
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 3
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 7
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "rulesAfterStop": 0,
+      "normalPolicy": false,
+      "headless": false,
+      "lastSnapshot": {
+        "kind": "initial",
+        "position": 11.827345,
+        "phase": "playing",
+        "segments": 6
+      },
+      "metrics": {
+        "starts": 10,
+        "eligibleStarts": 4,
+        "onsetAbsP95Ms": 179.63799999999975,
+        "completedEnds": 3,
+        "endSignedP50Ms": -34.48000000000029,
+        "endAbsP95Ms": 260.47000000000065,
+        "skipped": 5,
+        "skipRatio": 0.5,
+        "sourceInputSeconds": 86.89999999999989,
+        "translatedAudioSeconds": 92.96000000000001,
+        "bufferCount": 1,
+        "cacheBytes": 4561578,
+        "providerTokens": {
+          "inputAudio": 574,
+          "outputAudio": 1108,
+          "outputText": 396
+        },
+        "estimatedYuan": 0.23984,
+        "estimatedYuanPerInputHour": 9.93583429229
+      },
+      "notes": []
+    },
+    {
+      "file": "gate-bili-zh-en-original.json",
+      "url": "https://www.bilibili.com/video/BV1Gs4y1P7L1/",
+      "ok": true,
+      "firstReadyMs": 35679,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 33964
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 329
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 125
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "rulesAfterStop": 0,
+      "normalPolicy": false,
+      "headless": false,
+      "lastSnapshot": {
+        "kind": "initial",
+        "position": 11.843179,
+        "phase": "playing",
+        "segments": 11
+      },
+      "metrics": {
+        "starts": 18,
+        "eligibleStarts": 10,
+        "onsetAbsP95Ms": 185.403,
+        "completedEnds": 1,
+        "endSignedP50Ms": 0.9069999999997691,
+        "endAbsP95Ms": 0.9069999999997691,
+        "skipped": 7,
+        "skipRatio": 0.3888888888888889,
+        "sourceInputSeconds": 82.29999999999993,
+        "translatedAudioSeconds": 91.60000000000001,
+        "bufferCount": 1,
+        "cacheBytes": 4618610,
+        "providerTokens": {
+          "inputAudio": 609,
+          "outputAudio": 973,
+          "outputText": 410
+        },
+        "estimatedYuan": 0.22104,
+        "estimatedYuanPerInputHour": 9.668821385176193
+      },
+      "notes": []
+    },
+    {
+      "file": "gate-long-original-voice.json",
+      "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g",
+      "ok": false,
+      "error": "Stream stalled 3 times. Aborting",
+      "firstReadyMs": 35846,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        }
+      ],
+      "failureState": {
+        "phase": "error",
+        "position": 29.918528,
+        "inputThrough": 30,
+        "readyThrough": 30,
+        "segments": 15,
+        "epoch": 1
+      },
+      "normalPolicy": false,
+      "headless": false,
+      "lastSnapshot": {
+        "at": 1792056763711,
+        "position": 29.918528,
+        "phase": "buffering",
+        "ready": 30,
+        "segments": 15,
+        "skipped": 8
+      },
+      "memorySamples": [
+        {
+          "at": 1792056754353,
+          "browserRssMiB": 1466.40625,
+          "extensionHeap": {
+            "used": 15209101,
+            "total": 16063477
+          },
+          "cacheBytes": 2708528
+        }
+      ],
+      "metrics": {
+        "starts": 15,
+        "eligibleStarts": 7,
+        "onsetAbsP95Ms": 82.86400000000071,
+        "completedEnds": 3,
+        "endSignedP50Ms": 33.01299999999996,
+        "endAbsP95Ms": 114.47200000000002,
+        "skipped": 8,
+        "skipRatio": 0.5333333333333333,
+        "sourceInputSeconds": 30,
+        "translatedAudioSeconds": 42.160000000000004,
+        "bufferCount": 1,
+        "cacheBytes": 2708528,
+        "providerTokens": {
+          "inputAudio": 273,
+          "outputAudio": 490,
+          "outputText": 171
+        },
+        "estimatedYuan": 0.10642,
+        "estimatedYuanPerInputHour": 12.7704
+      },
+      "notes": []
+    },
+    {
+      "file": "gate-youtube-ja-zh-original.json",
+      "url": "https://www.youtube.com/watch?v=Ky39V29HUrk",
+      "ok": false,
+      "error": "Stream stalled 3 times. Aborting",
+      "firstReadyMs": 43495,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        }
+      ],
+      "failureState": {
+        "phase": "error",
+        "position": 120,
+        "inputThrough": 30,
+        "readyThrough": 120,
+        "segments": 11,
+        "epoch": 1
+      },
+      "normalPolicy": false,
+      "headless": false,
+      "lastSnapshot": {
+        "kind": "initial",
+        "position": 11.892202,
+        "phase": "playing",
+        "segments": 11
+      },
+      "metrics": {
+        "starts": 9,
+        "eligibleStarts": 5,
+        "onsetAbsP95Ms": 153.01600000000093,
+        "completedEnds": 0,
+        "endSignedP50Ms": null,
+        "endAbsP95Ms": null,
+        "skipped": 4,
+        "skipRatio": 0.4444444444444444,
+        "sourceInputSeconds": 30,
+        "translatedAudioSeconds": 26.240000000000006,
+        "bufferCount": 1,
+        "cacheBytes": 1686486,
+        "providerTokens": {
+          "inputAudio": 399,
+          "outputAudio": 295,
+          "outputText": 107
+        },
+        "estimatedYuan": 0.07386,
+        "estimatedYuanPerInputHour": 8.863199999999999
+      },
+      "notes": []
+    },
+    {
+      "file": "gate-long-bili-original.json",
+      "url": "https://www.bilibili.com/video/BV1Fc411Q7bN/",
+      "ok": false,
+      "error": "page.waitForTimeout: Target page, context or browser has been closed",
+      "firstReadyMs": 41994,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        }
+      ],
+      "normalPolicy": true,
+      "headless": false,
+      "lastSnapshot": {
+        "at": 1792058346890,
+        "position": 953.328999,
+        "phase": "playing",
+        "ready": 974.3637500000001,
+        "segments": 120,
+        "skipped": 58
+      },
+      "memorySamples": [
+        {
+          "at": 1792057265309,
+          "browserRssMiB": 1494.703125,
+          "extensionHeap": {
+            "used": 27768981,
+            "total": 46061741
+          },
+          "cacheBytes": 2472434
+        },
+        {
+          "at": 1792057326155,
+          "browserRssMiB": 1439.78125,
+          "extensionHeap": {
+            "used": 51097716,
+            "total": 71123672
+          },
+          "cacheBytes": 6386292
+        },
+        {
+          "at": 1792057386427,
+          "browserRssMiB": 1390.671875,
+          "extensionHeap": {
+            "used": 28231089,
+            "total": 30530437
+          },
+          "cacheBytes": 10353128
+        },
+        {
+          "at": 1792057446795,
+          "browserRssMiB": 1432.84375,
+          "extensionHeap": {
+            "used": 23251841,
+            "total": 24197921
+          },
+          "cacheBytes": 10353128
+        },
+        {
+          "at": 1792057507459,
+          "browserRssMiB": 1557.796875,
+          "extensionHeap": {
+            "used": 31430285,
+            "total": 61991869
+          },
+          "cacheBytes": 12484802
+        },
+        {
+          "at": 1792057567779,
+          "browserRssMiB": 1531.78125,
+          "extensionHeap": {
+            "used": 41039564,
+            "total": 93406176
+          },
+          "cacheBytes": 17473162
+        },
+        {
+          "at": 1792057628071,
+          "browserRssMiB": 1391.8125,
+          "extensionHeap": {
+            "used": 36216663,
+            "total": 53207155
+          },
+          "cacheBytes": 20169980
+        },
+        {
+          "at": 1792057688346,
+          "browserRssMiB": 1517.515625,
+          "extensionHeap": {
+            "used": 68769278,
+            "total": 99913222
+          },
+          "cacheBytes": 26158086
+        },
+        {
+          "at": 1792057748724,
+          "browserRssMiB": 1359.21875,
+          "extensionHeap": {
+            "used": 56979903,
+            "total": 76626123
+          },
+          "cacheBytes": 29570012
+        },
+        {
+          "at": 1792057808994,
+          "browserRssMiB": 1343.1875,
+          "extensionHeap": {
+            "used": 50507922,
+            "total": 105775878
+          },
+          "cacheBytes": 33191426
+        },
+        {
+          "at": 1792057870645,
+          "browserRssMiB": 1298.28125,
+          "extensionHeap": {
+            "used": 43623018,
+            "total": 55006010
+          },
+          "cacheBytes": 37253880
+        },
+        {
+          "at": 1792057931188,
+          "browserRssMiB": 1406.078125,
+          "extensionHeap": {
+            "used": 54009845,
+            "total": 105100397
+          },
+          "cacheBytes": 41505682
+        },
+        {
+          "at": 1792057991494,
+          "browserRssMiB": 1443.3125,
+          "extensionHeap": {
+            "used": 45001878,
+            "total": 53707710
+          },
+          "cacheBytes": 46247346
+        },
+        {
+          "at": 1792058051979,
+          "browserRssMiB": 1319.375,
+          "extensionHeap": {
+            "used": 42567771,
+            "total": 49949139
+          },
+          "cacheBytes": 51329830
+        },
+        {
+          "at": 1792058115062,
+          "browserRssMiB": 1280.515625,
+          "extensionHeap": {
+            "used": 42638353,
+            "total": 96076437
+          },
+          "cacheBytes": 55515442
+        },
+        {
+          "at": 1792058175668,
+          "browserRssMiB": 1385.984375,
+          "extensionHeap": {
+            "used": 62733133,
+            "total": 114208689
+          },
+          "cacheBytes": 60756278
+        },
+        {
+          "at": 1792058236346,
+          "browserRssMiB": 1398.265625,
+          "extensionHeap": {
+            "used": 45181187,
+            "total": 53945811
+          },
+          "cacheBytes": 65315116
+        },
+        {
+          "at": 1792058296736,
+          "browserRssMiB": 1570.734375,
+          "extensionHeap": {
+            "used": 42411690,
+            "total": 49423102
+          },
+          "cacheBytes": 69870620
+        }
+      ],
+      "metrics": {
+        "starts": 0,
+        "eligibleStarts": 0,
+        "onsetAbsP95Ms": null,
+        "completedEnds": 0,
+        "endSignedP50Ms": null,
+        "endAbsP95Ms": null,
+        "skipped": 0,
+        "skipRatio": null,
+        "providerTokens": {
+          "inputAudio": 0,
+          "outputAudio": 0,
+          "outputText": 0
+        },
+        "estimatedYuan": 0,
+        "estimatedYuanPerInputHour": null
+      },
+      "notes": [
+        "网站登录提示曾暂停原播放器，已关闭提示并通过播放按钮恢复。",
+        "长测使用隔离 Chrome，正常自动播放策略。"
+      ]
+    },
+    {
+      "file": "gate-bili-final.json",
+      "url": "https://www.bilibili.com/video/BV1Gs4y1P7L1/",
+      "ok": true,
+      "firstReadyMs": 34860,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 32081
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 121
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 52
+        },
+        {
+          "rapidSeekFinal": 20.917255,
+          "phase": "playing",
+          "epoch": 7
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "rulesAfterStop": 0,
+      "normalPolicy": true,
+      "headless": true,
+      "lastSnapshot": {
+        "kind": "initial",
+        "position": 11.694209,
+        "phase": "playing",
+        "segments": 11
+      },
+      "metrics": {
+        "starts": 22,
+        "eligibleStarts": 10,
+        "onsetAbsP95Ms": 264.27800000000093,
+        "completedEnds": 2,
+        "endSignedP50Ms": -222.47500000000286,
+        "endAbsP95Ms": 222.47500000000286,
+        "skipped": 11,
+        "skipRatio": 0.5,
+        "sourceInputSeconds": 85.19999999999993,
+        "translatedAudioSeconds": 96.07999999999998,
+        "bufferCount": 0,
+        "cacheBytes": 4710778,
+        "providerTokens": {
+          "inputAudio": 609,
+          "outputAudio": 1068,
+          "outputText": 430
+        },
+        "estimatedYuan": 0.23824,
+        "estimatedYuanPerInputHour": 10.066478873239445
+      },
+      "notes": []
+    },
+    {
+      "file": "gate-bili-worker-restart.json",
+      "url": "https://www.bilibili.com/video/BV1Gs4y1P7L1/",
+      "ok": false,
+      "error": "page.waitForTimeout: Target page, context or browser has been closed",
+      "firstReadyMs": 34030,
+      "actions": [
+        {
+          "workerRestart": true,
+          "workerStates": [
+            "running",
+            "stopping",
+            "stopped",
+            "starting",
+            "starting",
+            "starting",
+            "running"
+          ],
+          "sameSession": true
+        },
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        }
+      ],
+      "failureState": null,
+      "normalPolicy": true,
+      "headless": false,
+      "lastSnapshot": {
+        "kind": "initial",
+        "position": 12.911423,
+        "phase": "playing",
+        "segments": 12
+      },
+      "metrics": {
+        "starts": 10,
+        "eligibleStarts": 6,
+        "onsetAbsP95Ms": 68.45199999999974,
+        "completedEnds": 0,
+        "endSignedP50Ms": null,
+        "endAbsP95Ms": null,
+        "skipped": 4,
+        "skipRatio": 0.4,
+        "sourceInputSeconds": 64.30000000000001,
+        "translatedAudioSeconds": 73.03999999999999,
+        "bufferCount": 1,
+        "cacheBytes": 1973174,
+        "providerTokens": {
+          "inputAudio": 490,
+          "outputAudio": 777,
+          "outputText": 342
+        },
+        "estimatedYuan": 0.17812,
+        "estimatedYuanPerInputHour": 9.972503888024882
+      },
+      "notes": []
+    },
+    {
+      "file": "gate-youtube-final-failure.json",
+      "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g",
+      "ok": false,
+      "error": "提前读取请求未通过 YouTube 音轨播放验证，当前版本无法继续。翻译已停止，原声设置已恢复；可以重载视频后再试。",
+      "firstReadyMs": 36276,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        }
+      ],
+      "failureState": {
+        "phase": "error",
+        "position": 0,
+        "inputThrough": 120,
+        "readyThrough": 30,
+        "segments": 15,
+        "epoch": 2
+      },
+      "normalPolicy": false,
+      "headless": true,
+      "restoredAfterError": {
+        "muted": true,
+        "volume": 0.35,
+        "playError": "Native playback wait exceeded 2 seconds"
+      },
+      "rulesAfterError": 0,
+      "lastSnapshot": {
+        "kind": "initial",
+        "position": 12.13883,
+        "phase": "playing",
+        "segments": 15
+      },
+      "metrics": {
+        "starts": 14,
+        "eligibleStarts": 9,
+        "onsetAbsP95Ms": 152.37300000000076,
+        "completedEnds": 1,
+        "endSignedP50Ms": 69.46399999999997,
+        "endAbsP95Ms": 69.46399999999997,
+        "skipped": 5,
+        "skipRatio": 0.35714285714285715,
+        "sourceInputSeconds": 30,
+        "translatedAudioSeconds": 41.040000000000006,
+        "bufferCount": 0,
+        "cacheBytes": 2636846,
+        "providerTokens": {
+          "inputAudio": 266,
+          "outputAudio": 483,
+          "outputText": 169
+        },
+        "estimatedYuan": 0.10482,
+        "estimatedYuanPerInputHour": 12.578399999999998
+      },
+      "notes": []
+    }
+  ],
+  "siteReports": [
+    {
+      "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g",
+      "at": "2026-10-15T09:11:25.395Z",
+      "status": 200,
+      "title": "[1hr Talk] Intro to Large Language Models - YouTube",
+      "playability": null,
+      "nativePlayer": {
+        "position": 4.524623,
+        "paused": false,
+        "readyState": 4,
+        "buffered": [
+          [
+            0,
+            32.031999
+          ]
+        ]
+      },
+      "capture": {
+        "ok": true,
+        "value": {
+          "responses": 4,
+          "accepted": 3,
+          "lastError": "",
+          "sources": [
+            {
+              "tabId": 1460129658,
+              "identity": "youtube:zjkBMFhNj_g:",
+              "host": "rr4---sn-a5m7lnld.googlevideo.com",
+              "sabr": true
+            }
+          ]
+        }
+      },
+      "candidates": [
+        {
+          "site": "youtube",
+          "duration": 3587.701,
+          "width": 854,
+          "height": 480,
+          "sourceStatus": "ready",
+          "ad": false,
+          "mime": "application/vnd.yt-ump",
+          "host": "rr4---sn-a5m7lnld.googlevideo.com"
+        }
+      ],
+      "prefetch": {
+        "ok": true,
+        "samples": 480000,
+        "rms": 0.047379878549074744,
+        "window": [
+          0,
+          30
+        ],
+        "decodedStart": 0,
+        "decodedEnd": 30.06984126984127
+      },
+      "pausedDuringPrefetch": true
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g",
+      "at": "2026-10-15T09:57:37.175Z",
+      "status": 200,
+      "title": "[1hr Talk] Intro to Large Language Models - YouTube",
+      "playability": null,
+      "nativePlayer": {
+        "position": 25.827358,
+        "paused": false,
+        "readyState": 4,
+        "buffered": [
+          [
+            0,
+            60.001
+          ]
+        ]
+      },
+      "capture": {
+        "ok": true,
+        "value": {
+          "responses": 20,
+          "accepted": 7,
+          "lastError": "",
+          "sources": [
+            {
+              "tabId": 1262054012,
+              "identity": "youtube:zjkBMFhNj_g:",
+              "host": "rr2---sn-a5meknd6.googlevideo.com",
+              "sabr": true,
+              "poTokenBytes": 92
+            }
+          ]
+        }
+      },
+      "candidates": [
+        {
+          "site": "youtube",
+          "duration": 3587.701,
+          "width": 854,
+          "height": 480,
+          "sourceStatus": "ready",
+          "ad": false,
+          "mime": "application/vnd.yt-ump",
+          "host": "rr2---sn-a5meknd6.googlevideo.com"
+        }
+      ],
+      "prefetch": {
+        "id": "probe",
+        "ok": false,
+        "error": "YouTube 尚未完成音轨播放验证，无法提前读取所需片段。请回到原播放器播放后重新扫描；当前翻译已停止。",
+        "diagnostics": [
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 45206,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 45715,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 46234,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 46788,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 47269,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 47809,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 48321,
+              "backoff": 0
+            }
+          },
+          {
+            "host": "rr2---sn-a5meknd6.googlevideo.com",
+            "time": "69892",
+            "headers": [],
+            "protection": 2,
+            "policy": {
+              "target": 48860,
+              "backoff": 0
+            }
+          }
+        ]
+      },
+      "pausedDuringPrefetch": false
+    },
+    {
+      "url": "https://www.bilibili.com/video/BV13rsaeaEgE/",
+      "at": "2026-10-15T09:32:20.346Z",
+      "status": 200,
+      "title": "【TED科普】如何早起不疲惫？_哔哩哔哩_bilibili",
+      "playability": null,
+      "nativePlayer": {
+        "position": 7.853144,
+        "paused": false,
+        "readyState": 4,
+        "buffered": [
+          [
+            0.066,
+            50.066
+          ]
+        ]
+      },
+      "capture": {
+        "ok": true,
+        "value": {
+          "responses": 27,
+          "accepted": 13,
+          "lastError": "",
+          "sources": [
+            {
+              "tabId": 851436806,
+              "identity": "bilibili:/video/BV13rsaeaEgE/:1",
+              "host": "upos-sz-mirrorcos.bilivideo.com",
+              "sabr": false
+            }
+          ]
+        }
+      },
+      "candidates": [
+        {
+          "site": "bilibili",
+          "duration": 536,
+          "width": 640,
+          "height": 360,
+          "sourceStatus": "ready",
+          "ad": false,
+          "mime": "application/octet-stream",
+          "host": "upos-sz-mirrorcos.bilivideo.com"
+        }
+      ],
+      "prefetch": {
+        "ok": true,
+        "samples": 48000,
+        "rms": 0.1411081518144473,
+        "window": [
+          68.918708,
+          71.918708
+        ],
+        "decodedStart": 68.82358276643991,
+        "decodedEnd": 71.98149659863945
+      },
+      "pausedDuringPrefetch": true
+    },
+    {
+      "url": "https://www.bilibili.com/video/BV1ES4y157iR/",
+      "at": "2026-10-15T09:32:45.423Z",
+      "status": 200,
+      "title": "【TED】TED-ED科普科教动画【1-100集】/ 高清英文字幕 / 看动画学英语 / 练听力学科学 / 最全TED科教动画集锦_哔哩哔哩_bilibili",
+      "playability": null,
+      "nativePlayer": {
+        "position": 10.302449,
+        "paused": false,
+        "readyState": 4,
+        "buffered": [
+          [
+            0.023,
+            70.093
+          ]
+        ]
+      },
+      "capture": {
+        "ok": true,
+        "value": {
+          "responses": 65,
+          "accepted": 30,
+          "lastError": "",
+          "sources": [
+            {
+              "tabId": 851436808,
+              "identity": "bilibili:/video/BV1ES4y157iR/:1",
+              "host": "upos-sz-mirrorhw.bilivideo.com",
+              "sabr": false
+            }
+          ]
+        }
+      },
+      "candidates": [
+        {
+          "site": "bilibili",
+          "duration": 299,
+          "width": 640,
+          "height": 360,
+          "sourceStatus": "ready",
+          "ad": false,
+          "mime": "application/octet-stream",
+          "host": "upos-sz-mirrorhw.bilivideo.com"
+        }
+      ],
+      "prefetch": {
+        "ok": true,
+        "samples": 48000,
+        "rms": 0.08967806385457103,
+        "window": [
+          70.329498,
+          73.329498
+        ],
+        "decodedStart": 70.26340136054422,
+        "decodedEnd": 73.39809523809524
+      },
+      "pausedDuringPrefetch": true
+    }
+  ]
+}

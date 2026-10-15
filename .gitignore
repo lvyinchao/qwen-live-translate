@@ -1,0 +1,12 @@
+node_modules/
+.wxt/
+.output/
+work/
+.env*
+!.env.example
+outputs/*.zip
+outputs/extension/
+outputs/SHA256SUMS.txt
+outputs/FetchV-*.md
+.DS_Store
+*.log

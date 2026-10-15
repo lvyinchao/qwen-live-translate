@@ -1,0 +1,11 @@
+{
+  "archiveLoaded": true,
+  "sourceInstall": true,
+  "typecheck": true,
+  "tests": 30,
+  "build": true,
+  "identicalFiles": 19,
+  "actualCredentialAbsent": true,
+  "zipCrcPassed": true,
+  "testBrowserProfilesRemoved": 56
+}

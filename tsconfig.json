@@ -1,0 +1,11 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "types": ["chrome", "vitest/globals"],
+    "noUncheckedIndexedAccess": true
+  },
+  "exclude": ["node_modules", "work", "outputs", ".output"]
+}
