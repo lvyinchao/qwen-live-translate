@@ -38,6 +38,7 @@ try {
       'native-seek-bilibili-verification.json',
       'native-tencent-translation-verification.json',
       'native-tencent-translation.png',
+      'youtube-player-verification.json',
     ],
     { cwd: output },
   );
@@ -80,6 +81,7 @@ try {
     'native-seek-bilibili-verification.json',
     'native-tencent-translation-verification.json',
     'native-tencent-translation.png',
+    'youtube-player-verification.json',
   ])
     await fs.copyFile(
       path.join(output, file),

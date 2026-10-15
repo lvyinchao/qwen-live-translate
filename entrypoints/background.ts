@@ -3,6 +3,7 @@ import {
   inspectVideos,
   mediaKind,
   chooseGenericSource,
+  youtubePlayer,
   type ObservedMedia,
 } from '../lib/discovery';
 import { acceptEngineState } from '../lib/session';
@@ -194,8 +195,15 @@ export default defineBackground(() => {
       ] as { identity: string; items: ObservedMedia[] } | undefined);
     const items = resources?.identity === meta.identity ? resources.items : [];
     const candidates = frames.flatMap((frame) => {
-      const visible = (frame.result ?? []).filter(
-        (v) => v.width > 100 && v.height > 60,
+      // Watch-page previews and embedded players must not inherit the main
+      // video's identity, audio source or playback controls.
+      if (meta.site === 'youtube' && frame.frameId !== 0) return [];
+      const scanned =
+        meta.site === 'youtube'
+          ? youtubePlayer(frame.result ?? [])
+          : (frame.result ?? []);
+      const visible = scanned.filter(
+        (v) => v.displayed && v.width > 100 && v.height > 60,
       );
       const players = visible.some((v) => v.duration > 0)
         ? visible.filter((v) => v.duration > 0)
@@ -237,6 +245,7 @@ export default defineBackground(() => {
     // Show observed streams even when the site has not exposed a controllable
     // video element. Discovery alone must not imply synchronous playback support.
     for (const frameId of new Set(items.map((r) => r.frameId))) {
+      if (meta.site === 'youtube') continue;
       if (candidates.some((c) => c.frameId === frameId)) continue;
       const frameItems = items.filter((r) => r.frameId === frameId);
       for (const kind of new Set(frameItems.map((r) => r.kind))) {

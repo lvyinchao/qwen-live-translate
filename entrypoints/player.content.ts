@@ -1,7 +1,7 @@
 import { decode64 } from '../lib/audio';
 import { activeSegment, planDub, clockDiscontinuity } from '../lib/timeline';
 import { mediaIdentity } from '../lib/adapters';
-import { pageVideos } from '../lib/discovery';
+import { pageVideos, inspectVideos, youtubePlayer } from '../lib/discovery';
 import type { PlaybackSession, TranslationSegment } from '../lib/types';
 import { normalizeUILanguage, t } from '../lib/i18n';
 import type { UILanguage } from '../lib/types';
@@ -218,7 +218,9 @@ export default defineContentScript({
             !video.isConnected ||
             mediaIdentity(location.href) !==
               (session.candidate.frameMediaId ?? session.candidate.mediaId) ||
-            document.querySelector('#movie_player.ad-showing')
+            document.querySelector('#movie_player.ad-showing') ||
+            (session.candidate.site === 'youtube' &&
+              youtubePlayer(inspectVideos(true))[0]?.id !== video.dataset.qvdId)
           ) {
             this.send('player:lost');
             this.destroy();
@@ -484,7 +486,11 @@ export default defineContentScript({
         return;
       }
       if (message.type === 'player:highlight') {
-        const v = pageVideos().find((v) => v.dataset.qvdId === message.id);
+        const allowed =
+          !/(^|\.)youtube\.com$/.test(location.hostname) ||
+          youtubePlayer(inspectVideos(true))[0]?.id === message.id;
+        const v =
+          allowed && pageVideos().find((v) => v.dataset.qvdId === message.id);
         if (v) {
           v.scrollIntoView({ behavior: 'smooth', block: 'center' });
           const outline = v.style.outline;
@@ -499,8 +505,12 @@ export default defineContentScript({
       if (message.type === 'player:attach') {
         player?.destroy();
         const s = message.session as PlaybackSession;
+        const selected =
+          s.candidate.site === 'youtube'
+            ? youtubePlayer(inspectVideos(true))[0]?.id
+            : s.candidate.id;
         const video = pageVideos().find(
-          (v) => v.dataset.qvdId === s.candidate.id,
+          (v) => selected === s.candidate.id && v.dataset.qvdId === selected,
         );
         if (video) player = new Player(video, s);
         respond({ ok: Boolean(video) });

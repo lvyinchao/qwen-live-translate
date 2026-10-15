@@ -105,26 +105,82 @@ export function pageVideos(): HTMLVideoElement[] {
   return result;
 }
 // Serialized by scripting.executeScript: do not capture imported functions.
-export function inspectVideos() {
+export function inspectVideos(mainOnly = false) {
   const videos: HTMLVideoElement[] = [];
   const walk = (root: Document | ShadowRoot) => {
     videos.push(...root.querySelectorAll('video'));
     for (const element of root.querySelectorAll('*'))
       if (element.shadowRoot) walk(element.shadowRoot);
   };
-  walk(document);
-  return videos.map((v, index) => ({
-    id: (v.dataset.qvdId ??= crypto.randomUUID()),
-    title: document.title,
-    poster: v.poster,
-    duration: Number.isFinite(v.duration) ? v.duration : 0,
-    currentTime: v.currentTime,
-    width: v.videoWidth || v.clientWidth,
-    height: v.videoHeight || v.clientHeight,
-    paused: v.paused,
-    index,
-    url: v.currentSrc || v.src || v.querySelector('source')?.src || '',
-    frameUrl: location.href,
-    protected: Boolean(v.mediaKeys),
-  }));
+  if (mainOnly)
+    videos.push(
+      ...document.querySelectorAll<HTMLVideoElement>('#movie_player video'),
+    );
+  else walk(document);
+  const identityKey = Symbol.for('qvd.video.elementIdentity');
+  const assigned = new Set(
+    videos
+      .map((v) => (v as any)[identityKey] as string | undefined)
+      .filter(Boolean),
+  );
+  const seen = new Set<string>();
+  return videos.map((v, index) => {
+    // Cloned/replaced media elements can inherit dataset attributes. IDs must
+    // identify one element, otherwise a command may bind to an old player.
+    const known = (v as any)[identityKey] as string | undefined;
+    if (known) v.dataset.qvdId = known;
+    else if (
+      !v.dataset.qvdId ||
+      seen.has(v.dataset.qvdId) ||
+      assigned.has(v.dataset.qvdId)
+    )
+      v.dataset.qvdId = crypto.randomUUID();
+    (v as any)[identityKey] = v.dataset.qvdId;
+    seen.add(v.dataset.qvdId);
+    const box = v.getBoundingClientRect();
+    const style = getComputedStyle(v);
+    return {
+      id: v.dataset.qvdId,
+      title: document.title,
+      poster: v.poster,
+      duration: Number.isFinite(v.duration) ? v.duration : 0,
+      currentTime: v.currentTime,
+      width: v.videoWidth || v.clientWidth,
+      height: v.videoHeight || v.clientHeight,
+      paused: v.paused,
+      index,
+      url: v.currentSrc || v.src || v.querySelector('source')?.src || '',
+      frameUrl: location.href,
+      protected: Boolean(v.mediaKeys),
+      displayed:
+        box.width > 0 &&
+        box.height > 0 &&
+        style.visibility !== 'hidden' &&
+        style.visibility !== 'collapse' &&
+        style.display !== 'none' &&
+        (v.checkVisibility?.({
+          checkOpacity: true,
+          checkVisibilityCSS: true,
+        }) ??
+          true),
+      displayWidth: box.width,
+      displayHeight: box.height,
+      youtubeMain:
+        Boolean(v.closest('#movie_player')) &&
+        v.classList.contains('html5-main-video'),
+    };
+  });
+}
+
+/** One watch-page player owns all YouTube resolution/codec variants. */
+export function youtubePlayer(videos: ReturnType<typeof inspectVideos>) {
+  return videos
+    .filter((v) => v.displayed && v.youtubeMain)
+    .sort(
+      (a, b) =>
+        Number(a.paused) - Number(b.paused) ||
+        b.displayWidth * b.displayHeight - a.displayWidth * a.displayHeight ||
+        a.index - b.index,
+    )
+    .slice(0, 1);
 }
