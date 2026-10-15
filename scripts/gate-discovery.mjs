@@ -64,6 +64,8 @@ try {
 
     'https://v.youku.com/v_show/id_qvd_fixture.html':
       '<video width="640" height="360" src="https://cdn.youku.com/movie.mp4?signature=retain"></video>',
+    'https://v.youku.com/v_show/id_qvd_late.html':
+      '<div>Delayed player fixture</div>',
     'https://www.iqiyi.com/v_qvd_fixture.html':
       '<video width="640" height="360"></video><script>fetch("https://cdn.iqiyi.com/audio.m4a")</script>',
     'https://v.qq.com/x/cover/qvd-fixture.html':
@@ -234,6 +236,32 @@ try {
   assert.match(inlineMedia.source.hlsManifest, /token=keep/);
   report.checks.push(
     'Actual MAIN-world metadata observer, isolated bridge and background validation recover a Tencent inline HLS playlist from a fetch response',
+  );
+  // Delayed player insertion emits no media request: only continued scans
+  // can update the already-open panel in this controlled case.
+  await page.goto('https://v.youku.com/v_show/id_qvd_late.html');
+  await panel.reload();
+  await panel
+    .getByText('Watching for audio. Available sources appear automatically.', {
+      exact: true,
+    })
+    .waitFor();
+  await page.bringToFront();
+  await page.waitForTimeout(3500);
+  assert.equal(await panel.locator('.video-choice').count(), 0);
+  await page.evaluate(() => {
+    const v = document.createElement('video');
+    v.width = 640;
+    v.height = 360;
+    document.body.append(v);
+  });
+  await panel.locator('.video-choice').waitFor({ timeout: 6500 });
+  assert.equal(
+    await panel.getByRole('button', { name: /compatib/i }).count(),
+    0,
+  );
+  report.checks.push(
+    'An open panel discovers a delayed player automatically without a new network event or a manual rescan; no compatibility player entry remains',
   );
   report.passed = true;
 } catch (e) {

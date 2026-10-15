@@ -10,6 +10,7 @@ export interface ObservedMedia {
   headers: Record<string, string>;
   hlsManifest?: string;
   protected?: boolean;
+  playerId?: string;
 }
 export function mediaKind(url: string, mime: string): MediaKind | undefined {
   if (!safeMediaUrl(url, true)) return;
@@ -26,7 +27,7 @@ export function mediaKind(url: string, mime: string): MediaKind | undefined {
     return 'file';
 }
 export function chooseGenericSource(
-  video: { url: string; frameUrl: string; protected: boolean },
+  video: { id?: string; url: string; frameUrl: string; protected: boolean },
   resources: ObservedMedia[],
   identity: string,
   playersInFrame: number,
@@ -42,15 +43,32 @@ export function chooseGenericSource(
       ? { url: video.url, mime: '', kind: direct, headers: {} }
       : undefined;
   const playable = resources.filter(
-    (r) => r.kind === 'file' || r.kind === 'hls',
+    (r) =>
+      (!r.playerId || r.playerId === video.id) &&
+      (r.kind === 'file' || r.kind === 'hls'),
   );
+  const attached = playable.find((r) => r.playerId && r.playerId === video.id);
   const audio = playable.filter((r) => r.mime.startsWith('audio/'));
   const choices = audio.length ? audio : playable;
-  if (resources.some((r) => r.protected))
+  if (
+    resources.some(
+      (r) => r.protected && (!r.playerId || r.playerId === video.id),
+    )
+  )
     return { reason: '检测到受保护视频，暂不支持提前翻译' };
   const resource =
     chosen ??
-    (playersInFrame === 1 && choices.length === 1 ? choices[0] : undefined);
+    attached ??
+    (playersInFrame === 1 &&
+    choices.length === 1 &&
+    // A short ad MP4 can coexist with the main player's TS/fMP4 segments.
+    // Being the only standalone file does not associate it with the player.
+    !(
+      choices[0]?.kind === 'file' &&
+      resources.some((r) => r.kind === 'fragment')
+    )
+      ? choices[0]
+      : undefined);
   if (resource)
     return {
       source: {

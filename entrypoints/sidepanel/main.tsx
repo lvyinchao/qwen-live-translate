@@ -1,5 +1,4 @@
-import { compatError, type CompatState } from '../../lib/compat';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   AudioLines,
@@ -78,30 +77,48 @@ function App() {
   const [videos, setVideos] = useState<MediaCandidate[]>([]);
   const [selected, setSelected] = useState('');
   const [session, setSession] = useState<PlaybackSession | null>(null);
-  const [compat, setCompat] = useState<CompatState | null>(null);
   const [files, setFiles] = useState<LocalFileStatus>(EMPTY_FILE_STATUS);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<chrome.tabs.Tab>();
+  const scanning = useRef(false);
+  const mounted = useRef(true);
   const scan = async () => {
-    const [current] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    setTab(current);
-    if (!current?.id || !current.url || !/^https?:\/\//.test(current.url)) {
-      setVideos([]);
-      return;
+    if (scanning.current) return;
+    scanning.current = true;
+    try {
+      const [current] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (!mounted.current) return;
+      setTab(current);
+      if (!current?.id || !current.url || !/^https?:\/\//.test(current.url)) {
+        setVideos([]);
+        return;
+      }
+      const items = await call<MediaCandidate[]>('media:discover', {
+        tabId: current.id,
+      });
+      const [active] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (
+        !mounted.current ||
+        active?.id !== current.id ||
+        active?.url !== current.url
+      )
+        return;
+      items.sort((a, b) => b.width * b.height - a.width * a.height);
+      setVideos(items);
+      setSelected((old) =>
+        items.some((v) => v.id === old) ? old : (items[0]?.id ?? ''),
+      );
+    } finally {
+      scanning.current = false;
     }
-    const items = await call<MediaCandidate[]>('media:discover', {
-      tabId: current.id,
-    });
-    items.sort((a, b) => b.width * b.height - a.width * a.height);
-    setVideos(items);
-    setSelected((old) =>
-      items.some((v) => v.id === old) ? old : (items[0]?.id ?? ''),
-    );
   };
   const act = async (name: string, fn: () => Promise<void>) => {
     setBusy(name);
@@ -116,6 +133,7 @@ function App() {
     }
   };
   useEffect(() => {
+    mounted.current = true;
     void call<PublicSettings>('settings:get')
       .then((s) => {
         setSettings(s);
@@ -124,7 +142,6 @@ function App() {
       .catch((e) => setError(e.message))
       .finally(() => setLoaded(true));
     void call<PlaybackSession | null>('session:get').then(setSession);
-    void call<CompatState | null>('compat:get').then(setCompat);
     void call<LocalFileStatus>('files:status')
       .then(setFiles)
       .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
@@ -140,16 +157,24 @@ function App() {
         }, 500);
     };
     const activated = () => void scan().catch(() => {});
+    // Network events cannot detect a newly replaced player or a delayed src
+    // assignment on their own. Keep watching while this panel is open.
+    const polling = setInterval(activated, 3000);
+    const updated = (
+      _id: number,
+      change: { url?: string; status?: string },
+      current: chrome.tabs.Tab,
+    ) => {
+      if (current.active && (change.url || change.status === 'complete'))
+        activated();
+    };
     chrome.runtime.onMessage.addListener(listener);
     chrome.tabs.onActivated.addListener(activated);
+    chrome.tabs.onUpdated.addListener(updated);
     const onSettings = (
       changes: Record<string, chrome.storage.StorageChange>,
       area: string,
     ) => {
-      if (area === 'session' && changes.compatSession)
-        setCompat(
-          (changes.compatSession.newValue as CompatState | undefined) ?? null,
-        );
       if (area === 'local' && changes.settings)
         setSettings((old) => ({
           ...old,
@@ -161,9 +186,12 @@ function App() {
     };
     chrome.storage.onChanged.addListener(onSettings);
     return () => {
+      mounted.current = false;
+      clearInterval(polling);
       clearTimeout(scanTimer);
       chrome.runtime.onMessage.removeListener(listener);
       chrome.tabs.onActivated.removeListener(activated);
+      chrome.tabs.onUpdated.removeListener(updated);
       chrome.storage.onChanged.removeListener(onSettings);
     };
   }, []);
@@ -513,6 +541,10 @@ function App() {
                 </div>
               )}
             </section>
+            <p className="hint" role="status">
+              <RefreshCw size={14} />
+              {t('持续检测音轨中，找到可用资源后自动更新。')}
+            </p>
             {candidate?.site === 'youtube' && (
               <p className="hint">
                 <CircleHelp size={14} />
@@ -556,7 +588,7 @@ function App() {
                 {t('先连接百炼账户')}
                 <ArrowRight size={16} />
               </button>
-            ) : session || compat ? (
+            ) : session ? (
               <button
                 className="stop"
                 disabled={!!busy}
@@ -564,7 +596,6 @@ function App() {
                   act('stop', async () => {
                     await call('session:stop');
                     setSession(null);
-                    setCompat(null);
                   })
                 }
               >
@@ -593,62 +624,6 @@ function App() {
                 {t('开始翻译')}
                 <ArrowRight size={16} />
               </button>
-            )}
-            {!session && !compat && settings.hasKey && (
-              <section className="compat-entry">
-                <button
-                  className="secondary"
-                  disabled={
-                    !!busy ||
-                    !candidate ||
-                    candidate.detectionOnly ||
-                    candidate.protected ||
-                    candidate.ad
-                  }
-                  onClick={() =>
-                    act('compat', async () => {
-                      setCompat(
-                        await call<CompatState>('compat:start', {
-                          candidate,
-                          language,
-                        }),
-                      );
-                      setNotice(t('兼容播放器已打开'));
-                    })
-                  }
-                >
-                  <Video size={17} />
-                  {busy === 'compat' ? t('正在准备…') : t('用兼容播放器翻译')}
-                </button>
-                <p>
-                  {t(
-                    '采集标签页画面与声音，原标签页静音，在新窗口缓冲播放。首次准备约需一分钟或更久。',
-                  )}
-                </p>
-              </section>
-            )}
-            {compat && (
-              <section className="compat-entry">
-                <strong>{t('兼容播放器')}</strong>
-                <p>
-                  {t('已采集 {captured} · 已翻译 {ready}', {
-                    captured: time(compat.capturedThrough),
-                    ready: time(compat.readyThrough),
-                  })}
-                </p>
-                <button
-                  onClick={() =>
-                    void act('focus', async () => {
-                      await call('compat:focus');
-                    })
-                  }
-                >
-                  {t('打开播放器')}
-                </button>
-                {compat.error && (
-                  <p role="alert">{compatError(compat.error, locale)}</p>
-                )}
-              </section>
             )}
             {session ? (
               <section className="session-section">
@@ -849,10 +824,7 @@ function App() {
         </section>
         {(error || session?.error) && (
           <div className="feedback error" role="alert">
-            {compatError(
-              localizeMessage(error || session?.error || '', locale),
-              locale,
-            )}
+            {localizeMessage(error || session?.error || '', locale)}
           </div>
         )}
         {notice && (

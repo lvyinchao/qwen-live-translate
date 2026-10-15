@@ -1,0 +1,127 @@
+{
+  "at": "2026-10-15T13:53:27.327Z",
+  "scope": "Original page mode, anonymous real site, no model call",
+  "discoveries": [
+    {
+      "position": 1180.15,
+      "video": {
+        "duration": 2814.9319999999984,
+        "currentTime": 1180.15,
+        "protected": false
+      },
+      "candidates": [
+        {
+          "duration": 2814.9319999999984,
+          "status": "ready",
+          "source": {
+            "url": "https://ltscsy.qq.com/…/gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.ts.m3u8",
+            "kind": "hls",
+            "inline": true,
+            "sabr": false
+          }
+        }
+      ],
+      "decode": {
+        "id": "seek",
+        "ok": true,
+        "decodedStart": 1180.074,
+        "decodedEnd": 1210.2393333333334
+      }
+    },
+    {
+      "position": 120,
+      "video": {
+        "duration": 2814.9319999999984,
+        "currentTime": 120,
+        "protected": false
+      },
+      "candidates": [
+        {
+          "duration": 2814.9319999999984,
+          "status": "ready",
+          "source": {
+            "url": "https://ltscsy.qq.com/…/gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.ts.m3u8",
+            "kind": "hls",
+            "inline": true,
+            "sabr": false
+          }
+        }
+      ],
+      "decode": {
+        "id": "seek",
+        "ok": true,
+        "decodedStart": 119.936,
+        "decodedEnd": 150.05866666666665
+      }
+    }
+  ],
+  "responses": [
+    {
+      "url": "https://ltscsy.qq.com/…/08_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "950716"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/09_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "467180"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/010_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "669280"
+    },
+    {
+      "url": "https://defaultts.tc.qq.com/…/00_gzc_1000127_0b53taaa2aaa6aafoqv2qvvnnggdbwpqacsa.f322012.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "392732"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/011_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "383332"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/012_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "253800"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/013_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "310388"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/014_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "316216"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0119_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.4.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "500456"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0120_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "514180"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0121_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "526588"
+    }
+  ],
+  "page": "https://v.qq.com/…/z4102cn0lk3.html"
+}

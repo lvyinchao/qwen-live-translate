@@ -1,0 +1,159 @@
+{
+  "at": "2026-10-15T14:00:44.117Z",
+  "scope": "Original page mode, anonymous real site, actual Qwen translation with locally configured credentials",
+  "discoveries": [
+    {
+      "position": 1180.15,
+      "video": {
+        "duration": 2806.8259999999987,
+        "currentTime": 1180.15,
+        "protected": false
+      },
+      "candidates": [
+        {
+          "duration": 2806.8259999999987,
+          "status": "ready",
+          "source": {
+            "url": "https://ltscsy.qq.com/…/gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.ts.m3u8",
+            "kind": "hls",
+            "inline": true,
+            "sabr": false
+          }
+        }
+      ],
+      "decode": {
+        "id": "seek",
+        "ok": true,
+        "decodedStart": 1180.0746666666666,
+        "decodedEnd": 1210.24
+      }
+    }
+  ],
+  "responses": [
+    {
+      "url": "https://ltscsy.qq.com/…/08_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "950716"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/09_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "467180"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/010_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "669280"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/011_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "383332"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/012_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "253800"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/013_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "310388"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/014_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.1.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "316216"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0120_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "514180"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0121_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "526588"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0122_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "364344"
+    },
+    {
+      "url": "https://v.qq.com/…/575391dd-6947-4a9d-b4bc-7b6e65b3d108",
+      "status": 206,
+      "mime": "audio/wav",
+      "length": "42284",
+      "range": "bytes 0-42283/42284"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0123_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "432024"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0124_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "354944"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0125_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "481092"
+    },
+    {
+      "url": "https://ltscsy.qq.com/…/0126_gzc_1000102_0b53eqariaabiiabbo56sjvmcjgdcquaceca.f322062.5.ts",
+      "status": 200,
+      "mime": "video/MP2T",
+      "length": "585620"
+    }
+  ],
+  "page": "https://v.qq.com/…/z4102cn0lk3.html",
+  "translation": {
+    "language": "en",
+    "start": 1180.15,
+    "firstReadyMs": 33623,
+    "readyThrough": 1210.15,
+    "segments": 1,
+    "playback": {
+      "phase": "playing",
+      "position": 1190.95449,
+      "segments": [
+        {
+          "start": 1180.15,
+          "end": 1180.662,
+          "sourceText": "Oh! ",
+          "text": "Oh! "
+        }
+      ]
+    },
+    "audioEvents": [
+      {
+        "epoch": 1,
+        "kind": "start",
+        "segmentId": "item_KdBk3DD5LDeaYoI6gkwNQ",
+        "mediaTime": 1180.180997,
+        "error": 0.030996999999842956,
+        "partial": false,
+        "rate": 1.7187500000001894,
+        "type": "player:metric",
+        "at": 1792072925273
+      }
+    ],
+    "stopped": true
+  }
+}

@@ -14,7 +14,7 @@ const mediaCache = new RangeMediaCache();
 
 const inputs = new Map<string, Input>();
 self.onmessage = async (event) => {
-  const { id, type, source, start, end } = event.data;
+  const { id, type, source, start, end, expectedDuration } = event.data;
   if (type === 'cancel') {
     inputs.get(id)?.dispose();
     inputs.delete(id);
@@ -69,6 +69,16 @@ self.onmessage = async (event) => {
     if (!track) throw new Error('媒体资源没有可解码的音轨');
     if (!(await track.canDecode()))
       throw new Error('当前浏览器不支持这条音轨的编码格式');
+    if (!sabr && source.kind !== 'hls' && expectedDuration > 0) {
+      const duration = await track.getDurationFromMetadata();
+      if (
+        duration !== null &&
+        duration < expectedDuration - Math.max(2, expectedDuration * 0.01)
+      )
+        throw new Error(
+          '发现的音频资源短于当前视频，可能属于广告或单个分片；未找到完整音轨，请重新扫描',
+        );
+    }
     const output = new Float32Array(Math.ceil((end - start) * 16000));
     const sink = new AudioSampleSink(track);
     let count = 0,

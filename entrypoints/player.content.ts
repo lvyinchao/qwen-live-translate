@@ -12,34 +12,6 @@ export default defineContentScript({
   runAt: 'document_start',
   main(ctx) {
     let player: Player | null = null;
-    let capture: {
-      id: string;
-      video: HTMLVideoElement;
-      muted: boolean;
-      volume: number;
-      rate: number;
-      paused: boolean;
-      abort: AbortController;
-      timer: ReturnType<typeof setInterval>;
-    } | null = null;
-    const restoreCapture = () => {
-      const old = capture;
-      if (!old) return;
-      capture = null;
-      old.abort.abort();
-      clearInterval(old.timer);
-      old.video.muted = old.muted;
-      old.video.volume = old.volume;
-      old.video.playbackRate = old.rate;
-      if (old.paused || old.video.ended) old.video.pause();
-      else void old.video.play().catch(() => {});
-    };
-    const captureEvent = (type: string) => {
-      if (capture)
-        void chrome.runtime
-          .sendMessage({ target: 'background', type, id: capture.id })
-          .catch(() => restoreCapture());
-    };
     let locale: UILanguage = 'en';
     let localeVersion = 0;
     void chrome.runtime
@@ -504,74 +476,6 @@ export default defineContentScript({
     }
     chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (sender.id !== chrome.runtime.id) return;
-      if (message.type === 'capture:prepare') {
-        restoreCapture();
-        player?.destroy();
-        player = null;
-        const video = pageVideos().find(
-          (v) => v.dataset.qvdId === message.candidateId,
-        );
-        if (!video || video.mediaKeys) {
-          respond({
-            ok: false,
-            error: 'The selected player is missing or protected.',
-          });
-          return;
-        }
-        const abort = new AbortController();
-        const old = {
-          id: message.id,
-          video,
-          muted: video.muted,
-          volume: video.volume,
-          rate: video.playbackRate,
-          paused: video.paused,
-          abort,
-          timer: setInterval(() => {
-            if (!video.isConnected) captureEvent('compat:lost');
-          }, 1000),
-        };
-        capture = old;
-        video.pause();
-        video.playbackRate = 1;
-        video.muted = false;
-        video.volume = 1;
-        video.addEventListener('ended', () => captureEvent('compat:ended'), {
-          signal: abort.signal,
-        });
-        video.addEventListener('seeking', () => captureEvent('compat:lost'), {
-          signal: abort.signal,
-        });
-        respond({ ok: true });
-        return;
-      }
-      if (message.type === 'capture:restore') {
-        restoreCapture();
-        respond({ ok: true });
-        return;
-      }
-      if (message.type === 'capture:control') {
-        if (!capture || capture.id !== message.id) {
-          respond({ ok: false, error: 'Capture source was replaced.' });
-          return;
-        }
-        if (message.action === 'pause') {
-          capture.video.pause();
-          respond({ ok: true });
-          return;
-        }
-        if (message.action === 'play') {
-          void capture.video.play().then(
-            () => respond({ ok: true }),
-            () =>
-              respond({
-                ok: false,
-                error: 'Click Play in the source tab to allow capture.',
-              }),
-          );
-          return true;
-        }
-      }
       if (message.type === 'ui:changed') {
         localeVersion++;
         locale = normalizeUILanguage(message.language);
@@ -632,9 +536,6 @@ export default defineContentScript({
         return;
       }
     });
-    ctx.onInvalidated(() => {
-      player?.destroy();
-      restoreCapture();
-    });
+    ctx.onInvalidated(() => player?.destroy());
   },
 });

@@ -1,14 +1,15 @@
 {
-  "at": "2026-10-15T12:07:25.960Z",
+  "at": "2026-10-15T13:47:03.741Z",
   "scope": "Real Chrome worker, synthetic AAC/MP4 with tail metadata beyond the 8 MiB cache; localhost 200/206 HTTP responses; no model call",
   "fixtureBytes": 10633462,
   "checks": [
-    "Unmodified 0.1.3 reproduced the exact already-evicted cache error",
     "Fixed worker decoded future windows and rewound correctly from OPFS with only one 200 origin request",
     "A second disk-backed resource did not evict or delete the first live temporary file",
     "Inline HLS metadata decoded without re-requesting a playlist URL",
     "Unencrypted HLS VOD playlist and audio segments decoded through the same worker",
     "PCM samples from the 200 disk path exactly matched normal 206 range decoding",
+    "Full-length MP4 and HLS both decode 1180.15–1210.15 seconds; MP4 also seeks backward and forward without rebasing timestamps",
+    "Rejects a short unrelated file before translation, rather than shifting its timestamps into the requested window",
     "A fresh worker reclaimed unlocked temporary files left by termination"
   ],
   "cases": [
@@ -91,21 +92,65 @@
       "length": 32000,
       "rms": 0.0881951069148701,
       "hash": "8dbd9a01fb6de139152e54abeed60a8008549a85441ae28697ec94e01bc6f3bd"
-    }
-  ],
-  "baseline": {
-    "path": "/ignored.m4a",
-    "start": 1,
-    "end": 3,
-    "ok": false,
-    "error": "Attempted to read data from an already-evicted part of the cache. Because the HTTP server did not honor the range request, data can only be read sequentially, with old data being evicted from the cache. To fix this issue, either ensure your server responds to range requests with 206 Partial Content, or set maxCacheSize to Infinity in the UrlSource options. Note that the latter will store the entire file in the cache if needed, no matter how large."
-  },
-  "baselineRequests": [
+    },
     {
-      "path": "/ignored.m4a",
-      "range": "bytes=0-"
+      "path": "/long.m4a",
+      "start": 1180.15,
+      "end": 1210.15,
+      "expectedDuration": 1240,
+      "ok": true,
+      "decodedStart": 1180.096,
+      "decodedEnd": 1210.2186666666666,
+      "length": 480000,
+      "rms": 0.08795573675344268,
+      "hash": "9391542da1554b9db058c6a02207f633505713768cd6fa2c36f488a81cccd5f8"
+    },
+    {
+      "path": "/long.m4a",
+      "start": 120,
+      "end": 150,
+      "expectedDuration": 1240,
+      "ok": true,
+      "decodedStart": 119.936,
+      "decodedEnd": 150.05866666666665,
+      "length": 480000,
+      "rms": 0.0879095981308415,
+      "hash": "41239f5e53c6986a86e8a81c04eb6af13e625d29e529e336b6f1b8778322c220"
+    },
+    {
+      "path": "/long.m4a",
+      "start": 1180.15,
+      "end": 1210.15,
+      "expectedDuration": 1240,
+      "ok": true,
+      "decodedStart": 1180.096,
+      "decodedEnd": 1210.2186666666666,
+      "length": 480000,
+      "rms": 0.08795573675344268,
+      "hash": "9391542da1554b9db058c6a02207f633505713768cd6fa2c36f488a81cccd5f8"
+    },
+    {
+      "path": "/hls-long.m3u8",
+      "kind": "hls",
+      "start": 1180.15,
+      "end": 1210.15,
+      "expectedDuration": 1240,
+      "ok": true,
+      "decodedStart": 1180.096,
+      "decodedEnd": 1210.2186666666666,
+      "length": 480000,
+      "rms": 0.08795196518963816,
+      "hash": "08bc405a4e9b869c4a9410f4c2b7b58be7ae49732b9743a3da49f899c4dba0d1"
     }
   ],
+  "rejectedShortResource": {
+    "path": "/short.m4a",
+    "start": 1180.15,
+    "end": 1210.15,
+    "expectedDuration": 1240,
+    "ok": false,
+    "error": "发现的音频资源短于当前视频，可能属于广告或单个分片；未找到完整音轨，请重新扫描"
+  },
   "passed": true,
   "requests": [
     {
@@ -142,6 +187,82 @@
     },
     {
       "path": "/hls-01.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=4915200-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=4653056-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=4915200-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=921285-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=4915200-"
+    },
+    {
+      "path": "/long.m4a",
+      "range": "bytes=4653056-"
+    },
+    {
+      "path": "/hls-long.m3u8",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-000.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-118.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-119.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-120.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-121.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-122.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-123.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-long-124.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/short.m4a",
       "range": "bytes=0-"
     },
     {

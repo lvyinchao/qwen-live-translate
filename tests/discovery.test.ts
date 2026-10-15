@@ -118,3 +118,37 @@ it('preserves generic hash routes as video identities', () => {
     mediaIdentity('https://www.iqiyi.com/player#episode1'),
   );
 });
+it('does not mistake an isolated ad MP4 for the main segmented video audio', () => {
+  const ad = resource('file', 'https://cdn.youku.com/short-ad.mp4');
+  ad.mime = 'video/mp4';
+  expect(
+    chooseGenericSource(video, [ad, resource('fragment')], 'page', 1).source,
+  ).toBeUndefined();
+  // A direct URL on the selected video remains an explicit association.
+  expect(
+    chooseGenericSource(
+      { ...video, url: ad.url },
+      [ad, resource('fragment')],
+      'page',
+      1,
+    ).source?.url,
+  ).toBe(ad.url);
+});
+it('uses a player-associated native playlist even when another player has a protected stream', () => {
+  const main = {
+    ...resource('hls', 'https://cdn.qq.com/main.m3u8'),
+    playerId: 'main',
+  };
+  const ad = {
+    ...resource('hls', 'https://cdn.qq.com/ad.m3u8'),
+    playerId: 'ad',
+    protected: true,
+  };
+  expect(
+    chooseGenericSource({ ...video, id: 'main' }, [ad, main], 'page', 2).source
+      ?.url,
+  ).toBe(main.url);
+  expect(
+    chooseGenericSource({ ...video, id: 'other' }, [main], 'page', 1).source,
+  ).toBeUndefined();
+});

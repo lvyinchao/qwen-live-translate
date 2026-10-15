@@ -1,5 +1,3 @@
-import { CaptureEngine } from '../../lib/capture-engine';
-import type { CompatState } from '../../lib/compat';
 import DecodeWorker from '../../workers/decode?worker';
 import { SegmentCache } from '../../lib/cache';
 import { LocalFiles } from '../../lib/local-files';
@@ -258,7 +256,14 @@ class Engine {
       }, 60000);
       worker.addEventListener('message', listener);
       signal.addEventListener('abort', abort, { once: true });
-      worker.postMessage({ id, type: 'decode', source, start, end });
+      worker.postMessage({
+        id,
+        type: 'decode',
+        source,
+        start,
+        end,
+        expectedDuration: this.session?.candidate.duration,
+      });
     });
   }
   updateReadiness() {
@@ -514,7 +519,6 @@ class Engine {
   }
 }
 const engine = new Engine();
-const capture = new CaptureEngine(bg, files);
 chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
   if (
     message.target !== 'offscreen' ||
@@ -523,22 +527,6 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
   )
     return;
   void (async () => {
-    if (message.type === 'compat:start') {
-      await capture.start(
-        message.state as CompatState,
-        String(message.streamId),
-        message.settings as Settings,
-      );
-      return true;
-    }
-    if (message.type === 'compat:stop') {
-      await capture.stop();
-      return true;
-    }
-    if (message.type === 'compat:end') {
-      capture.end();
-      return true;
-    }
     if (message.type === 'engine:start') {
       await engine.start(
         message.session as PlaybackSession,

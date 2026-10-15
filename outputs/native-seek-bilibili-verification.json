@@ -1,0 +1,483 @@
+{
+  "at": "2026-10-15T13:48:17.080Z",
+  "scope": "Original page mode, anonymous real site, no model call",
+  "discoveries": [
+    {
+      "position": 120,
+      "video": {
+        "duration": 536,
+        "currentTime": 120,
+        "protected": false
+      },
+      "candidates": [
+        {
+          "duration": 536,
+          "status": "ready",
+          "source": {
+            "url": "https://upos-sz-estgcos.bilivideo.com/…/25985482844-1-30216.m4s",
+            "inline": false,
+            "sabr": false
+          }
+        }
+      ],
+      "decode": {
+        "id": "seek",
+        "ok": true,
+        "decodedStart": 119.90748299319728,
+        "decodedEnd": 150.09342403628116
+      }
+    },
+    {
+      "position": 5,
+      "video": {
+        "duration": 536,
+        "currentTime": 5,
+        "protected": false
+      },
+      "candidates": [
+        {
+          "duration": 536,
+          "status": "ready",
+          "source": {
+            "url": "https://upos-sz-estgcos.bilivideo.com/…/25985482844-1-30216.m4s",
+            "inline": false,
+            "sabr": false
+          }
+        }
+      ],
+      "decode": {
+        "id": "seek",
+        "ok": true,
+        "decodedStart": 4.922267573696145,
+        "decodedEnd": 35.06176870748299
+      }
+    },
+    {
+      "position": 125,
+      "video": {
+        "duration": 536,
+        "currentTime": 125,
+        "protected": false
+      },
+      "candidates": [
+        {
+          "duration": 536,
+          "status": "ready",
+          "source": {
+            "url": "https://upos-sz-estgcos.bilivideo.com/…/25985482844-1-30216.m4s",
+            "inline": false,
+            "sabr": false
+          }
+        }
+      ],
+      "decode": {
+        "id": "seek",
+        "ok": true,
+        "decodedStart": 124.92299319727891,
+        "decodedEnd": 155.06249433106575
+      }
+    }
+  ],
+  "responses": [
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "2350",
+      "range": "bytes 0-2349/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "1022",
+      "range": "bytes 0-1021/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "57720",
+      "range": "bytes 2350-60069/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "61686",
+      "range": "bytes 60070-121755/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "64406",
+      "range": "bytes 121756-186161/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "42394",
+      "range": "bytes 186162-228555/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "52837",
+      "range": "bytes 228556-281392/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "70068",
+      "range": "bytes 281393-351460/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "62289",
+      "range": "bytes 351461-413749/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "60578",
+      "range": "bytes 413750-474327/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "42437",
+      "range": "bytes 474328-516764/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "68640",
+      "range": "bytes 516765-585404/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "114956",
+      "range": "bytes 1334696-1449651/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "78489",
+      "range": "bytes 1402559-1481047/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "69077",
+      "range": "bytes 1481048-1550124/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "56943",
+      "range": "bytes 1550125-1607067/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "44163",
+      "range": "bytes 1607068-1651230/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "76725",
+      "range": "bytes 1651231-1727955/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "65881",
+      "range": "bytes 1727956-1793836/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "63296",
+      "range": "bytes 1793837-1857132/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "75664",
+      "range": "bytes 1857133-1932796/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "65555",
+      "range": "bytes 1932797-1998351/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "48107",
+      "range": "bytes 1998352-2046458/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "49403",
+      "range": "bytes 2046459-2095861/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "138926",
+      "range": "bytes 2095862-2234787/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "87428",
+      "range": "bytes 2234788-2322215/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "96003",
+      "range": "bytes 2322216-2418218/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "57720",
+      "range": "bytes 2350-60069/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "61686",
+      "range": "bytes 60070-121755/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "64406",
+      "range": "bytes 121756-186161/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "42394",
+      "range": "bytes 186162-228555/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "52837",
+      "range": "bytes 228556-281392/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "70068",
+      "range": "bytes 281393-351460/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "62289",
+      "range": "bytes 351461-413749/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "60578",
+      "range": "bytes 413750-474327/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "42437",
+      "range": "bytes 474328-516764/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "68640",
+      "range": "bytes 516765-585404/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "51389",
+      "range": "bytes 585405-636793/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "44023",
+      "range": "bytes 636794-680816/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "60389",
+      "range": "bytes 680817-741205/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "61291",
+      "range": "bytes 741206-802496/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "97367",
+      "range": "bytes 802497-899863/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "119935",
+      "range": "bytes 1402559-1522493/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "69077",
+      "range": "bytes 1481048-1550124/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "56943",
+      "range": "bytes 1550125-1607067/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "44163",
+      "range": "bytes 1607068-1651230/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "76725",
+      "range": "bytes 1651231-1727955/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "65881",
+      "range": "bytes 1727956-1793836/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "63296",
+      "range": "bytes 1793837-1857132/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "75664",
+      "range": "bytes 1857133-1932796/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "65555",
+      "range": "bytes 1932797-1998351/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "48107",
+      "range": "bytes 1998352-2046458/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "49403",
+      "range": "bytes 2046459-2095861/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "138926",
+      "range": "bytes 2095862-2234787/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "87428",
+      "range": "bytes 2234788-2322215/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "96003",
+      "range": "bytes 2322216-2418218/6386048"
+    },
+    {
+      "url": "https://upos-sz-estghw.bilivideo.com/…/25985482844_x1-1-100022.m4s",
+      "status": 206,
+      "mime": "video/mp4",
+      "length": "100704",
+      "range": "bytes 2418219-2518922/6386048"
+    }
+  ],
+  "page": "https://www.bilibili.com/…/"
+}

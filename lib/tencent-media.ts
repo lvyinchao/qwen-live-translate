@@ -4,6 +4,7 @@ export interface TencentMediaInfo {
   url: string;
   playlist: string;
   protected: boolean;
+  playerId?: string;
 }
 export function tencentInfoEndpoint(value: string): boolean {
   try {

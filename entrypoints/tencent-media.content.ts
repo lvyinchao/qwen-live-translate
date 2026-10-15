@@ -1,24 +1,32 @@
 import { parseTencentMedia, tencentInfoEndpoint } from '../lib/tencent-media';
 import type { TencentMediaInfo } from '../lib/tencent-media';
+import { observeTencentHls } from '../lib/tencent-hls';
 export default defineContentScript({
   matches: ['https://v.qq.com/*'],
   world: 'MAIN',
   runAt: 'document_start',
   main() {
-    let latest: TencentMediaInfo | undefined;
+    const latest = new Map<string, TencentMediaInfo>();
     const publish = () => {
-      if (latest && location.pathname.endsWith(`/${latest.videoId}.html`))
-        window.postMessage(
-          { type: 'qvd:tencent-media', media: latest },
-          location.origin,
-        );
+      for (const info of latest.values())
+        if (location.pathname.endsWith(`/${info.videoId}.html`))
+          window.postMessage(
+            { type: 'qvd:tencent-media', media: info },
+            location.origin,
+          );
     };
     const inspect = (text: string) => {
       const info = parseTencentMedia(text, location.href);
       if (!info) return;
-      latest = info;
+      latest.set(info.playerId ?? '', info);
       publish();
     };
+    observeTencentHls((info) => {
+      latest.set(info.playerId ?? '', info);
+      // Bound retained episode/player metadata during single-page navigation.
+      while (latest.size > 4) latest.delete(latest.keys().next().value!);
+      publish();
+    });
     window.addEventListener('message', (event) => {
       if (
         event.source === window &&

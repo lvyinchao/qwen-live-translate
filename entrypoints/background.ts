@@ -1,4 +1,3 @@
-import type { CompatState } from '../lib/compat';
 import { parseTencentMedia } from '../lib/tencent-media';
 import {
   inspectVideos,
@@ -49,39 +48,6 @@ export default defineBackground(() => {
   let mediaRuleId = 920000;
   const rules = new Map<string, number>();
   let session: PlaybackSession | null = null;
-  let compat: CompatState | null = null;
-  let compatViewer: number | undefined;
-  let compatStopping: Promise<void> | null = null;
-  async function compatSource(
-    type: string,
-    data: Record<string, unknown> = {},
-  ) {
-    if (!compat) return;
-    const response = await chrome.tabs.sendMessage(
-      compat.candidate.tabId,
-      { type, ...data },
-      { frameId: compat.candidate.frameId },
-    );
-    if (response?.ok === false) throw new Error(response.error);
-    return response;
-  }
-  async function stopCompat() {
-    if (compatStopping) return compatStopping;
-    if (!compat) return;
-    compatStopping = (async () => {
-      try {
-        await chrome.runtime
-          .sendMessage({ target: 'offscreen', type: 'compat:stop' })
-          .catch(() => {});
-        await compatSource('capture:restore').catch(() => {});
-        compat = null;
-        await chrome.storage.session.remove('compatSession');
-      } finally {
-        compatStopping = null;
-      }
-    })();
-    return compatStopping;
-  }
   const trusted = (sender: chrome.runtime.MessageSender) =>
     sender.id === chrome.runtime.id &&
     !!sender.url?.startsWith(chrome.runtime.getURL(''));
@@ -100,24 +66,15 @@ export default defineBackground(() => {
     await chrome.storage.local.setAccessLevel({
       accessLevel: 'TRUSTED_CONTEXTS',
     });
-    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
     await chrome.action.setTitle({
       title: t((await loadSettings()).uiLanguage, '打开听译'),
     });
-    const savedCompat = (await chrome.storage.session.get('compatSession'))
-      .compatSession as CompatState | undefined;
     const saved = (await chrome.storage.session.get('activeSession'))
       .activeSession as PlaybackSession | undefined;
     const contexts = await chrome.runtime.getContexts({
       contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
     });
-    if (savedCompat && contexts.length) {
-      compat = savedCompat;
-      const viewers = await chrome.tabs.query({
-        url: chrome.runtime.getURL('viewer.html*'),
-      });
-      compatViewer = viewers.find((v) => v.url?.includes(savedCompat.id))?.id;
-    }
     if (saved && contexts.length) {
       session = saved;
       for (const rule of await chrome.declarativeNetRequest.getSessionRules()) {
@@ -127,20 +84,11 @@ export default defineBackground(() => {
           mediaRuleId = Math.max(mediaRuleId, rule.id);
         }
       }
-    } else if (!compat) {
-      if (savedCompat) {
-        compat = savedCompat;
-        await compatSource('capture:restore').catch(() => {});
-        compat = null;
-        await chrome.storage.session.remove('compatSession');
-      }
+    } else {
       await cleanRules();
       await chrome.storage.session.remove('activeSession');
     }
   };
-  chrome.action.onClicked.addListener((tab) => {
-    if (tab.id !== undefined) void chrome.sidePanel.open({ tabId: tab.id });
-  });
   const initialized = initialize();
   async function ensureOffscreen() {
     const existing = await chrome.runtime.getContexts({
@@ -153,10 +101,9 @@ export default defineBackground(() => {
         reasons: [
           chrome.offscreen.Reason.BLOBS,
           chrome.offscreen.Reason.WORKERS,
-          chrome.offscreen.Reason.USER_MEDIA,
         ],
         justification:
-          'Capture tab audio/video locally, decode audio in workers and buffer translated playback without exposing credentials to pages',
+          'Decode media audio in a worker and maintain bounded Blob caches for the active translation task',
       })
       .finally(() => {
         offscreenCreating = undefined;
@@ -511,7 +458,6 @@ export default defineBackground(() => {
     },
   );
   const stop = async () => {
-    await stopCompat();
     if (session) {
       await chrome.runtime
         .sendMessage({ target: 'offscreen', type: 'engine:stop' })
@@ -526,10 +472,6 @@ export default defineBackground(() => {
       .catch(() => {});
   };
   chrome.tabs.onRemoved.addListener((id) => {
-    void initialized.then(() => {
-      if (compat?.candidate.tabId === id || compatViewer === id)
-        return stopCompat();
-    });
     sources.delete(id);
     detected.delete(id);
     void chrome.storage.session.remove([`source:${id}`, `detected:${id}`]);
@@ -537,13 +479,6 @@ export default defineBackground(() => {
   });
   chrome.tabs.onUpdated.addListener((id, change) => {
     if (change.url) {
-      void initialized.then(() => {
-        if (
-          compat?.candidate.tabId === id &&
-          mediaIdentity(change.url!) !== compat.candidate.mediaId
-        )
-          return stopCompat();
-      });
       if (detected.get(id)?.identity !== mediaIdentity(change.url)) {
         detected.delete(id);
         void chrome.storage.session.remove(`detected:${id}`);
@@ -707,7 +642,7 @@ export default defineBackground(() => {
         }
         case 'settings:test':
           if (!privileged) throw new Error('不允许网页测试凭据');
-          if (session || compat) throw new Error('请先停止翻译再测试连接');
+          if (session) throw new Error('请先停止翻译再测试连接');
           await ensureOffscreen();
           return chrome.runtime.sendMessage({
             target: 'offscreen',
@@ -724,6 +659,7 @@ export default defineBackground(() => {
             url?: string;
             playlist?: string;
             protected?: boolean;
+            playerId?: string;
           };
           const validated = parseTencentMedia(
             JSON.stringify({
@@ -752,7 +688,10 @@ export default defineBackground(() => {
             identity,
             items: [
               ...items.filter(
-                (r) => r.kind !== 'hls' || r.frameId !== (sender.frameId ?? 0),
+                (r) =>
+                  r.kind !== 'hls' ||
+                  r.frameId !== (sender.frameId ?? 0) ||
+                  r.playerId !== supplied.playerId,
               ),
               {
                 url: validated.url,
@@ -760,6 +699,11 @@ export default defineBackground(() => {
                 kind: 'hls' as const,
                 hlsManifest: validated.playlist,
                 protected: validated.protected,
+                playerId:
+                  typeof supplied.playerId === 'string' &&
+                  /^[a-zA-Z0-9-]{1,64}$/.test(supplied.playerId)
+                    ? supplied.playerId
+                    : undefined,
                 frameId: sender.frameId ?? 0,
                 at: Date.now(),
                 headers: { Referer: tab.url, Origin: 'https://v.qq.com' },
@@ -818,135 +762,6 @@ export default defineBackground(() => {
             { type: 'player:highlight', id: message.id },
             { frameId: Number(message.frameId) },
           );
-          return true;
-        case 'compat:focus':
-          if (!privileged || compatViewer === undefined) return false;
-          const viewerTab = await chrome.tabs.get(compatViewer);
-          await chrome.windows.update(viewerTab.windowId, { focused: true });
-          return true;
-        case 'compat:get':
-          if (!privileged) return null;
-          return compat;
-        case 'compat:start': {
-          if (!privileged) throw new Error('Not allowed.');
-          await stop();
-          const choice = message.candidate as MediaCandidate;
-          const fresh = (await discover(choice.tabId)).find(
-            (v) => v.id === choice.id && v.frameId === choice.frameId,
-          );
-          if (!fresh || fresh.detectionOnly || fresh.ad || !fresh.duration)
-            throw new Error(
-              'Choose a normal video player after ads have finished.',
-            );
-          if (fresh.protected)
-            throw new Error('Protected video capture is not supported.');
-          const settings = await loadSettings();
-          endpoint(settings);
-          if (!settings.apiKey)
-            throw new Error('Configure your Model Studio credentials first.');
-          await ensureOffscreen();
-          compat = {
-            id: crypto.randomUUID(),
-            candidate: fresh,
-            language: String(message.language ?? settings.language),
-            uiLanguage: settings.uiLanguage,
-            phase: 'preparing',
-            capturedThrough: 0,
-            readyThrough: 0,
-            position: 0,
-            chunks: 0,
-            bytes: 0,
-            sourcePaused: false,
-          };
-          try {
-            const prepared = await compatSource('capture:prepare', {
-              id: compat.id,
-              candidateId: fresh.id,
-            });
-            if (!prepared)
-              throw new Error(
-                'The player cannot be controlled. Rescan this page.',
-              );
-            // Obtain the stream before opening the viewer: activeTab belongs to the source tab.
-            const streamId = await chrome.tabCapture.getMediaStreamId({
-              targetTabId: fresh.tabId,
-            });
-            const r = await chrome.runtime.sendMessage({
-              target: 'offscreen',
-              type: 'compat:start',
-              state: compat,
-              streamId,
-              settings,
-            });
-            if (r?.ok === false) throw new Error(r.error);
-            const viewer = await chrome.windows.create({
-              url: chrome.runtime.getURL(`viewer.html?id=${compat.id}`),
-              type: 'popup',
-              width: 1100,
-              height: 820,
-            });
-            compatViewer = viewer?.tabs?.[0]?.id;
-            await chrome.storage.session.set({ compatSession: compat });
-            return compat;
-          } catch (error) {
-            await stopCompat();
-            throw error;
-          }
-        }
-        case 'compat:stop':
-          if (!privileged) throw new Error('Not allowed.');
-          await stopCompat();
-          return true;
-        case 'compat:state':
-          if (
-            !privileged ||
-            sender.url !== chrome.runtime.getURL('offscreen.html') ||
-            !compat ||
-            (message.state as CompatState)?.id !== compat.id
-          )
-            return false;
-          compat = message.state as CompatState;
-          await chrome.storage.session.set({ compatSession: compat });
-          return true;
-        case 'compat:source':
-          if (
-            !privileged ||
-            !compat ||
-            sender.url !== chrome.runtime.getURL('offscreen.html') ||
-            message.id !== compat.id
-          )
-            return false;
-          return compatSource('capture:control', {
-            id: compat.id,
-            action: message.action,
-          });
-        case 'compat:restore':
-          if (
-            !privileged ||
-            !compat ||
-            sender.url !== chrome.runtime.getURL('offscreen.html') ||
-            message.id !== compat.id
-          )
-            return false;
-          await compatSource('capture:restore').catch(() => {});
-          return true;
-        case 'compat:ended':
-        case 'compat:lost':
-          if (
-            !compat ||
-            message.id !== compat.id ||
-            sender.tab?.id !== compat.candidate.tabId ||
-            sender.frameId !== compat.candidate.frameId
-          )
-            return false;
-          if (message.type === 'compat:lost') {
-            await stopCompat();
-            return true;
-          }
-          await chrome.runtime.sendMessage({
-            target: 'offscreen',
-            type: 'compat:end',
-          });
           return true;
         case 'session:get':
           if (!privileged) return null;
@@ -1043,8 +858,6 @@ export default defineBackground(() => {
           return true;
         case 'auth:install':
           if (!privileged) throw new Error('不允许网页安装鉴权规则');
-          if (message.compatId && message.compatId !== compat?.id)
-            throw new Error('Capture session expired.');
           if (
             message.sessionId &&
             (session?.id !== message.sessionId ||
@@ -1057,7 +870,6 @@ export default defineBackground(() => {
           });
           return endpoint(await loadSettings());
         case 'auth:remove':
-          if (message.compatId && message.compatId !== compat?.id) return false;
           if (!privileged) throw new Error('不允许网页修改鉴权规则');
           await chrome.declarativeNetRequest.updateSessionRules({
             removeRuleIds: [AUTH_RULE],
@@ -1157,7 +969,7 @@ export default defineBackground(() => {
           });
         case 'cache:clear':
           if (!privileged) throw new Error('不允许网页清理缓存');
-          if (session || compat) throw new Error('请先停止翻译，再清理缓存');
+          if (session) throw new Error('请先停止翻译，再清理缓存');
           await ensureOffscreen();
           return chrome.runtime.sendMessage({
             target: 'offscreen',

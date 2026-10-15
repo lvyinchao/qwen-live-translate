@@ -49,6 +49,37 @@ execFileSync('ffmpeg', [
   path.join(directory, 'hls-%02d.ts'),
   path.join(directory, 'hls.m3u8'),
 ]);
+execFileSync('ffmpeg', [
+  '-hide_banner',
+  '-loglevel',
+  'error',
+  '-f',
+  'lavfi',
+  '-i',
+  'sine=frequency=440:sample_rate=48000:duration=1240',
+  '-c:a',
+  'aac',
+  '-b:a',
+  '32k',
+  '-y',
+  path.join(directory, 'long.m4a'),
+]);
+execFileSync('ffmpeg', [
+  '-hide_banner',
+  '-loglevel',
+  'error',
+  '-i',
+  path.join(directory, 'long.m4a'),
+  '-c:a',
+  'copy',
+  '-hls_time',
+  '10',
+  '-hls_playlist_type',
+  'vod',
+  '-hls_segment_filename',
+  path.join(directory, 'hls-long-%03d.ts'),
+  path.join(directory, 'hls-long.m3u8'),
+]);
 const hlsFiles = Object.fromEntries(
   await Promise.all(
     (await fs.readdir(directory))
@@ -57,6 +88,7 @@ const hlsFiles = Object.fromEntries(
   ),
 );
 const small = await fs.readFile(path.join(directory, 'small.m4a'));
+const long = await fs.readFile(path.join(directory, 'long.m4a'));
 let moov = -1;
 for (let at = 0; at < small.length; ) {
   const size = small.readUInt32BE(at);
@@ -99,24 +131,28 @@ const server = http.createServer((req, res) => {
     res.end(hlsFiles[req.url]);
     return;
   }
-  if (req.url === '/honest.m4a' && range) {
+  const bytes =
+    req.url === '/long.m4a' ? long : req.url === '/short.m4a' ? small : fixture;
+  if (
+    (req.url === '/honest.m4a' ||
+      req.url === '/long.m4a' ||
+      req.url === '/short.m4a') &&
+    range
+  ) {
     const match = range.match(/^bytes=(\d+)-(\d*)$/);
     assert.ok(match);
     const start = Number(match[1]),
-      end = Math.min(
-        Number(match[2] || fixture.length - 1),
-        fixture.length - 1,
-      );
-    if (start >= fixture.length) {
-      res.writeHead(416, { 'Content-Range': `bytes */${fixture.length}` });
+      end = Math.min(Number(match[2] || bytes.length - 1), bytes.length - 1);
+    if (start >= bytes.length) {
+      res.writeHead(416, { 'Content-Range': `bytes */${bytes.length}` });
       res.end();
       return;
     }
     res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${end}/${fixture.length}`,
+      'Content-Range': `bytes ${start}-${end}/${bytes.length}`,
       'Content-Length': end - start + 1,
     });
-    res.end(fixture.subarray(start, end + 1));
+    res.end(bytes.subarray(start, end + 1));
   } else {
     res.writeHead(200, { 'Content-Length': fixture.length });
     res.end(fixture);
@@ -211,6 +247,7 @@ try {
                 },
                 start: test.start,
                 end: test.end,
+                expectedDuration: test.expectedDuration,
               });
             });
             results.push({ ...test, ...result });
@@ -250,6 +287,16 @@ try {
     { path: '/honest.m4a', start: 1, end: 3 },
     { path: '/hls.m3u8', kind: 'hls', start: 2, end: 4 },
     { path: '/inline.m3u8', kind: 'hls', inline: true, start: 2, end: 4 },
+    { path: '/long.m4a', start: 1180.15, end: 1210.15, expectedDuration: 1240 },
+    { path: '/long.m4a', start: 120, end: 150, expectedDuration: 1240 },
+    { path: '/long.m4a', start: 1180.15, end: 1210.15, expectedDuration: 1240 },
+    {
+      path: '/hls-long.m3u8',
+      kind: 'hls',
+      start: 1180.15,
+      end: 1210.15,
+      expectedDuration: 1240,
+    },
   ]);
   report.cases = cases;
   for (const c of cases) {
@@ -275,6 +322,24 @@ try {
   );
   report.checks.push(
     'PCM samples from the 200 disk path exactly matched normal 206 range decoding',
+  );
+  assert.equal(cases[7].hash, cases[9].hash);
+  report.checks.push(
+    'Full-length MP4 and HLS both decode 1180.15–1210.15 seconds; MP4 also seeks backward and forward without rebasing timestamps',
+  );
+  const [short] = await run(workerFile, [
+    {
+      path: '/short.m4a',
+      start: 1180.15,
+      end: 1210.15,
+      expectedDuration: 1240,
+    },
+  ]);
+  assert.equal(short.ok, false);
+  assert.match(short.error, /短于当前视频/);
+  report.rejectedShortResource = short;
+  report.checks.push(
+    'Rejects a short unrelated file before translation, rather than shifting its timestamps into the requested window',
   );
   const afterTermination = await setup.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
