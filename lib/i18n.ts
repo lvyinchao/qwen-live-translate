@@ -3,6 +3,22 @@ import type { UILanguage } from './types';
 // Keep the original internal errors stable: retry classification and diagnostics
 // use them. Localize at the presentation boundary, never model text or subtitles.
 const english = {
+  '片段自动暂存在本机，翻译结束或停止时合并为一个音频包；分段不发起下载。':
+    'Audio chunks save quietly on this device. When translation finishes or stops, they merge into one audio package. No per-chunk downloads.',
+  '正在合并并保存…': 'Merging and saving…',
+  '已保存 {count} 个结果': '{count} saved results',
+  '译音先分段保存，完成后自动合并':
+    'Audio saves in chunks, then merges when finished',
+  '已暂存 {count} 段译音': '{count} audio chunks stored locally',
+  '有 {count} 个视频待合并': '{count} videos ready to merge',
+  合并并保存: 'Merge and save',
+  '无法合并：译音 WAV 格式无效': 'Cannot merge: invalid translated WAV format.',
+  '合并音频超过 WAV 文件上限': 'Merged audio exceeds the WAV file size limit.',
+  '本地译音片段不完整，无法合并':
+    'A local audio chunk is incomplete and cannot be merged.',
+  '合并文件超过 ZIP 文件上限':
+    'The merged package exceeds the ZIP file size limit.',
+  本地译音片段信息无效: 'Invalid local audio chunk metadata.',
   本地保存: 'Local files',
   '脚本、字幕与原音色音频自动保存到下载目录，按视频和目标语言分文件夹。':
     'Transcripts, subtitles and original-voice audio save automatically to your Chrome download folder, organized by video and target language.',

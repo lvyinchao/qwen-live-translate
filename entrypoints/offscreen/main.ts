@@ -73,11 +73,16 @@ class Engine {
     events: [] as Record<string, unknown>[],
   };
   async stop() {
+    const savedContext = this.session
+      ? archiveContext(this.session)
+      : undefined;
     this.generation++;
     this.abort?.abort();
     this.worker?.terminate();
     this.worker = undefined;
     await files.flush().catch((error) => files.failed(error));
+    if (savedContext)
+      await files.finish(savedContext).catch((error) => files.failed(error));
     this.session = null;
     this.segments = [];
     this.ranges = [];
@@ -200,6 +205,9 @@ class Engine {
       this.session.phase = 'error';
       this.session.error = messageError(error);
       await files.flush().catch((failure) => files.failed(failure));
+      await files
+        .finish(archiveContext(session))
+        .catch((failure) => files.failed(failure));
       await this.publish(true);
     });
   }
@@ -272,7 +280,10 @@ class Engine {
     let cursor = this.session!.position;
     while (!signal.aborted && this.session?.epoch === epoch) {
       const s = this.session;
-      if (cursor >= s.candidate.duration - 0.02) return;
+      if (cursor >= s.candidate.duration - 0.02) {
+        await files.finish(archiveContext(s));
+        return;
+      }
       const existing = coverageEnd(this.ranges, cursor);
       if (existing > cursor + 0.02) {
         cursor = existing;
@@ -489,8 +500,12 @@ class Engine {
     s.rate = Number(message.rate);
     if (message.userPaused !== undefined)
       this.userPaused = Boolean(message.userPaused);
-    if (message.ended) s.phase = 'ended';
-    else if (!this.rebuffering && s.phase !== 'error')
+    if (message.ended) {
+      s.phase = 'ended';
+      await files
+        .finish(archiveContext(s))
+        .catch((error) => files.failed(error));
+    } else if (!this.rebuffering && s.phase !== 'error')
       s.phase = this.userPaused ? 'paused' : 'playing';
     this.updateReadiness();
     await this.publish();
@@ -531,6 +546,12 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
       return true;
     }
     if (message.type === 'files:status') return files.status();
+    if (message.type === 'files:merge') {
+      await files.finish(
+        engine.session ? archiveContext(engine.session) : undefined,
+      );
+      return files.status();
+    }
     if (message.type === 'files:retry') {
       await files.retry();
       return files.status();

@@ -17,6 +17,7 @@ export interface ArchiveBatch {
   ready: boolean;
 }
 export interface LocalFileStatus {
+  staged?: number;
   pending: number;
   saved: number;
   saving: boolean;

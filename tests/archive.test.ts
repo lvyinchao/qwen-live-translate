@@ -14,6 +14,7 @@ import {
   type ArchiveContext,
 } from '../lib/archive';
 import { LocalFiles } from '../lib/local-files';
+import { MemoryFiles } from './file-store';
 import { encode64, wav } from '../lib/audio';
 import type { PlaybackSession, TranslationSegment } from '../lib/types';
 
@@ -108,13 +109,18 @@ it('retains failed downloads across restart and deduplicates successful retries'
     failed = vi.fn(async () => {
       throw new Error('disk full');
     });
-  const files = new LocalFiles(failed, () => {}, name);
+  const disk = new MemoryFiles();
+  const files = new LocalFiles(failed, () => {}, name, disk);
   await files.capture(context, 60, 90, [segment], true);
+  expect(failed).not.toHaveBeenCalled();
+  await files.finish(context);
   await wait(async () => !!(await files.status()).error);
   expect((await files.status()).pending).toBe(1);
   const download = vi.fn(async () => 42);
-  const restarted = new LocalFiles(download, () => {}, name);
+  const restarted = new LocalFiles(download, () => {}, name, disk);
   await restarted.flush();
+  expect(download).not.toHaveBeenCalled();
+  await restarted.retry();
   await wait(
     async () =>
       (await restarted.status()).saved === 1 &&
@@ -122,6 +128,7 @@ it('retains failed downloads across restart and deduplicates successful retries'
   );
   expect((await restarted.status()).pending).toBe(0);
   await restarted.capture(context, 60, 90, [segment], true);
+  await restarted.finish(context);
   await wait(
     async () =>
       (await restarted.status()).pending === 0 &&
@@ -138,10 +145,17 @@ it('flushes completed utterances from unfinished windows and keeps updates arriv
       });
     return 10;
   });
-  const files = new LocalFiles(download, () => {}, crypto.randomUUID());
+  const files = new LocalFiles(
+    download,
+    () => {},
+    crypto.randomUUID(),
+    new MemoryFiles(),
+  );
   await files.capture(context, 60, 90, [segment]);
   expect(download).not.toHaveBeenCalled();
   await files.flush();
+  expect(download).not.toHaveBeenCalled();
+  await files.finish(context);
   await wait(async () => !!release);
   await files.capture(
     context,
@@ -150,6 +164,7 @@ it('flushes completed utterances from unfinished windows and keeps updates arriv
     [{ ...segment, id: 'b', start: 65, end: 66, text: '后续' }],
     true,
   );
+  await files.finish(context);
   release();
   await wait(
     async () =>

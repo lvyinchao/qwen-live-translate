@@ -711,18 +711,23 @@ function App() {
           <strong>{t('本地保存')}</strong>
           <p>
             {t(
-              '脚本、字幕与原音色音频自动保存到下载目录，按视频和目标语言分文件夹。',
+              '片段自动暂存在本机，翻译结束或停止时合并为一个音频包；分段不发起下载。',
             )}
           </p>
           <span role="status">
             {files.saving
-              ? t('正在保存文件…')
+              ? t('正在合并并保存…')
               : files.saved
-                ? t('已保存 {count} 个译音包', { count: files.saved })
-                : t('翻译完成的内容会自动保存为 ZIP')}
+                ? t('已保存 {count} 个结果', { count: files.saved })
+                : t('译音先分段保存，完成后自动合并')}
           </span>
+          {!!files.staged && (
+            <small>{t('已暂存 {count} 段译音', { count: files.staged })}</small>
+          )}
           {files.pending > 0 && (
-            <small>{t('待保存 {count} 批', { count: files.pending })}</small>
+            <small>
+              {t('有 {count} 个视频待合并', { count: files.pending })}
+            </small>
           )}
           {files.error && (
             <p className="file-error" role="alert">
@@ -748,11 +753,15 @@ function App() {
                 disabled={!!busy || files.saving}
                 onClick={() =>
                   act('files-retry', async () => {
-                    setFiles(await call<LocalFileStatus>('files:retry'));
+                    setFiles(
+                      await call<LocalFileStatus>(
+                        files.error ? 'files:retry' : 'files:merge',
+                      ),
+                    );
                   })
                 }
               >
-                {t('重试保存')}
+                {files.error ? t('重试保存') : t('合并并保存')}
               </button>
             )}
           </div>

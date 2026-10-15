@@ -1,26 +1,44 @@
 import {
-  archiveEntries,
   archiveFilename,
-  archiveKey,
   mergeArchiveSegments,
-  zipEntries,
   type ArchiveBatch,
   type ArchiveContext,
   type LocalFileStatus,
 } from './archive';
+import { decode64 } from './audio';
+import { PrivateFiles, putBlob, type FileStore } from './file-store';
+import {
+  digest,
+  mergeAudio,
+  mergedScripts,
+  pcmSize,
+  streamZip,
+  textDigest,
+  type StoredPart,
+} from './merged-audio';
 import { messageError, type TranslationSegment } from './types';
 
-type PendingBatch = ArchiveBatch & { revision: number; bytes: number };
-type SavedBatch = {
+type Job = {
   key: string;
-  batchKey: string;
-  downloadId: number;
-  filename: string;
-  at: number;
-  fingerprint: string;
+  folder: string;
+  context: ArchiveContext;
+  revision: number;
+  requestedRevision: number;
+  savedRevision: number;
+  count: number;
+  updatedAt: number;
 };
+type Saved = { key: string; downloadId: number; filename: string; at: number };
+const jobKey = (context: ArchiveContext) =>
+  JSON.stringify([
+    context.mediaId,
+    context.trackId,
+    context.language,
+    context.voice,
+  ]);
 export class LocalFiles {
   private dbPromise?: Promise<IDBDatabase>;
+  private initialized?: Promise<void>;
   private writes: Promise<unknown> = Promise.resolve();
   private draining?: Promise<void>;
   private error?: string;
@@ -28,33 +46,55 @@ export class LocalFiles {
     private download: (url: string, filename: string) => Promise<number>,
     private notify: (status: LocalFileStatus) => void = () => {},
     private name = 'qwen-video-dub-files',
+    private disk: FileStore = new PrivateFiles(),
   ) {}
   private db() {
     return (this.dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(this.name, 1);
+      const request = indexedDB.open(this.name, 2);
       request.onupgradeneeded = () => {
-        request.result.createObjectStore('pending', { keyPath: 'key' });
-        request.result.createObjectStore('saved', { keyPath: 'key' });
+        const db = request.result;
+        if (!db.objectStoreNames.contains('pending'))
+          db.createObjectStore('pending', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('saved'))
+          db.createObjectStore('saved', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('jobs'))
+          db.createObjectStore('jobs', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('parts'))
+          db.createObjectStore('parts', { keyPath: 'key' }).createIndex(
+            'job',
+            'job',
+          );
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     }));
   }
-  private async read<T>(name: string): Promise<T[]> {
+  private async all<T>(store: string, key?: IDBValidKey): Promise<T[]> {
     const db = await this.db();
     return new Promise((resolve, reject) => {
-      const request = db.transaction(name).objectStore(name).getAll();
+      const target = db.transaction(store).objectStore(store);
+      const request =
+        key === undefined ? target.getAll() : target.index('job').getAll(key);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
-  private async mutate(
-    fn: (pending: IDBObjectStore, saved: IDBObjectStore) => void,
-  ) {
+  private async get<T>(
+    store: string,
+    key: IDBValidKey,
+  ): Promise<T | undefined> {
     const db = await this.db();
-    return new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(['pending', 'saved'], 'readwrite');
-      fn(tx.objectStore('pending'), tx.objectStore('saved'));
+    return new Promise((resolve, reject) => {
+      const r = db.transaction(store).objectStore(store).get(key);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  }
+  private async mutate(stores: string[], fn: (tx: IDBTransaction) => void) {
+    const db = await this.db();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(stores, 'readwrite');
+      fn(tx);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error);
@@ -65,15 +105,114 @@ export class LocalFiles {
     this.writes = next.catch(() => {});
     return next;
   }
+  private initialize() {
+    return (this.initialized ??= (async () => {
+      // Migrate old queued audio one window at a time. Never delete its only copy
+      // until WAV files and the new metadata transaction have both committed.
+      const db = await this.db();
+      const keys = await new Promise<IDBValidKey[]>((resolve, reject) => {
+        const r = db.transaction('pending').objectStore('pending').getAllKeys();
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = () => reject(r.error);
+      });
+      for (const key of keys) {
+        const batch = await this.get<ArchiveBatch>('pending', key);
+        if (batch) await this.saveParts(batch.context, batch.segments);
+        await this.mutate(['pending'], (tx) =>
+          tx.objectStore('pending').delete(key),
+        );
+      }
+      // A previously failed final download is retried only on an explicit user
+      // retry. Merely opening the extension must never start a download burst.
+      const jobs = await this.all<Job>('jobs');
+      await this.mutate(['jobs'], (tx) => {
+        for (const job of jobs)
+          if (job.requestedRevision > job.savedRevision)
+            tx.objectStore('jobs').put({
+              ...job,
+              requestedRevision: job.savedRevision,
+            });
+      });
+    })());
+  }
+  private async saveParts(
+    context: ArchiveContext,
+    segments: TranslationSegment[],
+  ) {
+    if (!segments.length) return;
+    const key = jobKey(context);
+    const previous = await this.get<Job>('jobs', key);
+    const folder = previous?.folder ?? (await textDigest(key)).slice(0, 24);
+    const job: Job = previous ?? {
+      key,
+      folder,
+      context,
+      revision: 0,
+      requestedRevision: 0,
+      savedRevision: 0,
+      count: 0,
+      updatedAt: Date.now(),
+    };
+    const updates: StoredPart[] = [];
+    for (const segment of mergeArchiveSegments([], segments)) {
+      if (
+        segment.mediaId !== context.mediaId ||
+        segment.language !== context.language ||
+        segment.voice !== context.voice ||
+        !Number.isFinite(segment.start) ||
+        !Number.isFinite(segment.end) ||
+        segment.start < 0 ||
+        segment.end <= segment.start
+      )
+        throw new Error('本地译音片段信息无效');
+      const partKey = JSON.stringify([key, segment.start, segment.end]);
+      const bytes = decode64(segment.audio),
+        audioHash = await digest(bytes);
+      const fingerprint = await textDigest(
+        JSON.stringify([
+          audioHash,
+          segment.sourceText,
+          segment.text,
+          segment.speaker ?? null,
+        ]),
+      );
+      const old = await this.get<StoredPart>('parts', partKey);
+      if (old?.fingerprint === fingerprint) continue;
+      const file = new Blob([bytes], { type: 'audio/wav' }),
+        size = await pcmSize(file);
+      const path = `${folder}/parts/${Math.round(segment.start * 1000)}-${Math.round(segment.end * 1000)}-${audioHash.slice(0, 24)}.wav`;
+      await putBlob(this.disk, path, file);
+      const { audio: _, ...metadata } = segment;
+      updates.push({
+        ...metadata,
+        key: partKey,
+        job: key,
+        path,
+        fingerprint,
+        samples: size / 2,
+      });
+      job.revision++;
+      if (!old) job.count++;
+    }
+    if (!updates.length) return;
+    job.context = context;
+    job.updatedAt = Date.now();
+    await this.mutate(['jobs', 'parts'], (tx) => {
+      for (const p of updates) tx.objectStore('parts').put(p);
+      tx.objectStore('jobs').put(job);
+    });
+  }
   async status(): Promise<LocalFileStatus> {
+    await this.initialize();
     await this.writes;
-    const [pending, saved] = await Promise.all([
-      this.read<PendingBatch>('pending'),
-      this.read<SavedBatch>('saved'),
+    const [jobs, saved] = await Promise.all([
+      this.all<Job>('jobs'),
+      this.all<Saved>('saved'),
     ]);
     const last = saved.sort((a, b) => b.at - a.at)[0];
     return {
-      pending: pending.length,
+      pending: jobs.filter((j) => j.revision > j.savedRevision).length,
+      staged: jobs.reduce((n, j) => n + j.count, 0),
       saved: saved.length,
       saving: !!this.draining,
       lastDownloadId: last?.downloadId,
@@ -86,66 +225,51 @@ export class LocalFiles {
   }
   async capture(
     context: ArchiveContext,
-    start: number,
-    end: number,
+    _start: number,
+    _end: number,
     segments: TranslationSegment[],
-    ready = false,
+    _ready = false,
   ) {
-    await this.serialize(async () => {
-      const key = archiveKey(context, start, end);
-      const pending = await this.read<PendingBatch>('pending');
-      const existing = pending.find((p) => p.key === key);
-      if (!existing && !segments.length) return;
-      const nextSegments = mergeArchiveSegments(
-        existing?.segments ?? [],
-        segments,
-      );
-      const bytes = nextSegments.reduce(
-        (n, s) =>
-          n + s.audio.length + (s.text.length + s.sourceText.length) * 2 + 512,
-        0,
-      );
-      if (
-        pending
-          .filter((p) => p.key !== key)
-          .reduce((n, p) => n + p.bytes, bytes) >
-        128 * 1024 * 1024
-      )
-        throw new Error('本地保存待处理内容已满，请先重试保存');
-      await this.mutate((store) =>
-        store.put({
-          key,
-          context,
-          start,
-          end,
-          segments: nextSegments,
-          ready: ready || existing?.ready || false,
-          bytes,
-          revision: (existing?.revision ?? 0) + 1,
-        }),
-      );
-    });
+    await this.initialize();
+    await this.serialize(() => this.saveParts(context, segments));
     await this.publish();
-    if (ready && !this.error) void this.drain();
   }
-  // Complete utterances survive seeks, stopping, cache eviction and a restart.
+  // Quiet checkpoint: seeks, startup and completed input windows only persist
+  // chunks; none of these actions may invoke chrome.downloads.
   async flush() {
+    await this.initialize();
+    await this.writes;
+    await this.publish();
+  }
+  async finish(context?: ArchiveContext) {
+    await this.initialize();
     await this.serialize(async () => {
-      const pending = await this.read<PendingBatch>('pending');
-      await this.mutate((store) =>
-        pending.forEach((p) => store.put({ ...p, ready: true })),
-      );
+      const jobs = context
+        ? [await this.get<Job>('jobs', jobKey(context))]
+        : await this.all<Job>('jobs');
+      await this.mutate(['jobs'], (tx) => {
+        for (const job of jobs)
+          if (job && job.revision > job.savedRevision)
+            tx.objectStore('jobs').put({
+              ...job,
+              requestedRevision: job.revision,
+            });
+      });
     });
     if (!this.error) void this.drain();
     await this.publish();
   }
   async retry() {
     this.error = undefined;
-    await this.flush();
+    await this.finish();
   }
   async failed(error: unknown) {
     this.error = messageError(error);
-    await this.publish();
+    try {
+      await this.publish();
+    } catch {
+      this.notify({ pending: 0, saved: 0, saving: false, error: this.error });
+    }
   }
   private drain() {
     if (this.draining) return this.draining;
@@ -158,7 +282,9 @@ export class LocalFiles {
         await this.publish();
         if (
           !this.error &&
-          (await this.read<PendingBatch>('pending')).some((p) => p.ready)
+          (await this.all<Job>('jobs')).some(
+            (j) => j.requestedRevision > j.savedRevision,
+          )
         )
           void this.drain();
       });
@@ -167,53 +293,77 @@ export class LocalFiles {
   private async run() {
     while (!this.error) {
       await this.writes;
-      const next = (await this.read<PendingBatch>('pending')).find(
-        (p) => p.ready,
+      const job = (await this.all<Job>('jobs')).find(
+        (j) => j.requestedRevision > j.savedRevision,
       );
-      if (!next) return;
-      await this.publish();
-      const baseFilename = await archiveFilename(next);
-      const bytes = zipEntries(archiveEntries(next));
-      const fingerprint = [
-        ...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
-      ]
-        .map((n) => n.toString(16).padStart(2, '0'))
-        .join('');
-      const previous = (await this.read<SavedBatch>('saved')).find(
-        (s) =>
-          (s.batchKey ?? s.key) === next.key && s.fingerprint === fingerprint,
+      if (!job) return;
+      // Snapshot metadata under the same queue as capture. WAV filenames are
+      // content addressed, so later captures cannot mutate an in-progress merge.
+      const snapshot = await this.serialize(async () => ({
+        job: (await this.get<Job>('jobs', job.key))!,
+        parts: (await this.all<StoredPart>('parts', job.key)).sort(
+          (a, b) => a.start - b.start || a.end - b.end,
+        ),
+      }));
+      const revision = snapshot.job.revision,
+        parts = snapshot.parts;
+      if (!parts.length) return;
+      const fingerprint = await textDigest(
+        JSON.stringify([
+          snapshot.job.context,
+          parts.map((p) => [p.start, p.end, p.fingerprint]),
+        ]),
       );
-      // A stopped window may be saved again with more/different utterances.
-      // Keep earlier audio files instead of overwriting a partial archive.
+      const savedKey = JSON.stringify([job.key, fingerprint]);
+      const old = await this.get<Saved>('saved', savedKey);
+      const mergedPath = `${job.folder}/merged-${fingerprint.slice(0, 24)}.wav`,
+        zipPath = `${job.folder}/merged-${fingerprint.slice(0, 24)}.zip`;
+      const base = await archiveFilename({
+        key: job.key,
+        context: snapshot.job.context,
+        start: parts[0]!.start,
+        end: Math.max(...parts.map((p) => p.end)),
+        segments: [],
+        ready: true,
+      });
       const filename =
-        previous?.filename ??
-        baseFilename.replace(/\.zip$/, `-${fingerprint.slice(0, 12)}.zip`);
-      const url = URL.createObjectURL(
-        new Blob([bytes], { type: 'application/zip' }),
-      );
+        old?.filename ??
+        base.replace(/\.zip$/, `-merged-${fingerprint.slice(0, 12)}.zip`);
+      let id = old?.downloadId;
       try {
-        const downloadId = previous
-          ? previous.downloadId
-          : await this.download(url, filename);
+        if (id === undefined) {
+          await this.publish();
+          await mergeAudio(this.disk, mergedPath, parts);
+          await streamZip(this.disk, zipPath, [
+            { name: 'combined.wav', blob: await this.disk.get(mergedPath) },
+            ...mergedScripts(snapshot.job.context, parts),
+          ]);
+          const url = URL.createObjectURL(await this.disk.get(zipPath));
+          try {
+            id = await this.download(url, filename);
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        }
         await this.serialize(async () => {
-          const current = (await this.read<PendingBatch>('pending')).find(
-            (p) => p.key === next.key,
-          );
-          await this.mutate((pending, saved) => {
-            // A retry/seek may have added utterances while the file was saving.
-            if (current?.revision === next.revision) pending.delete(next.key);
-            saved.put({
-              key: JSON.stringify([next.key, fingerprint]),
-              batchKey: next.key,
-              downloadId,
+          const current = (await this.get<Job>('jobs', job.key))!;
+          await this.mutate(['jobs', 'saved'], (tx) => {
+            tx.objectStore('jobs').put({
+              ...current,
+              savedRevision: Math.max(current.savedRevision, revision),
+            });
+            tx.objectStore('saved').put({
+              key: savedKey,
+              downloadId: id,
               filename,
-              fingerprint,
               at: Date.now(),
             });
           });
         });
       } finally {
-        URL.revokeObjectURL(url);
+        // Source chunks remain durable. Temporary merged files are reproducible.
+        await this.disk.remove(mergedPath).catch(() => {});
+        await this.disk.remove(zipPath).catch(() => {});
       }
     }
   }

@@ -411,6 +411,7 @@ export default defineBackground(() => {
       const privileged = trusted(sender);
       switch (message.type) {
         case 'files:status':
+        case 'files:merge':
         case 'files:retry': {
           if (!privileged) throw new Error('不允许网页读取本地保存内容');
           await ensureOffscreen();
