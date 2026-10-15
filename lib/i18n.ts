@@ -3,6 +3,31 @@ import type { UILanguage } from './types';
 // Keep the original internal errors stable: retry classification and diagnostics
 // use them. Localize at the presentation boundary, never model text or subtitles.
 const english = {
+  媒体资源: 'Media stream',
+  '媒体资源已发现，暂未找到可控制的网页播放器':
+    'Media detected. A controllable in-page player has not been found yet.',
+  '检测到受保护视频，暂不支持提前翻译':
+    'Protected video detected. Reading audio ahead is not supported.',
+  '发现多个媒体资源，暂无法确定当前视频音轨':
+    'Multiple media resources found. The current audio track could not be matched yet.',
+  '已发现 DASH 清单，暂未接入该站音轨解析':
+    'DASH playlist detected. Audio extraction for this site is not yet supported.',
+  '已发现媒体分片，尚缺可提前读取的完整音轨':
+    'Media segments detected. A complete audio source is still needed.',
+  '打开视频网站的点播页面，播放几秒后重新扫描。':
+    'Open a video page, play a few seconds, then rescan.',
+
+  '音轨服务器读取超时，请重试':
+    'Reading the audio server timed out. Please retry.',
+  '音轨服务器返回的数据不完整，请刷新资源后重试':
+    'The audio server returned incomplete data. Refresh the media and retry.',
+  '音轨临时存储空间不足，请释放磁盘空间后重试':
+    'Temporary audio storage is full. Free disk space and retry.',
+  '不支持范围读取的音轨超过 2 GiB，无法提前读取':
+    'This audio track exceeds the 2 GiB limit for servers without range support.',
+  '当前浏览器无法创建音轨临时文件，请检查本地存储权限':
+    'The browser could not create temporary audio storage. Check local storage permissions.',
+
   '片段自动暂存在本机，翻译结束或停止时合并为一个音频包；分段不发起下载。':
     'Audio chunks save quietly on this device. When translation finishes or stops, they merge into one audio package. No per-chunk downloads.',
   '正在合并并保存…': 'Merging and saving…',

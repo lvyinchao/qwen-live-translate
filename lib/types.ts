@@ -1,7 +1,15 @@
-export type Site = 'youtube' | 'bilibili' | 'generic';
+export type Site =
+  | 'youtube'
+  | 'bilibili'
+  | 'youku'
+  | 'iqiyi'
+  | 'tencent'
+  | 'generic';
 export interface AudioSource {
   url: string;
   mime?: string;
+  kind?: 'file' | 'hls';
+  hlsManifest?: string;
   headers?: Record<string, string>;
   identity: string;
   /** Native SABR request, kept in extension memory only. Never contains model credentials. */
@@ -26,6 +34,7 @@ export interface MediaCandidate {
   mediaId: string;
   tabId: number;
   frameId: number;
+  frameMediaId?: string;
   site: Site;
   title: string;
   poster: string;
@@ -36,6 +45,10 @@ export interface MediaCandidate {
   paused: boolean;
   ad: boolean;
   source?: AudioSource;
+  detectionOnly?: boolean;
+  sourceReason?: string;
+  detectedMedia?: { kind: string; count: number }[];
+  protected?: boolean;
   sourceStatus: 'ready' | 'discovering' | 'unsupported';
 }
 export interface TranslationSegment {

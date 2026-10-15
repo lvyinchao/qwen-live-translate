@@ -31,6 +31,9 @@ try {
       '验收数据.json',
       'ui-verification.json',
       'local-files-verification.json',
+      'range-source-verification.json',
+      'discovery-verification.json',
+      'generic-live-verification.json',
     ],
     { cwd: output },
   );
@@ -66,6 +69,9 @@ try {
     '音色试听说明.md',
     'ui-verification.json',
     'local-files-verification.json',
+    'range-source-verification.json',
+    'discovery-verification.json',
+    'generic-live-verification.json',
   ])
     await fs.copyFile(
       path.join(output, file),

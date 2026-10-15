@@ -284,7 +284,7 @@ try {
   );
   const cdp = await context.newCDPSession(video);
   await cdp.send('DOM.enable');
-  const caption = async () => {
+  const captionNode = async () => {
     const { root } = await cdp.send('DOM.getDocument', {
       depth: -1,
       pierce: true,
@@ -308,7 +308,23 @@ try {
     function text(node) {
       return (node.nodeValue ?? '') + (node.children ?? []).map(text).join('');
     }
-    return found ? text(found) : '';
+    return { found, text: found ? text(found) : '' };
+  };
+  const caption = async () => (await captionNode()).text;
+  const captionDisplay = async () => {
+    const { found } = await captionNode();
+    assert.ok(found, 'caption exists in the closed shadow root');
+    const { object } = await cdp.send('DOM.resolveNode', {
+      nodeId: found.nodeId,
+    });
+    const { result } = await cdp.send('Runtime.callFunctionOn', {
+      objectId: object.objectId,
+      functionDeclaration:
+        'function(){ return { hidden: this.hidden, display: getComputedStyle(this).display, height: this.getBoundingClientRect().height }; }',
+      returnByValue: true,
+    });
+    await cdp.send('Runtime.releaseObject', { objectId: object.objectId });
+    return result.value;
   };
   await video.waitForTimeout(350);
   assert.match(await caption(), /正在准备译音/);
@@ -330,6 +346,101 @@ try {
   );
   await video.waitForTimeout(350);
   assert.match(await caption(), /Preparing audio/);
+  const playerMessage = (message) =>
+    panel.evaluate(
+      ({ tabId, message }) =>
+        chrome.tabs.sendMessage(tabId, message, { frameId: 0 }),
+      { tabId, message },
+    );
+  const wav = (await fs.readFile('outputs/原音色译音示例.wav')).toString(
+    'base64',
+  );
+  const playing = {
+    ...session,
+    candidate: { ...session.candidate, tabId },
+    phase: 'paused',
+    subtitles: true,
+  };
+  await playerMessage({ type: 'player:state', session: playing });
+  await playerMessage({
+    type: 'player:segment',
+    epoch: session.epoch,
+    segment: {
+      ...session.segments[0],
+      mediaId: candidate.mediaId,
+      language: 'zh',
+      voice: 'original-auto-v1',
+      audio: wav,
+      audioDuration: 3.84,
+    },
+  });
+  assert.equal((await captionDisplay()).display, 'flex');
+  assert.match(await caption(), /翻译内容/);
+  await playerMessage({
+    type: 'player:mix',
+    originalVolume: 0,
+    dubVolume: 1,
+    subtitles: false,
+  });
+  assert.deepEqual(await captionDisplay(), {
+    hidden: true,
+    display: 'none',
+    height: 0,
+  });
+  await playerMessage({
+    type: 'player:segment',
+    epoch: session.epoch,
+    segment: {
+      ...session.segments[0],
+      id: 'replacement',
+      mediaId: candidate.mediaId,
+      language: 'zh',
+      voice: 'original-auto-v1',
+      sourceText: 'New source',
+      text: '新到达的译文',
+      audio: wav,
+      audioDuration: 3.84,
+    },
+  });
+  await playerMessage({
+    type: 'player:state',
+    session: { ...playing, subtitles: false },
+  });
+  await video.waitForTimeout(400);
+  assert.deepEqual(await captionDisplay(), {
+    hidden: true,
+    display: 'none',
+    height: 0,
+  });
+  await video
+    .locator('video')
+    .evaluate((v) => v.parentElement.requestFullscreen());
+  assert.equal(await video.evaluate(() => !!document.fullscreenElement), true);
+  assert.equal((await captionDisplay()).display, 'none');
+  await playerMessage({
+    type: 'player:mix',
+    originalVolume: 0,
+    dubVolume: 1,
+    subtitles: true,
+  });
+  assert.equal((await captionDisplay()).display, 'flex');
+  assert.match(await caption(), /新到达的译文/);
+  await video.evaluate(() => document.exitFullscreen());
+  await playerMessage({
+    type: 'player:mix',
+    originalVolume: 0,
+    dubVolume: 1,
+    subtitles: false,
+  });
+  await playerMessage({
+    type: 'player:attach',
+    session: { ...playing, subtitles: false },
+  });
+  await video.waitForTimeout(300);
+  assert.equal((await captionDisplay()).display, 'none');
+  result.checks.push(
+    'Caption toggle hides rendered pixels immediately; remains hidden after segment/state updates, fullscreen and reattachment; re-enabling restores text',
+  );
   const isolated = await panel.evaluate(
     async (tabId) =>
       (

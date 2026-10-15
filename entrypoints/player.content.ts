@@ -1,12 +1,13 @@
 import { decode64 } from '../lib/audio';
 import { activeSegment, planDub, clockDiscontinuity } from '../lib/timeline';
 import { mediaIdentity } from '../lib/adapters';
+import { pageVideos } from '../lib/discovery';
 import type { PlaybackSession, TranslationSegment } from '../lib/types';
 import { normalizeUILanguage, t } from '../lib/i18n';
 import type { UILanguage } from '../lib/types';
 
 export default defineContentScript({
-  matches: ['*://*.youtube.com/*', '*://*.bilibili.com/*'],
+  matches: ['http://*/*', 'https://*/*'],
   allFrames: true,
   runAt: 'document_start',
   main(ctx) {
@@ -20,6 +21,34 @@ export default defineContentScript({
           locale = normalizeUILanguage(result.value);
       })
       .catch(() => {});
+    window.addEventListener(
+      'message',
+      (event) => {
+        if (
+          event.source !== window ||
+          event.origin !== location.origin ||
+          event.data?.type !== 'qvd:tencent-media'
+        )
+          return;
+        const media = event.data.media;
+        if (
+          !media ||
+          typeof media.url !== 'string' ||
+          typeof media.playlist !== 'string' ||
+          media.playlist.length > 256 * 1024
+        )
+          return;
+        void chrome.runtime
+          .sendMessage({
+            target: 'background',
+            type: 'media:tencent-info',
+            media,
+          })
+          .catch(() => {});
+      },
+      { signal: ctx.signal },
+    );
+    window.postMessage({ type: 'qvd:request-media' }, location.origin);
     class Player {
       video: HTMLVideoElement;
       session: PlaybackSession;
@@ -99,10 +128,11 @@ export default defineContentScript({
         const shadow = this.host.attachShadow({ mode: 'closed' });
         const style = document.createElement('style');
         style.textContent =
-          ':host{font-family:system-ui,sans-serif}.caption{position:absolute;bottom:12%;left:8%;right:8%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}.line{max-width:100%;padding:6px 12px;background:rgba(10,18,30,.85);color:white;border-radius:6px;font-size:clamp(14px,2.3vw,25px);line-height:1.45;text-shadow:0 1px 2px #000;white-space:pre-wrap}.source{font-size:clamp(11px,1.4vw,17px);color:#cbd5e1}.note{font-size:12px;color:#f9cd87}';
+          ':host{font-family:system-ui,sans-serif}.caption{position:absolute;bottom:12%;left:8%;right:8%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}.caption[hidden]{display:none!important}.line{max-width:100%;padding:6px 12px;background:rgba(10,18,30,.85);color:white;border-radius:6px;font-size:clamp(14px,2.3vw,25px);line-height:1.45;text-shadow:0 1px 2px #000;white-space:pre-wrap}.source{font-size:clamp(11px,1.4vw,17px);color:#cbd5e1}.note{font-size:12px;color:#f9cd87}';
         this.caption.className = 'caption';
         shadow.append(style, this.caption, this.audio);
         this.placeOverlay();
+        this.mix(session.originalVolume, session.dubVolume, session.subtitles);
         const listen = (name: string, fn: () => void) =>
           video.addEventListener(name, fn, { signal: this.abort.signal });
         listen('pause', () => {
@@ -186,7 +216,8 @@ export default defineContentScript({
         this.timer = setInterval(() => {
           if (
             !video.isConnected ||
-            mediaIdentity(location.href) !== session.candidate.mediaId ||
+            mediaIdentity(location.href) !==
+              (session.candidate.frameMediaId ?? session.candidate.mediaId) ||
             document.querySelector('#movie_player.ad-showing')
           ) {
             this.send('player:lost');
@@ -314,13 +345,22 @@ export default defineContentScript({
       }
       placeOverlay() {
         const fullscreen = document.fullscreenElement;
+        let ancestor: Node | null = this.video;
+        while (ancestor && ancestor !== fullscreen)
+          ancestor =
+            ancestor.parentNode instanceof ShadowRoot
+              ? ancestor.parentNode.host
+              : ancestor.parentNode;
+        const root = this.video.getRootNode();
         const parent =
-          fullscreen && fullscreen.contains(this.video)
+          fullscreen && ancestor === fullscreen
             ? fullscreen
-            : this.video.parentElement;
+            : (this.video.parentElement ??
+              (root instanceof ShadowRoot ? root : null));
         if (parent && !(parent instanceof HTMLVideoElement))
           parent.append(this.host);
       }
+
       clearAudio() {
         this.audio.pause();
         this.audio.removeAttribute('src');
@@ -444,9 +484,7 @@ export default defineContentScript({
         return;
       }
       if (message.type === 'player:highlight') {
-        const v = Array.from(document.querySelectorAll('video')).find(
-          (v) => v.dataset.qvdId === message.id,
-        );
+        const v = pageVideos().find((v) => v.dataset.qvdId === message.id);
         if (v) {
           v.scrollIntoView({ behavior: 'smooth', block: 'center' });
           const outline = v.style.outline;
@@ -461,7 +499,7 @@ export default defineContentScript({
       if (message.type === 'player:attach') {
         player?.destroy();
         const s = message.session as PlaybackSession;
-        const video = Array.from(document.querySelectorAll('video')).find(
+        const video = pageVideos().find(
           (v) => v.dataset.qvdId === s.candidate.id,
         );
         if (video) player = new Player(video, s);

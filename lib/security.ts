@@ -34,11 +34,18 @@ export function authRule(
     },
   };
 }
-export function safeMediaUrl(value: string): boolean {
+export function safeMediaUrl(value: string, otherPublicHosts = false): boolean {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:' || url.username || url.password) return false;
     const host = url.hostname.toLowerCase();
+    if (otherPublicHosts)
+      return (
+        host.includes('.') &&
+        !/^[\d.]+$/.test(host) &&
+        !host.includes(':') &&
+        !/(?:^|\.)(?:localhost|local|internal|test|invalid|example)$/.test(host)
+      );
     return [
       'googlevideo.com',
       'bilivideo.com',

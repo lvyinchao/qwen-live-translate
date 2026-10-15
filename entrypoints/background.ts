@@ -1,3 +1,10 @@
+import { parseTencentMedia } from '../lib/tencent-media';
+import {
+  inspectVideos,
+  mediaKind,
+  chooseGenericSource,
+  type ObservedMedia,
+} from '../lib/discovery';
 import { acceptEngineState } from '../lib/session';
 import { normalizeUILanguage, t } from '../lib/i18n';
 import {
@@ -29,6 +36,10 @@ import { VideoPlaybackAbrRequest } from 'googlevideo/protos';
 
 export default defineBackground(() => {
   const sources = new Map<number, { identity: string; source: AudioSource }>();
+  const detected = new Map<
+    number,
+    { identity: string; items: ObservedMedia[] }
+  >();
   const requests = new Map<string, Record<string, string>>();
   const bodies = new Map<string, string>();
   const scopes = new Map<string, Promise<string | undefined>>();
@@ -112,7 +123,7 @@ export default defineBackground(() => {
   async function publishLocale(language: UILanguage) {
     await chrome.action.setTitle({ title: t(language, '打开听译') });
     const tabs = await chrome.tabs.query({
-      url: ['*://*.youtube.com/*', '*://*.bilibili.com/*'],
+      url: ['http://*/*', 'https://*/*'],
     });
     await Promise.allSettled(
       tabs
@@ -139,21 +150,7 @@ export default defineBackground(() => {
       chrome.scripting.executeScript({
         target: { tabId, allFrames: true },
         world: 'ISOLATED',
-        func: () =>
-          Array.from(document.querySelectorAll('video')).map((v, i) => {
-            const id = (v.dataset.qvdId ??= crypto.randomUUID());
-            return {
-              id,
-              title: document.title,
-              poster: v.poster,
-              duration: Number.isFinite(v.duration) ? v.duration : 0,
-              currentTime: v.currentTime,
-              width: v.videoWidth || v.clientWidth,
-              height: v.videoHeight || v.clientHeight,
-              paused: v.paused,
-              index: i,
-            };
-          }),
+        func: inspectVideos,
       }),
       chrome.scripting.executeScript({
         target: { tabId },
@@ -189,24 +186,84 @@ export default defineBackground(() => {
           ...source.headers,
         },
       };
-    return frames.flatMap((frame) =>
-      (frame.result ?? [])
-        .filter((v) => v.width > 100 && v.height > 60)
-        .map(
-          (v) =>
-            ({
-              ...v,
-              tabId,
-              frameId: frame.frameId,
-              site: meta.site,
-              mediaId: meta.identity,
-              title: meta.title,
-              ad: meta.ad,
-              source,
-              sourceStatus: source ? 'ready' : 'discovering',
-            }) as MediaCandidate,
-        ),
-    );
+    const native = meta.site === 'youtube' || meta.site === 'bilibili';
+    const resources =
+      detected.get(tabId) ??
+      ((await chrome.storage.session.get(`detected:${tabId}`))[
+        `detected:${tabId}`
+      ] as { identity: string; items: ObservedMedia[] } | undefined);
+    const items = resources?.identity === meta.identity ? resources.items : [];
+    const candidates = frames.flatMap((frame) => {
+      const visible = (frame.result ?? []).filter(
+        (v) => v.width > 100 && v.height > 60,
+      );
+      const players = visible.some((v) => v.duration > 0)
+        ? visible.filter((v) => v.duration > 0)
+        : visible;
+      const frameItems = items.filter((r) => r.frameId === frame.frameId);
+      return players.map((v) => {
+        const resolved = native
+          ? { source }
+          : chooseGenericSource(v, frameItems, meta.identity, players.length);
+        const reason = v.protected
+          ? '检测到受保护视频，暂不支持提前翻译'
+          : resolved.reason;
+        const selectedSource = v.protected ? undefined : resolved.source;
+        return {
+          ...v,
+          tabId,
+          frameId: frame.frameId,
+          frameMediaId: mediaIdentity(v.frameUrl),
+          site: meta.site,
+          mediaId: meta.identity,
+          title: meta.title,
+          ad: meta.ad,
+          source: selectedSource,
+          sourceReason: reason,
+          detectedMedia: [...new Set(frameItems.map((r) => r.kind))].map(
+            (kind) => ({
+              kind,
+              count: frameItems.filter((r) => r.kind === kind).length,
+            }),
+          ),
+          sourceStatus: selectedSource
+            ? 'ready'
+            : reason
+              ? 'unsupported'
+              : 'discovering',
+        } as MediaCandidate;
+      });
+    });
+    // Show observed streams even when the site has not exposed a controllable
+    // video element. Discovery alone must not imply synchronous playback support.
+    for (const frameId of new Set(items.map((r) => r.frameId))) {
+      if (candidates.some((c) => c.frameId === frameId)) continue;
+      const frameItems = items.filter((r) => r.frameId === frameId);
+      for (const kind of new Set(frameItems.map((r) => r.kind))) {
+        candidates.push({
+          id: `request:${frameId}:${kind}`,
+          mediaId: meta.identity,
+          tabId,
+          frameId,
+          site: meta.site,
+          title: `${meta.title} · ${kind.toUpperCase()}`,
+          poster: '',
+          duration: 0,
+          currentTime: 0,
+          width: 0,
+          height: 0,
+          paused: true,
+          ad: false,
+          detectionOnly: true,
+          sourceStatus: 'unsupported',
+          sourceReason: '媒体资源已发现，暂未找到可控制的网页播放器',
+          detectedMedia: [
+            { kind, count: frameItems.filter((r) => r.kind === kind).length },
+          ],
+        });
+      }
+    }
+    return candidates;
   }
   chrome.webRequest.onBeforeRequest.addListener(
     (details) => {
@@ -226,7 +283,11 @@ export default defineBackground(() => {
           .catch(() => undefined),
       );
       if (scopes.size > 500) scopes.delete(scopes.keys().next().value!);
-      if (details.method !== 'POST') return undefined;
+      if (
+        details.method !== 'POST' ||
+        !new URL(details.url).hostname.endsWith('.googlevideo.com')
+      )
+        return undefined;
       const raw = details.requestBody?.raw;
       if (!raw?.length) return undefined;
       const length = raw.reduce((n, r) => n + (r.bytes?.byteLength ?? 0), 0);
@@ -243,12 +304,8 @@ export default defineBackground(() => {
       return undefined;
     },
     {
-      urls: [
-        '*://*.googlevideo.com/*',
-        '*://*.bilivideo.com/*',
-        '*://*.bilivideo.cn/*',
-        '*://*.akamaized.net/*',
-      ],
+      urls: ['http://*/*', 'https://*/*'],
+      types: ['media', 'xmlhttprequest', 'other'],
     },
     ['requestBody'],
   );
@@ -268,12 +325,8 @@ export default defineBackground(() => {
       return undefined;
     },
     {
-      urls: [
-        '*://*.googlevideo.com/*',
-        '*://*.bilivideo.com/*',
-        '*://*.bilivideo.cn/*',
-        '*://*.akamaized.net/*',
-      ],
+      urls: ['http://*/*', 'https://*/*'],
+      types: ['media', 'xmlhttprequest', 'other'],
     },
     ['requestHeaders', 'extraHeaders'],
   );
@@ -296,7 +349,9 @@ export default defineBackground(() => {
         details.initiator?.startsWith('chrome-extension:') ||
         details.statusCode < 200 ||
         details.statusCode >= 300 ||
-        (!sabr && !observedAudio(details.url, mime))
+        (!sabr &&
+          !observedAudio(details.url, mime) &&
+          !mediaKind(details.url, mime))
       )
         return;
       captureStats.accepted++;
@@ -306,6 +361,51 @@ export default defineBackground(() => {
           if (!tab.url) return;
           const identity = mediaIdentity(tab.url);
           if ((await scope) !== identity) return;
+          const host = new URL(tab.url).hostname;
+          if (!/(^|\.)(youtube\.com|bilibili\.com)$/.test(host)) {
+            const kind = mediaKind(details.url, mime);
+            if (!kind) return;
+            const persisted =
+              detected.get(details.tabId) ??
+              ((await chrome.storage.session.get(`detected:${details.tabId}`))[
+                `detected:${details.tabId}`
+              ] as { identity: string; items: ObservedMedia[] } | undefined);
+            const previous = detected.get(details.tabId) ?? persisted;
+            const items = previous?.identity === identity ? previous.items : [];
+            const updated = [
+              ...items.filter(
+                (r) =>
+                  !(r.url === details.url && r.frameId === details.frameId),
+              ),
+              {
+                url: details.url,
+                mime,
+                kind,
+                frameId: details.frameId,
+                at: Date.now(),
+                headers,
+              },
+            ];
+            const state = {
+              identity,
+              items: (['file', 'hls', 'dash', 'fragment'] as const).flatMap(
+                (k) => updated.filter((r) => r.kind === k).slice(-10),
+              ),
+            };
+            if (
+              detected.get(details.tabId)?.identity &&
+              detected.get(details.tabId)?.identity !== identity
+            )
+              return;
+            detected.set(details.tabId, state);
+            await chrome.storage.session.set({
+              [`detected:${details.tabId}`]: state,
+            });
+            void chrome.runtime
+              .sendMessage({ type: 'sources:updated', tabId: details.tabId })
+              .catch(() => {});
+            return;
+          }
           const trackId = sabr
             ? VideoPlaybackAbrRequest.decode(decode64(sabrRequest!))
                 .clientAbrState?.audioTrackId || 'default'
@@ -341,12 +441,8 @@ export default defineBackground(() => {
         });
     },
     {
-      urls: [
-        '*://*.googlevideo.com/*',
-        '*://*.bilivideo.com/*',
-        '*://*.bilivideo.cn/*',
-        '*://*.akamaized.net/*',
-      ],
+      urls: ['http://*/*', 'https://*/*'],
+      types: ['media', 'xmlhttprequest', 'other'],
     },
     ['responseHeaders'],
   );
@@ -357,12 +453,8 @@ export default defineBackground(() => {
       requests.delete(details.requestId);
     },
     {
-      urls: [
-        '*://*.googlevideo.com/*',
-        '*://*.bilivideo.com/*',
-        '*://*.bilivideo.cn/*',
-        '*://*.akamaized.net/*',
-      ],
+      urls: ['http://*/*', 'https://*/*'],
+      types: ['media', 'xmlhttprequest', 'other'],
     },
   );
   const stop = async () => {
@@ -381,11 +473,16 @@ export default defineBackground(() => {
   };
   chrome.tabs.onRemoved.addListener((id) => {
     sources.delete(id);
-    void chrome.storage.session.remove(`source:${id}`);
+    detected.delete(id);
+    void chrome.storage.session.remove([`source:${id}`, `detected:${id}`]);
     if (session?.candidate.tabId === id) void stop();
   });
   chrome.tabs.onUpdated.addListener((id, change) => {
     if (change.url) {
+      if (detected.get(id)?.identity !== mediaIdentity(change.url)) {
+        detected.delete(id);
+        void chrome.storage.session.remove(`detected:${id}`);
+      }
       const old = sources.get(id);
       if (old && old.identity !== mediaIdentity(change.url)) {
         sources.delete(id);
@@ -552,6 +649,67 @@ export default defineBackground(() => {
             type: 'engine:probe',
             settings: await loadSettings(),
           });
+        case 'media:tencent-info': {
+          if (!sender.tab?.id || !sender.url?.startsWith('https://v.qq.com/'))
+            throw new Error('不允许网页触发扫描');
+          const tab = await chrome.tabs.get(sender.tab.id);
+          if (!tab.url) return false;
+          const supplied = message.media as {
+            videoId?: string;
+            url?: string;
+            playlist?: string;
+            protected?: boolean;
+          };
+          const validated = parseTencentMedia(
+            JSON.stringify({
+              vinfo: {
+                vl: {
+                  vi: [
+                    {
+                      vid: supplied.videoId,
+                      drm: supplied.protected ? 1 : 0,
+                      ul: {
+                        m3u8: supplied.playlist,
+                        ui: [{ url: supplied.url }],
+                      },
+                    },
+                  ],
+                },
+              },
+            }),
+            tab.url,
+          );
+          if (!validated) return false;
+          const identity = mediaIdentity(tab.url);
+          const previous = detected.get(sender.tab.id);
+          const items = previous?.identity === identity ? previous.items : [];
+          const state = {
+            identity,
+            items: [
+              ...items.filter(
+                (r) => r.kind !== 'hls' || r.frameId !== (sender.frameId ?? 0),
+              ),
+              {
+                url: validated.url,
+                mime: 'application/vnd.apple.mpegurl',
+                kind: 'hls' as const,
+                hlsManifest: validated.playlist,
+                protected: validated.protected,
+                frameId: sender.frameId ?? 0,
+                at: Date.now(),
+                headers: { Referer: tab.url, Origin: 'https://v.qq.com' },
+              },
+            ],
+          };
+          detected.set(sender.tab.id, state);
+          await chrome.storage.session.set({
+            [`detected:${sender.tab.id}`]: state,
+          });
+          void chrome.runtime
+            .sendMessage({ type: 'sources:updated', tabId: sender.tab.id })
+            .catch(() => {});
+          return true;
+        }
         case 'media:discover':
           if (!privileged) throw new Error('不允许网页触发扫描');
           return discover(Number(message.tabId));
@@ -614,6 +772,8 @@ export default defineBackground(() => {
             (v) => v.id === choice.id && v.frameId === choice.frameId,
           );
           if (!fresh) throw new Error('视频已变化，请重新扫描');
+          if (fresh.sourceReason && !fresh.source)
+            throw new Error(fresh.sourceReason);
           if (fresh.ad) throw new Error('请等待广告结束，再选择正片');
           if (!fresh.duration) throw new Error('首版仅支持普通点播视频');
           if (!fresh.source)
@@ -709,7 +869,7 @@ export default defineBackground(() => {
         case 'media:headers': {
           if (!privileged) throw new Error('不允许网页修改请求规则');
           const source = message.source as AudioSource;
-          if (!safeMediaUrl(source.url))
+          if (!safeMediaUrl(source.url, true))
             throw new Error('媒体域名不在允许范围');
           if (!Object.keys(source.headers ?? {}).length) return true;
           const exactHost = new URL(source.url).hostname;

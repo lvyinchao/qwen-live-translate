@@ -1,0 +1,43 @@
+{
+  "at": "2026-10-15T12:04:01.002Z",
+  "scope": "Real Chrome extension with controlled Youku/iQIYI/Tencent-shaped pages; actual DOM/frame/network discovery; no site playback or model acceptance",
+  "checks": [
+    "Youku/iQIYI/Tencent host detection, direct MP4, observed audio request and HLS source detection",
+    "Nested frame and open shadow DOM video selection/control with stable frame identity",
+    "A player with actual attached EME MediaKeys is identified as protected, never reported as ready",
+    "Network media remains discoverable without a DOM player, with an explicit unavailable-control status",
+    "Actual MAIN-world metadata observer, isolated bridge and background validation recover a Tencent inline HLS playlist from a fetch response"
+  ],
+  "cases": [
+    {
+      "site": "youku",
+      "players": 1,
+      "frameId": 0,
+      "sourceKind": "file",
+      "detected": [],
+      "overlayAttached": true
+    },
+    {
+      "site": "iqiyi",
+      "players": 1,
+      "frameId": 0,
+      "sourceKind": "file",
+      "detected": [
+        {
+          "kind": "file",
+          "count": 1
+        }
+      ],
+      "overlayAttached": true
+    },
+    {
+      "site": "tencent",
+      "players": 1,
+      "frameId": 7,
+      "sourceKind": "hls",
+      "detected": [],
+      "overlayAttached": true
+    }
+  ],
+  "passed": true
+}

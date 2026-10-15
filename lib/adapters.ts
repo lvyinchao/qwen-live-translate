@@ -7,7 +7,7 @@ export function mediaIdentity(url: string): string {
     return `youtube:${u.searchParams.get('v') ?? u.pathname}:${u.searchParams.get('list') ?? ''}`;
   if (u.hostname.endsWith('bilibili.com'))
     return `bilibili:${u.pathname}:${u.searchParams.get('p') ?? '1'}`;
-  return `${u.origin}${u.pathname}${u.search}`;
+  return `${u.origin}${u.pathname}${u.search}${u.hash}`;
 }
 export function observedAudio(url: string, mime: string): boolean {
   try {
@@ -151,8 +151,14 @@ export function inspectPlayerMain(): PlayerMetadata {
     };
   }
   return {
-    identity: `${u.origin}${u.pathname}${u.search}`,
-    site: 'generic',
+    identity: `${u.origin}${u.pathname}${u.search}${u.hash}`,
+    site: /(^|\.)youku\.com$/.test(u.hostname)
+      ? 'youku'
+      : /(^|\.)iqiyi\.com$/.test(u.hostname)
+        ? 'iqiyi'
+        : /(^|\.)qq\.com$/.test(u.hostname)
+          ? 'tencent'
+          : 'generic',
     title,
     ad: false,
   };

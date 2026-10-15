@@ -88,13 +88,7 @@ function App() {
       currentWindow: true,
     });
     setTab(current);
-    if (
-      !current?.id ||
-      !current.url ||
-      !/^https?:\/\/(?:[^/]+\.)?(youtube\.com|bilibili\.com)\//.test(
-        current.url,
-      )
-    ) {
+    if (!current?.id || !current.url || !/^https?:\/\//.test(current.url)) {
       setVideos([]);
       return;
     }
@@ -132,10 +126,15 @@ function App() {
       .then(setFiles)
       .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
     void scan().catch((e) => setError(e.message));
+    let scanTimer: ReturnType<typeof setTimeout> | undefined;
     const listener = (m: any) => {
       if (m.type === 'session:updated') setSession(m.session);
       if (m.type === 'files:updated') setFiles(m.status);
-      if (m.type === 'sources:updated') void scan().catch(() => {});
+      if (m.type === 'sources:updated' && !scanTimer)
+        scanTimer = setTimeout(() => {
+          scanTimer = undefined;
+          void scan().catch(() => {});
+        }, 500);
     };
     const activated = () => void scan().catch(() => {});
     chrome.runtime.onMessage.addListener(listener);
@@ -155,6 +154,7 @@ function App() {
     };
     chrome.storage.onChanged.addListener(onSettings);
     return () => {
+      clearTimeout(scanTimer);
       chrome.runtime.onMessage.removeListener(listener);
       chrome.tabs.onActivated.removeListener(activated);
       chrome.storage.onChanged.removeListener(onSettings);
@@ -429,11 +429,12 @@ function App() {
                     className={`video-choice ${v.id === selected ? 'selected' : ''}`}
                     onClick={() => {
                       setSelected(v.id);
-                      void call('media:highlight', {
-                        tabId: v.tabId,
-                        frameId: v.frameId,
-                        id: v.id,
-                      });
+                      if (!v.detectionOnly)
+                        void call('media:highlight', {
+                          tabId: v.tabId,
+                          frameId: v.frameId,
+                          id: v.id,
+                        });
                     }}
                   >
                     <span className="video-poster">
@@ -442,7 +443,9 @@ function App() {
                       ) : (
                         <Video size={25} />
                       )}
-                      <span>{time(v.duration)}</span>
+                      <span>
+                        {v.detectionOnly ? t('媒体资源') : time(v.duration)}
+                      </span>
                     </span>
                     <span className="video-info">
                       <strong>{v.title}</strong>
@@ -451,8 +454,18 @@ function App() {
                           ? 'YouTube'
                           : v.site === 'bilibili'
                             ? 'Bilibili'
-                            : t('网页视频')}{' '}
-                        · {v.width} × {v.height}
+                            : v.site === 'youku'
+                              ? 'Youku'
+                              : v.site === 'iqiyi'
+                                ? 'iQIYI'
+                                : v.site === 'tencent'
+                                  ? 'Tencent Video'
+                                  : t('网页视频')}{' '}
+                        {!v.detectionOnly && (
+                          <>
+                            · {v.width} × {v.height}
+                          </>
+                        )}
                       </small>
                       <span
                         className={`source-state ${v.source ? 'available' : ''}`}
@@ -462,7 +475,13 @@ function App() {
                         ) : (
                           <span className="tiny-dot" />
                         )}
-                        {v.source ? t('音轨已识别') : t('等待识别音轨')}
+                        {v.sourceReason
+                          ? localizeMessage(v.sourceReason, locale)
+                          : v.source
+                            ? t('音轨已识别')
+                            : t('等待识别音轨')}
+                        {!!v.detectedMedia?.length &&
+                          ` · ${v.detectedMedia.map((r) => `${r.kind.toUpperCase()} × ${r.count}`).join(', ')}`}
                       </span>
                     </span>
                     <span className="radio">
@@ -476,11 +495,7 @@ function App() {
                     <Video size={28} />
                   </span>
                   <strong>{t('让视频先出现')}</strong>
-                  <p>
-                    {t(
-                      '打开 YouTube 或 Bilibili 点播页面，播放几秒后重新扫描。',
-                    )}
-                  </p>
+                  <p>{t('打开视频网站的点播页面，播放几秒后重新扫描。')}</p>
                   <button
                     className="text-button"
                     onClick={() => act('scan', scan)}
@@ -502,7 +517,9 @@ function App() {
             {candidate && !candidate.source && (
               <p className="hint">
                 <CircleHelp size={14} />
-                {t('先播放几秒，让浏览器发现音轨，再点击重新扫描。')}
+                {candidate.sourceReason
+                  ? localizeMessage(candidate.sourceReason, locale)
+                  : t('先播放几秒，让浏览器发现音轨，再点击重新扫描。')}
               </p>
             )}
             <section className="language-section">
@@ -549,7 +566,7 @@ function App() {
             ) : (
               <button
                 className="primary"
-                disabled={!!busy || !candidate}
+                disabled={!!busy || !candidate || !!candidate.sourceReason}
                 onClick={() =>
                   act('start', async () => {
                     const s = await call<PlaybackSession>('session:start', {

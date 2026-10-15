@@ -1,0 +1,37 @@
+{
+  "at": "2026-10-15T12:01:45.518Z",
+  "scope": "Anonymous public-site discovery, no login and no model calls; failure to load/resolve is recorded, not counted as accepted",
+  "sites": [
+    {
+      "landing": "https://v.qq.com/x/cover/mzc00200803dr6b/z4102cn0lk3.html",
+      "httpStatus": 200,
+      "page": "https://v.qq.com/x/cover/mzc00200803dr6b/z4102cn0lk3.html",
+      "title": "兰香如故_05_电视剧_高清完整版视频在线观看_腾讯视频",
+      "candidates": [
+        {
+          "site": "tencent",
+          "frameId": 0,
+          "duration": 2806.8259999999987,
+          "sourceStatus": "unsupported",
+          "reason": "已发现媒体分片，尚缺可提前读取的完整音轨",
+          "detectedMedia": [
+            {
+              "kind": "fragment",
+              "count": 6
+            }
+          ]
+        }
+      ],
+      "detected": true,
+      "prefetchable": false
+    }
+  ],
+  "metadataDiagnostic": {
+    "source": "Anonymous response inspection for the user-provided Tencent video",
+    "videoId": "z4102cn0lk3",
+    "metadataEncoding": 1,
+    "metadataProtocol": "7",
+    "videoDrmFlag": 0,
+    "result": "Encoded playback information not supported; detection passed but no prefetch or dubbing acceptance"
+  }
+}

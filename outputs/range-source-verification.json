@@ -1,0 +1,152 @@
+{
+  "at": "2026-10-15T12:07:25.960Z",
+  "scope": "Real Chrome worker, synthetic AAC/MP4 with tail metadata beyond the 8 MiB cache; localhost 200/206 HTTP responses; no model call",
+  "fixtureBytes": 10633462,
+  "checks": [
+    "Unmodified 0.1.3 reproduced the exact already-evicted cache error",
+    "Fixed worker decoded future windows and rewound correctly from OPFS with only one 200 origin request",
+    "A second disk-backed resource did not evict or delete the first live temporary file",
+    "Inline HLS metadata decoded without re-requesting a playlist URL",
+    "Unencrypted HLS VOD playlist and audio segments decoded through the same worker",
+    "PCM samples from the 200 disk path exactly matched normal 206 range decoding",
+    "A fresh worker reclaimed unlocked temporary files left by termination"
+  ],
+  "cases": [
+    {
+      "path": "/ignored.m4a",
+      "start": 1,
+      "end": 3,
+      "ok": true,
+      "decodedStart": 0.9386666666666666,
+      "decodedEnd": 3.0506666666666664,
+      "length": 32000,
+      "rms": 0.08829650908114561,
+      "hash": "635321c2ef1af8dd9e2f2ab4457fd6383c35559fe5df8e3f6b853f5cef9dd3a5"
+    },
+    {
+      "path": "/ignored.m4a",
+      "start": 8,
+      "end": 11,
+      "ok": true,
+      "decodedStart": 7.936,
+      "decodedEnd": 11.050666666666666,
+      "length": 48000,
+      "rms": 0.08816916902080398,
+      "hash": "df3dd1d00db23408723dea969c3c929f1c5261e5a5ab879f6e8eafd45d88498f"
+    },
+    {
+      "path": "/ignored-b.m4a",
+      "start": 2,
+      "end": 4,
+      "ok": true,
+      "decodedStart": 1.9413333333333334,
+      "decodedEnd": 4.053333333333334,
+      "length": 32000,
+      "rms": 0.08820491198730329,
+      "hash": "87c847aacf5bb01eabc0096a8edf70ea22ed6dfc6844d4ba12b4b0647186751d"
+    },
+    {
+      "path": "/ignored.m4a",
+      "start": 1,
+      "end": 3,
+      "ok": true,
+      "decodedStart": 0.9386666666666666,
+      "decodedEnd": 3.0506666666666664,
+      "length": 32000,
+      "rms": 0.08829650908114561,
+      "hash": "635321c2ef1af8dd9e2f2ab4457fd6383c35559fe5df8e3f6b853f5cef9dd3a5"
+    },
+    {
+      "path": "/honest.m4a",
+      "start": 1,
+      "end": 3,
+      "ok": true,
+      "decodedStart": 0.9386666666666666,
+      "decodedEnd": 3.0506666666666664,
+      "length": 32000,
+      "rms": 0.08829650908114561,
+      "hash": "635321c2ef1af8dd9e2f2ab4457fd6383c35559fe5df8e3f6b853f5cef9dd3a5"
+    },
+    {
+      "path": "/hls.m3u8",
+      "kind": "hls",
+      "start": 2,
+      "end": 4,
+      "ok": true,
+      "decodedStart": 1.9413333333333334,
+      "decodedEnd": 4.053333333333334,
+      "length": 32000,
+      "rms": 0.0881951069148701,
+      "hash": "8dbd9a01fb6de139152e54abeed60a8008549a85441ae28697ec94e01bc6f3bd"
+    },
+    {
+      "path": "/inline.m3u8",
+      "kind": "hls",
+      "inline": true,
+      "start": 2,
+      "end": 4,
+      "ok": true,
+      "decodedStart": 1.9413333333333334,
+      "decodedEnd": 4.053333333333334,
+      "length": 32000,
+      "rms": 0.0881951069148701,
+      "hash": "8dbd9a01fb6de139152e54abeed60a8008549a85441ae28697ec94e01bc6f3bd"
+    }
+  ],
+  "baseline": {
+    "path": "/ignored.m4a",
+    "start": 1,
+    "end": 3,
+    "ok": false,
+    "error": "Attempted to read data from an already-evicted part of the cache. Because the HTTP server did not honor the range request, data can only be read sequentially, with old data being evicted from the cache. To fix this issue, either ensure your server responds to range requests with 206 Partial Content, or set maxCacheSize to Infinity in the UrlSource options. Note that the latter will store the entire file in the cache if needed, no matter how large."
+  },
+  "baselineRequests": [
+    {
+      "path": "/ignored.m4a",
+      "range": "bytes=0-"
+    }
+  ],
+  "passed": true,
+  "requests": [
+    {
+      "path": "/ignored.m4a",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/ignored-b.m4a",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/honest.m4a",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/honest.m4a",
+      "range": "bytes=10551296-"
+    },
+    {
+      "path": "/hls.m3u8",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-00.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-01.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-00.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/hls-01.ts",
+      "range": "bytes=0-"
+    },
+    {
+      "path": "/ignored.m4a",
+      "range": "bytes=0-"
+    }
+  ]
+}

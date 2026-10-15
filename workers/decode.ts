@@ -8,6 +8,9 @@ import {
 import { renderMono } from '../lib/audio';
 import { openSabrWindow } from '../lib/sabr';
 import { messageError } from '../lib/types';
+import { RangeMediaCache } from '../lib/range-media';
+
+const mediaCache = new RangeMediaCache();
 
 const inputs = new Map<string, Input>();
 self.onmessage = async (event) => {
@@ -24,6 +27,7 @@ self.onmessage = async (event) => {
       sabr = openSabrWindow(source, start, end, AbortSignal.timeout(45000));
     input = new Input({
       formats: ALL_FORMATS,
+      formatOptions: { hls: { offsetTimestampsByDateTime: false } },
       source: sabr
         ? new ReadableStreamSource(sabr.stream, {
             maxCacheSize: 8 * 1024 * 1024,
@@ -35,13 +39,29 @@ self.onmessage = async (event) => {
             requestInit: { credentials: 'include' },
             getRetryDelay: (attempt, error) =>
               attempt < 2 ? 2 ** attempt : null,
-            fetchFn: async (url, init) => {
-              const timeout = AbortSignal.timeout(20000);
-              const signal = init?.signal
-                ? AbortSignal.any([init.signal, timeout])
-                : timeout;
-              return fetch(url, { ...init, signal });
-            },
+            fetchFn:
+              source.kind === 'hls'
+                ? (url, init) =>
+                    source.hlsManifest &&
+                    new URL(url instanceof Request ? url.url : String(url))
+                      .href === new URL(source.url).href
+                      ? Promise.resolve(
+                          new Response(source.hlsManifest, {
+                            headers: {
+                              'Content-Type': 'application/vnd.apple.mpegurl',
+                            },
+                          }),
+                        )
+                      : fetch(url, {
+                          ...init,
+                          signal: init?.signal
+                            ? AbortSignal.any([
+                                init.signal,
+                                AbortSignal.timeout(20000),
+                              ])
+                            : AbortSignal.timeout(20000),
+                        })
+                : mediaCache.fetch,
           }),
     });
     inputs.set(id, input);
