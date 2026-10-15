@@ -9,6 +9,7 @@ export default defineConfig({
     minimum_chrome_version: '116',
     permissions: [
       'storage',
+      'downloads',
       'activeTab',
       'tabs',
       'scripting',

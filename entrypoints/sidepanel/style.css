@@ -50,6 +50,35 @@ button svg {
   display: flex;
   flex-direction: column;
 }
+.local-files {
+  border-top: 1px solid #e4e8e2;
+  margin-top: 24px;
+  padding-top: 18px;
+  font-size: 11px;
+  color: #6b7c70;
+}
+.local-files strong {
+  color: #346c52;
+  font-weight: 600;
+}
+.local-files p {
+  font-size: 10px;
+  line-height: 1.8;
+}
+.local-files small {
+  display: block;
+  margin-top: 5px;
+}
+.local-files .file-error {
+  color: #ae4429;
+  overflow-wrap: anywhere;
+}
+.file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
 .header {
   height: 77px;
   padding: 0 23px;

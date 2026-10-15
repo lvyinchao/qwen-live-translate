@@ -30,6 +30,7 @@ try {
       '音色试听说明.md',
       '验收数据.json',
       'ui-verification.json',
+      'local-files-verification.json',
     ],
     { cwd: output },
   );
@@ -64,6 +65,7 @@ try {
     '原音色译音示例.wav',
     '音色试听说明.md',
     'ui-verification.json',
+    'local-files-verification.json',
   ])
     await fs.copyFile(
       path.join(output, file),

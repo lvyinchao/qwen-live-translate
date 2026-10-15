@@ -3,6 +3,28 @@ import type { UILanguage } from './types';
 // Keep the original internal errors stable: retry classification and diagnostics
 // use them. Localize at the presentation boundary, never model text or subtitles.
 const english = {
+  本地保存: 'Local files',
+  '脚本、字幕与原音色音频自动保存到下载目录，按视频和目标语言分文件夹。':
+    'Transcripts, subtitles and original-voice audio save automatically to your Chrome download folder, organized by video and target language.',
+  '正在保存文件…': 'Saving files…',
+  '已保存 {count} 个译音包': '{count} translation bundles saved',
+  '翻译完成的内容会自动保存为 ZIP':
+    'Completed translations save automatically as ZIP files',
+  '待保存 {count} 批': '{count} batches waiting to save',
+  '本地保存失败，待保存内容已保留，请重试。':
+    'Saving failed. Please retry to save the queued files.',
+  查看已保存文件: 'Show saved files',
+  重试保存: 'Retry saving',
+  '本地保存待处理内容已满，请先重试保存':
+    'The local save queue is full. Retry saving before continuing.',
+  不允许网页读取本地保存内容:
+    'Web pages cannot access saved translation files.',
+  本地保存暂不可用: 'Local saving is temporarily unavailable.',
+  本地文件不存在: 'The saved file is unavailable.',
+  不允许网页保存文件: 'Web pages cannot save extension files.',
+  本地保存路径无效: 'Invalid local save path.',
+  '本地文件保存中断，请重试': 'File saving was interrupted. Please retry.',
+  '本地文件保存超时，请重试': 'File saving timed out. Please retry.',
   听译: 'Qwen Dub',
   '听译 · 视频译音': 'Qwen Video Dub',
   打开听译: 'Open Qwen Video Dub',

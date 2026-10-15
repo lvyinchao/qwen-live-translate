@@ -1,5 +1,7 @@
 import DecodeWorker from '../../workers/decode?worker';
 import { SegmentCache } from '../../lib/cache';
+import { LocalFiles } from '../../lib/local-files';
+import { archiveContext } from '../../lib/archive';
 import { silenceBoundary } from '../../lib/audio';
 import { coverageEnd, mergeCoverage, type Coverage } from '../../lib/timeline';
 import { abortError, delay, translateWindow } from '../../lib/qwen';
@@ -28,6 +30,15 @@ async function bg<T = unknown>(
   if (!result.ok) throw new Error(result.error);
   return result.value;
 }
+const files = new LocalFiles(
+  (url, filename) => bg<number>('files:download', { url, filename }),
+  (status) => {
+    void chrome.runtime
+      .sendMessage({ type: 'files:updated', status })
+      .catch(() => {});
+  },
+);
+void files.flush().catch((error) => files.failed(error));
 class Engine {
   session: PlaybackSession | null = null;
   settings: Settings | null = null;
@@ -66,6 +77,7 @@ class Engine {
     this.abort?.abort();
     this.worker?.terminate();
     this.worker = undefined;
+    await files.flush().catch((error) => files.failed(error));
     this.session = null;
     this.segments = [];
     this.ranges = [];
@@ -124,11 +136,15 @@ class Engine {
     session.position = position;
     session.phase = 'buffering';
     session.error = undefined;
-    const cached = await cache.load(
-      this.cacheIdentity(),
-      session.language,
-      VOICE,
-    );
+    const identity = this.cacheIdentity();
+    await files.flush().catch((error) => files.failed(error));
+    if (
+      signal.aborted ||
+      operation !== this.generation ||
+      this.session !== session
+    )
+      return;
+    const cached = await cache.load(identity, session.language, VOICE);
     if (
       signal.aborted ||
       operation !== this.generation ||
@@ -137,6 +153,26 @@ class Engine {
       return;
     this.ranges = cached.ranges;
     this.segments = cached.segments;
+    // Save cache hits as well, grouped into bounded bundles. Exact repeats are
+    // deduplicated against successfully completed downloads.
+    const groups = new Map<number, TranslationSegment[]>();
+    for (const segment of cached.segments) {
+      const start = Math.floor(segment.start / 60) * 60;
+      groups.set(start, [...(groups.get(start) ?? []), segment]);
+    }
+    for (const [start, segments] of groups) {
+      await files.capture(
+        archiveContext(session),
+        start,
+        Math.min(
+          session.candidate.duration,
+          Math.max(start + 60, ...segments.map((s) => s.end)),
+        ),
+        segments,
+        true,
+      );
+      if (signal.aborted || operation !== this.generation) return;
+    }
     this.startPosition = position;
     this.rebuffering = true;
     session.readyThrough = coverageEnd(this.ranges, position);
@@ -163,6 +199,7 @@ class Engine {
       this.abort?.abort();
       this.session.phase = 'error';
       this.session.error = messageError(error);
+      await files.flush().catch((failure) => files.failed(failure));
       await this.publish(true);
     });
   }
@@ -265,6 +302,7 @@ class Engine {
       const translatePart = async (part: { start: number; end: number }) => {
         const windowStart = cursor + part.start / 16000,
           windowEnd = cursor + part.end / 16000;
+        const context = archiveContext(s);
         let lastInput = windowStart,
           attemptStart = windowStart;
         const connection = crypto.randomUUID();
@@ -282,6 +320,9 @@ class Engine {
           this.segments.sort((a, b) => a.start - b.start);
           this.diagnostics.outputSeconds += segment.audioDuration;
           void this.sendSegment(segment, epoch);
+          void files
+            .capture(context, windowStart, windowEnd, [segment])
+            .catch((error) => files.failed(error));
         };
         let result: TranslationSegment[] = [];
         for (let attempt = 0; ; attempt++) {
@@ -377,15 +418,24 @@ class Engine {
           ...this.ranges,
           { start: windowStart, end: windowEnd },
         ]);
+        const completedSegments = this.segments.filter(
+          (t) => t.start >= windowStart - 0.03 && t.end <= windowEnd + 0.03,
+        );
         await cache.put(
           this.cacheIdentity(),
           s.language,
           VOICE,
           { start: windowStart, end: windowEnd },
-          this.segments.filter(
-            (t) => t.start >= windowStart - 0.03 && t.end <= windowEnd + 0.03,
-          ),
+          completedSegments,
         );
+        await files.capture(
+          context,
+          windowStart,
+          windowEnd,
+          completedSegments,
+          true,
+        );
+        if (signal.aborted || this.session?.epoch !== epoch) return;
         this.updateReadiness();
         await this.publish(true);
       };
@@ -448,7 +498,12 @@ class Engine {
 }
 const engine = new Engine();
 chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
-  if (message.target !== 'offscreen' || sender.id !== chrome.runtime.id) return;
+  if (
+    message.target !== 'offscreen' ||
+    sender.id !== chrome.runtime.id ||
+    !sender.url?.startsWith(chrome.runtime.getURL(''))
+  )
+    return;
   void (async () => {
     if (message.type === 'engine:start') {
       await engine.start(
@@ -474,6 +529,11 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
     if (message.type === 'cache:clear') {
       await cache.clear();
       return true;
+    }
+    if (message.type === 'files:status') return files.status();
+    if (message.type === 'files:retry') {
+      await files.retry();
+      return files.status();
     }
     if (message.type === 'engine:diagnostics') {
       const memory = (

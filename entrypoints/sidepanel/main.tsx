@@ -35,6 +35,7 @@ import {
   type MessageKey,
 } from '../../lib/i18n';
 import type { UILanguage } from '../../lib/types';
+import { EMPTY_FILE_STATUS, type LocalFileStatus } from '../../lib/archive';
 import './style.css';
 
 async function call<T = unknown>(
@@ -76,6 +77,7 @@ function App() {
   const [videos, setVideos] = useState<MediaCandidate[]>([]);
   const [selected, setSelected] = useState('');
   const [session, setSession] = useState<PlaybackSession | null>(null);
+  const [files, setFiles] = useState<LocalFileStatus>(EMPTY_FILE_STATUS);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -126,9 +128,13 @@ function App() {
       .catch((e) => setError(e.message))
       .finally(() => setLoaded(true));
     void call<PlaybackSession | null>('session:get').then(setSession);
+    void call<LocalFileStatus>('files:status')
+      .then(setFiles)
+      .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
     void scan().catch((e) => setError(e.message));
     const listener = (m: any) => {
       if (m.type === 'session:updated') setSession(m.session);
+      if (m.type === 'files:updated') setFiles(m.status);
       if (m.type === 'sources:updated') void scan().catch(() => {});
     };
     const activated = () => void scan().catch(() => {});
@@ -701,6 +707,56 @@ function App() {
             )}
           </>
         )}
+        <section className="local-files" aria-label={t('本地保存')}>
+          <strong>{t('本地保存')}</strong>
+          <p>
+            {t(
+              '脚本、字幕与原音色音频自动保存到下载目录，按视频和目标语言分文件夹。',
+            )}
+          </p>
+          <span role="status">
+            {files.saving
+              ? t('正在保存文件…')
+              : files.saved
+                ? t('已保存 {count} 个译音包', { count: files.saved })
+                : t('翻译完成的内容会自动保存为 ZIP')}
+          </span>
+          {files.pending > 0 && (
+            <small>{t('待保存 {count} 批', { count: files.pending })}</small>
+          )}
+          {files.error && (
+            <p className="file-error" role="alert">
+              {t('本地保存失败，待保存内容已保留，请重试。')}{' '}
+              {localizeMessage(files.error, locale)}
+            </p>
+          )}
+          <div className="file-actions">
+            <button
+              className="text-button"
+              disabled={!!busy || files.lastDownloadId === undefined}
+              onClick={() =>
+                act('files-show', async () => {
+                  await call('files:show', { id: files.lastDownloadId });
+                })
+              }
+            >
+              {t('查看已保存文件')}
+            </button>
+            {(files.pending > 0 || files.error) && (
+              <button
+                className="text-button"
+                disabled={!!busy || files.saving}
+                onClick={() =>
+                  act('files-retry', async () => {
+                    setFiles(await call<LocalFileStatus>('files:retry'));
+                  })
+                }
+              >
+                {t('重试保存')}
+              </button>
+            )}
+          </div>
+        </section>
         {(error || session?.error) && (
           <div className="feedback error" role="alert">
             {localizeMessage(error || session?.error || '', locale)}

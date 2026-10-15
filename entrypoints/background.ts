@@ -402,6 +402,7 @@ export default defineBackground(() => {
     if (
       message.target === 'offscreen' ||
       message.type === 'session:updated' ||
+      message.type === 'files:updated' ||
       message.type === 'sources:updated'
     )
       return;
@@ -409,6 +410,89 @@ export default defineBackground(() => {
       await initialized;
       const privileged = trusted(sender);
       switch (message.type) {
+        case 'files:status':
+        case 'files:retry': {
+          if (!privileged) throw new Error('不允许网页读取本地保存内容');
+          await ensureOffscreen();
+          const result = await chrome.runtime.sendMessage({
+            target: 'offscreen',
+            type: message.type,
+          });
+          if (!result?.ok) throw new Error(result?.error ?? '本地保存暂不可用');
+          return result.value;
+        }
+        case 'files:show': {
+          if (!privileged) throw new Error('不允许网页读取本地保存内容');
+          const id = Number(message.id);
+          if (!Number.isInteger(id)) throw new Error('本地文件不存在');
+          const [item] = await chrome.downloads.search({ id });
+          if (!item || item.byExtensionId !== chrome.runtime.id)
+            throw new Error('本地文件不存在');
+          await chrome.downloads.show(id);
+          return true;
+        }
+        case 'files:download': {
+          if (
+            !privileged ||
+            sender.url !== chrome.runtime.getURL('offscreen.html')
+          )
+            throw new Error('不允许网页保存文件');
+          const url = String(message.url),
+            filename = String(message.filename);
+          if (
+            !url.startsWith(`blob:${chrome.runtime.getURL('')}`) ||
+            !filename.startsWith('Qwen Video Dub/') ||
+            !filename.endsWith('.zip') ||
+            /[\\\x00-\x1f]/.test(filename) ||
+            filename.split('/').some((p) => !p || p === '.' || p === '..')
+          )
+            throw new Error('本地保存路径无效');
+          return new Promise<number>((resolve, reject) => {
+            let id: number | undefined;
+            const cleanup = () => {
+              clearTimeout(timer);
+              chrome.downloads.onChanged.removeListener(changed);
+            };
+            const changed = (delta: chrome.downloads.DownloadDelta) => {
+              if (delta.id !== id) return;
+              if (delta.state?.current === 'complete') {
+                cleanup();
+                resolve(id);
+              }
+              if (delta.state?.current === 'interrupted') {
+                cleanup();
+                reject(new Error('本地文件保存中断，请重试'));
+              }
+            };
+            const timer = setTimeout(() => {
+              cleanup();
+              reject(new Error('本地文件保存超时，请重试'));
+            }, 90000);
+            chrome.downloads.onChanged.addListener(changed);
+            void chrome.downloads
+              .download({
+                url,
+                filename,
+                saveAs: false,
+                conflictAction: 'uniquify',
+              })
+              .then(async (value) => {
+                id = value;
+                const [item] = await chrome.downloads.search({ id });
+                if (item?.state === 'complete') {
+                  cleanup();
+                  resolve(id);
+                } else if (item?.state === 'interrupted') {
+                  cleanup();
+                  reject(new Error('本地文件保存中断，请重试'));
+                }
+              })
+              .catch((error) => {
+                cleanup();
+                reject(error);
+              });
+          });
+        }
         case 'ui:get':
           // Content scripts can read only this presentation preference.
           return (await loadSettings()).uiLanguage;

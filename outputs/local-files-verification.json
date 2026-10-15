@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-15T11:04:03.397Z",
+  "scope": "Actual built Chrome extension and disk downloads using an existing real translated WAV as a cache fixture; no new provider call",
+  "checks": [
+    "Cached real original-voice WAV exported automatically through the built engine; bilingual TXT/SRT/JSON and exact source timestamps verified on disk",
+    "Replaying identical cached translations does not create duplicate downloads",
+    "Clearing playback cache leaves downloaded files intact",
+    "Unfinished-window utterances recovered after offscreen recreation; denied download remains queued and visibly reports failure",
+    "User retry completes a previously interrupted disk download without losing queued audio",
+    "Webpage/content-script access to file metadata and direct offscreen commands rejected",
+    "Sidepanel cannot bypass the offscreen-only local download route"
+  ],
+  "files": [
+    {
+      "relative": "Qwen Video Dub/169a1061de8770b9-Local archive 原音色/zh-original-auto-v1/0000000000-0000030000-df2f794a2a25.zip",
+      "zipCrcPassed": true,
+      "wavIdentical": true,
+      "sampleRate": 24000,
+      "sourceStart": 23,
+      "sourceEnd": 25.504
+    }
+  ],
+  "passed": true
+}
