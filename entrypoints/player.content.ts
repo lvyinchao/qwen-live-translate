@@ -244,6 +244,7 @@ export default defineContentScript({
             type,
             sessionId: this.session.id,
             epoch: this.session.epoch,
+            languageVersion: this.session.languageVersion ?? 0,
             ...data,
           })
           .catch(() => {});
@@ -299,9 +300,15 @@ export default defineContentScript({
         }
       }
       state(next: PlaybackSession) {
-        if (next.id !== this.session.id || next.epoch < this.session.epoch)
+        const version = next.languageVersion ?? 0;
+        const currentVersion = this.session.languageVersion ?? 0;
+        if (
+          next.id !== this.session.id ||
+          version < currentVersion ||
+          (version === currentVersion && next.epoch < this.session.epoch)
+        )
           return;
-        if (next.epoch !== this.session.epoch) {
+        if (next.epoch !== this.session.epoch || version !== currentVersion) {
           this.epochStartPosition = next.position;
           this.clearAudio();
           this.segments = [];
@@ -320,8 +327,13 @@ export default defineContentScript({
         } else if (next.phase === 'playing') void this.resumeVideo();
         this.tick();
       }
-      add(segment: TranslationSegment, epoch: number) {
-        if (epoch !== this.session.epoch) return;
+      add(segment: TranslationSegment, epoch: number, languageVersion = 0) {
+        if (
+          epoch !== this.session.epoch ||
+          languageVersion !== (this.session.languageVersion ?? 0) ||
+          segment.language !== this.session.language
+        )
+          return;
         this.segments = this.segments.filter(
           (s) =>
             s.id !== segment.id &&
@@ -516,6 +528,29 @@ export default defineContentScript({
         respond({ ok: Boolean(video) });
         return;
       }
+      if (message.type === 'player:language') {
+        const next = message.session as PlaybackSession;
+        if (
+          !player ||
+          player.session.id !== next.id ||
+          (next.languageVersion ?? 0) <= (player.session.languageVersion ?? 0)
+        ) {
+          respond({ ok: false });
+          return;
+        }
+        const position = player.video.currentTime;
+        const rate = player.video.playbackRate;
+        const userPaused = player.userPaused;
+        player.state({
+          ...next,
+          position,
+          rate,
+          readyThrough: position,
+          inputThrough: position,
+        });
+        respond({ ok: true, position, rate, userPaused });
+        return;
+      }
       if (message.type === 'player:stop') {
         player?.destroy();
         player = null;
@@ -532,7 +567,7 @@ export default defineContentScript({
         return;
       }
       if (message.type === 'player:segment') {
-        player?.add(message.segment, message.epoch);
+        player?.add(message.segment, message.epoch, message.languageVersion);
         respond({ ok: true });
         return;
       }

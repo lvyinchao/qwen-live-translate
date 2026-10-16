@@ -66,6 +66,7 @@ class Engine {
   private userPaused = false;
   private decodeSerial = 0;
   private generation = 0;
+  private languageEpoch = 0;
   private connections = new Set<string>();
   private authQueue: Promise<unknown> = Promise.resolve();
   private auth<T>(operation: () => Promise<T>): Promise<T> {
@@ -102,6 +103,7 @@ class Engine {
   async start(session: PlaybackSession, settings: Settings) {
     await this.stop();
     this.session = session;
+    this.languageEpoch = session.epoch;
     this.settings = settings;
     this.diagnostics = {
       startedAt: Date.now(),
@@ -116,6 +118,26 @@ class Engine {
     this.rebuffering = true;
     this.userPaused = false;
     await this.beginEpoch(session.position);
+  }
+  async switchLanguage(next: PlaybackSession, userPaused: boolean) {
+    if (
+      !this.session ||
+      this.session.id !== next.id ||
+      (next.languageVersion ?? 0) <= (this.session.languageVersion ?? 0)
+    )
+      return;
+    const previous = archiveContext(this.session);
+    // Replace, never mutate: provider callbacks still hold the previous object.
+    this.abort?.abort();
+    this.worker?.terminate();
+    this.session = next;
+    this.languageEpoch = next.epoch;
+    this.segments = [];
+    this.ranges = [];
+    this.userPaused = userPaused;
+    this.rebuffering = true;
+    void files.finish(previous).catch((error) => files.failed(error));
+    await this.beginEpoch(next.position, false);
   }
   async publish(force = false) {
     if (!this.session) return;
@@ -134,17 +156,32 @@ class Engine {
     );
     await bg('engine:state', { session: this.session });
   }
-  async sendSegment(segment: TranslationSegment, epoch: number) {
-    if (!this.session || this.session.epoch !== epoch) return;
-    await bg('engine:segment', { sessionId: this.session.id, epoch, segment });
+  async sendSegment(
+    segment: TranslationSegment,
+    epoch: number,
+    languageVersion: number,
+  ) {
+    if (
+      !this.session ||
+      this.session.epoch !== epoch ||
+      (this.session.languageVersion ?? 0) !== languageVersion ||
+      this.session.language !== segment.language
+    )
+      return;
+    await bg('engine:segment', {
+      sessionId: this.session.id,
+      epoch,
+      languageVersion,
+      segment,
+    });
   }
-  async beginEpoch(position: number) {
+  async beginEpoch(position: number, advance = true) {
     this.abort?.abort();
     this.worker?.terminate();
     if (!this.session) return;
     const session = this.session,
       operation = ++this.generation,
-      epoch = ++session.epoch;
+      epoch = advance ? ++session.epoch : session.epoch;
     this.abort = new AbortController();
     const signal = this.abort.signal;
     this.rebuffering = true;
@@ -204,7 +241,7 @@ class Engine {
     for (const segment of this.segments.filter(
       (s) => s.end > position && s.start < position + 90,
     ))
-      await this.sendSegment(segment, epoch);
+      await this.sendSegment(segment, epoch, session.languageVersion ?? 0);
     this.updateReadiness();
     void this.produce(epoch, signal).catch(async (error) => {
       if (signal.aborted || !this.session || this.session.epoch !== epoch)
@@ -230,6 +267,7 @@ class Engine {
     const source = await bg<AudioSource | undefined>('media:refresh', {
       sessionId: this.session?.id,
       epoch: this.session?.epoch,
+      languageVersion: this.session?.languageVersion ?? 0,
     });
     signal.throwIfAborted();
     if (source && this.session) this.session.candidate.source = source;
@@ -347,7 +385,7 @@ class Engine {
           this.segments.push(segment);
           this.segments.sort((a, b) => a.start - b.start);
           this.diagnostics.outputSeconds += segment.audioDuration;
-          void this.sendSegment(segment, epoch);
+          void this.sendSegment(segment, epoch, s.languageVersion ?? 0);
           void files
             .capture(context, windowStart, windowEnd, [segment])
             .catch((error) => files.failed(error));
@@ -370,7 +408,11 @@ class Engine {
                   signal.throwIfAborted();
                   this.connections.add(connection);
                   try {
-                    await bg('auth:install', { sessionId: s.id, epoch });
+                    await bg('auth:install', {
+                      sessionId: s.id,
+                      epoch,
+                      languageVersion: s.languageVersion ?? 0,
+                    });
                   } catch (error) {
                     this.connections.delete(connection);
                     throw error;
@@ -456,6 +498,7 @@ class Engine {
           { start: windowStart, end: windowEnd },
           completedSegments,
         );
+        if (signal.aborted || this.session?.epoch !== epoch) return;
         await files.capture(
           context,
           windowStart,
@@ -488,8 +531,18 @@ class Engine {
   }
   async clock(message: Envelope) {
     const s = this.session;
-    if (!s || message.sessionId !== s.id) return;
-    if (message.type !== 'player:seek' && message.epoch !== s.epoch) return;
+    if (
+      !s ||
+      message.sessionId !== s.id ||
+      (message.languageVersion ?? 0) !== (s.languageVersion ?? 0)
+    )
+      return;
+    if (
+      message.type === 'player:seek'
+        ? Number(message.epoch) < this.languageEpoch
+        : message.epoch !== s.epoch
+    )
+      return;
     if (message.type === 'player:seek') {
       this.userPaused = Boolean(message.paused);
       await this.beginEpoch(Number(message.position));
@@ -547,6 +600,13 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
       await engine.start(
         message.session as PlaybackSession,
         message.settings as Settings,
+      );
+      return true;
+    }
+    if (message.type === 'engine:language') {
+      await engine.switchLanguage(
+        message.session as PlaybackSession,
+        Boolean(message.userPaused),
       );
       return true;
     }

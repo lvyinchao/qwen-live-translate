@@ -39,6 +39,8 @@ try {
       'native-tencent-translation-verification.json',
       'native-tencent-translation.png',
       'youtube-player-verification.json',
+      'language-switch-verification.json',
+      'language-live-verification.json',
     ],
     { cwd: output },
   );
@@ -82,6 +84,8 @@ try {
     'native-tencent-translation-verification.json',
     'native-tencent-translation.png',
     'youtube-player-verification.json',
+    'language-switch-verification.json',
+    'language-live-verification.json',
   ])
     await fs.copyFile(
       path.join(output, file),

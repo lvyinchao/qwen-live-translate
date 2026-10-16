@@ -76,6 +76,7 @@ export type Phase =
 export interface PlaybackSession {
   id: string;
   epoch: number;
+  languageVersion?: number;
   candidate: MediaCandidate;
   language: string;
   phase: Phase;

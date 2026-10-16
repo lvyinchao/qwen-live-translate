@@ -82,6 +82,47 @@ function App() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<chrome.tabs.Tab>();
+  const languageRequest = useRef(0);
+  const languagePending = useRef(false);
+  const sessionRef = useRef<PlaybackSession | null>(null);
+  const receiveSession = (next: PlaybackSession | null) => {
+    const current = sessionRef.current;
+    if (
+      next &&
+      current?.id === next.id &&
+      ((next.languageVersion ?? 0) < (current.languageVersion ?? 0) ||
+        ((next.languageVersion ?? 0) === (current.languageVersion ?? 0) &&
+          next.epoch < current.epoch))
+    )
+      return;
+    sessionRef.current = next;
+    setSession(next);
+    if (next && !languagePending.current) setLanguage(next.language);
+  };
+  const changeLanguage = async (value: string) => {
+    setLanguage(value);
+    const current = sessionRef.current;
+    if (!current) return;
+    const request = ++languageRequest.current;
+    languagePending.current = true;
+    setError('');
+    try {
+      const next = await call<PlaybackSession | null>('session:language', {
+        sessionId: current.id,
+        language: value,
+      });
+      if (request !== languageRequest.current || !mounted.current) return;
+      languagePending.current = false;
+      receiveSession(next);
+    } catch (e) {
+      if (request !== languageRequest.current || !mounted.current) return;
+      languagePending.current = false;
+      setError(e instanceof Error ? e.message : '操作未完成，请重试');
+      const active = await call<PlaybackSession | null>('session:get');
+      if (request === languageRequest.current && mounted.current)
+        receiveSession(active);
+    }
+  };
   const scanning = useRef(false);
   const mounted = useRef(true);
   const scan = async () => {
@@ -137,18 +178,19 @@ function App() {
     void call<PublicSettings>('settings:get')
       .then((s) => {
         setSettings(s);
-        setLanguage(s.language);
+        if (!sessionRef.current && !languagePending.current)
+          setLanguage(s.language);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoaded(true));
-    void call<PlaybackSession | null>('session:get').then(setSession);
+    void call<PlaybackSession | null>('session:get').then(receiveSession);
     void call<LocalFileStatus>('files:status')
       .then(setFiles)
       .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
     void scan().catch((e) => setError(e.message));
     let scanTimer: ReturnType<typeof setTimeout> | undefined;
     const listener = (m: any) => {
-      if (m.type === 'session:updated') setSession(m.session);
+      if (m.type === 'session:updated') receiveSession(m.session);
       if (m.type === 'files:updated') setFiles(m.status);
       if (m.type === 'sources:updated' && !scanTimer)
         scanTimer = setTimeout(() => {
@@ -572,8 +614,8 @@ function App() {
               <select
                 id="language"
                 value={language}
-                disabled={!!session}
-                onChange={(e) => setLanguage(e.target.value)}
+                disabled={!!busy}
+                onChange={(e) => void changeLanguage(e.target.value)}
               >
                 {LANGUAGES.map(([code]) => (
                   <option key={code} value={code}>
@@ -598,7 +640,7 @@ function App() {
                 onClick={() =>
                   act('stop', async () => {
                     await call('session:stop');
-                    setSession(null);
+                    receiveSession(null);
                   })
                 }
               >
@@ -615,7 +657,7 @@ function App() {
                       candidate,
                       language,
                     });
-                    setSession(s);
+                    receiveSession(s);
                   })
                 }
               >

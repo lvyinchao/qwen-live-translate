@@ -4,7 +4,13 @@ export function acceptEngineState(
   current: PlaybackSession | null,
   next: PlaybackSession,
 ): PlaybackSession | null {
-  if (!current || current.id !== next?.id || next.epoch < current.epoch)
+  if (
+    !current ||
+    current.id !== next?.id ||
+    (next.languageVersion ?? 0) !== (current.languageVersion ?? 0) ||
+    next.epoch < current.epoch ||
+    next.language !== current.language
+  )
     return null;
   return {
     ...next,

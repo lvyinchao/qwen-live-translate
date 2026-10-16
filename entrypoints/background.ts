@@ -23,6 +23,7 @@ import {
 } from '../lib/security';
 import {
   DEFAULT_SETTINGS,
+  LANGUAGES,
   messageError,
   type AudioSource,
   type Envelope,
@@ -188,7 +189,9 @@ export default defineBackground(() => {
         `source:${tabId}`
       ]) as { identity: string; source: AudioSource } | undefined;
     const observed =
-      saved?.identity === meta.identity
+      saved?.identity === meta.identity &&
+      (saved.source.sabrRequest ||
+        observedAudio(saved.source.url, saved.source.mime ?? ''))
         ? (saved.source as AudioSource)
         : undefined;
     // Prefer a URL that the current native player has already requested
@@ -436,6 +439,9 @@ export default defineBackground(() => {
               .catch(() => {});
             return;
           }
+          // Native sites may request video-only files after audio. Generic
+          // discovery must never overwrite a native audio source with those.
+          if (!sabr && !observedAudio(details.url, mime)) return;
           const trackId = sabr
             ? VideoPlaybackAbrRequest.decode(decode64(sabrRequest!))
                 .clientAbrState?.audioTrackId || 'default'
@@ -488,13 +494,16 @@ export default defineBackground(() => {
     },
   );
   const stop = async () => {
-    if (session) {
+    const previous = session;
+    const detach = previous ? toPlayer('player:stop') : Promise.resolve();
+    // A stop also invalidates language changes awaiting their player reply.
+    session = null;
+    await detach;
+    if (previous) {
       await chrome.runtime
         .sendMessage({ target: 'offscreen', type: 'engine:stop' })
         .catch(() => {});
-      await toPlayer('player:stop');
     }
-    session = null;
     await chrome.storage.session.remove('activeSession');
     await cleanRules();
     void chrome.runtime
@@ -778,11 +787,16 @@ export default defineBackground(() => {
             !privileged ||
             !session ||
             session.id !== message.sessionId ||
+            (session.languageVersion ?? 0) !== (message.languageVersion ?? 0) ||
             session.epoch !== message.epoch
           )
             throw new Error('翻译任务已过期');
           const fresh = sources.get(session.candidate.tabId);
-          if (fresh?.identity === session.candidate.mediaId)
+          if (
+            fresh?.identity === session.candidate.mediaId &&
+            (fresh.source.sabrRequest ||
+              observedAudio(fresh.source.url, fresh.source.mime ?? ''))
+          )
             return {
               ...session.candidate.source,
               ...fresh.source,
@@ -846,6 +860,7 @@ export default defineBackground(() => {
           session = {
             id: crypto.randomUUID(),
             epoch: 0,
+            languageVersion: 0,
             candidate: fresh,
             language: String(message.language ?? settings.language),
             phase: 'preparing',
@@ -871,6 +886,61 @@ export default defineBackground(() => {
             session,
             settings,
           });
+          if (result?.ok === false) {
+            await stop();
+            throw new Error(result.error);
+          }
+          return session;
+        }
+        case 'session:language': {
+          if (!privileged) throw new Error('不允许网页触发翻译');
+          const language = String(message.language);
+          if (!LANGUAGES.some(([code]) => code === language))
+            throw new Error('无效的目标语言');
+          if (!session || session.id !== message.sessionId)
+            throw new Error('翻译任务已过期');
+          if (session.language === language) return session;
+          // Invalidate the old language before the first asynchronous step.
+          const next: PlaybackSession = {
+            ...session,
+            language,
+            epoch: session.epoch + 1,
+            languageVersion: (session.languageVersion ?? 0) + 1,
+            phase: 'buffering',
+            readyThrough: session.position,
+            inputThrough: session.position,
+            skipped: 0,
+            segments: [],
+            error: undefined,
+            diagnostic: undefined,
+          };
+          session = next;
+          const clock = await toPlayer('player:language', { session: next });
+          if (session !== next) return session;
+          if (!clock?.ok) {
+            await stop();
+            throw new Error('播放器已被页面替换，请重新扫描');
+          }
+          next.position = clock.position;
+          next.rate = clock.rate;
+          next.readyThrough = next.inputThrough = clock.position;
+          await chrome.storage.session.set({ activeSession: next });
+          if (session !== next) return session;
+          void chrome.runtime
+            .sendMessage({ type: 'session:updated', session: next })
+            .catch(() => {});
+          const result = await chrome.runtime.sendMessage({
+            target: 'offscreen',
+            type: 'engine:language',
+            session: next,
+            userPaused: clock.userPaused,
+          });
+          if (
+            session?.id !== next.id ||
+            session.epoch !== next.epoch ||
+            session.language !== language
+          )
+            return session;
           if (result?.ok === false) {
             await stop();
             throw new Error(result.error);
@@ -912,6 +982,8 @@ export default defineBackground(() => {
           if (
             message.sessionId &&
             (session?.id !== message.sessionId ||
+              (session.languageVersion ?? 0) !==
+                (message.languageVersion ?? 0) ||
               session.epoch !== message.epoch)
           )
             throw new Error('翻译任务已过期');
@@ -992,10 +1064,20 @@ export default defineBackground(() => {
           }
           return true;
         case 'engine:segment':
-          if (!privileged || session?.id !== message.sessionId) return false;
+          if (
+            !privileged ||
+            !session ||
+            session.id !== message.sessionId ||
+            (session.languageVersion ?? 0) !== (message.languageVersion ?? 0) ||
+            session.epoch !== message.epoch ||
+            (message.segment as { language?: string })?.language !==
+              session.language
+          )
+            return false;
           await toPlayer('player:segment', {
             segment: message.segment,
             epoch: message.epoch,
+            languageVersion: message.languageVersion,
           });
           return true;
         case 'player:clock':

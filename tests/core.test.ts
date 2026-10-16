@@ -279,3 +279,18 @@ it('distinguishes native player resets from ordinary and throttled playback cloc
   expect(clockDiscontinuity(10, 10.5, 0.25, 2)).toBe(false);
   expect(clockDiscontinuity(10, 130, 60, 2)).toBe(false);
 });
+
+it('does not accept Bilibili video-only requests as audio while retaining its real audio variants', () => {
+  expect(
+    observedAudio(
+      'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/25985482844_x1-1-100022.m4s',
+      'video/mp4',
+    ),
+  ).toBe(false);
+  expect(
+    observedAudio(
+      'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/25985482844-1-30216.m4s',
+      'video/mp4',
+    ),
+  ).toBe(true);
+});

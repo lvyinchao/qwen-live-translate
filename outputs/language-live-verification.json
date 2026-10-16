@@ -1,0 +1,86 @@
+{
+  "at": "2026-10-16T00:31:47.817Z",
+  "url": "https://www.bilibili.com/video/BV13rsaeaEgE/",
+  "scope": "Live Bilibili native player and actual Qwen3.8 original-voice sessions. Chinese target switched to Japanese during playback. Short software playback check only; not long-video/hardware synchronization acceptance.",
+  "snapshots": [
+    {
+      "language": "zh",
+      "waitMs": 34212,
+      "position": 0.422838,
+      "epoch": 1,
+      "segments": [
+        {
+          "start": 0.5,
+          "end": 4.416,
+          "text": "你是不是那种醒来总是感觉很累的人？"
+        },
+        {
+          "start": 4.416,
+          "end": 13.152,
+          "text": "有时候你睡了八个小时，有时候甚至十二个小时，有时候只有五个小时。但不管你觉得自己的睡眠有多好，你醒来时总是感觉昏昏沉沉的。"
+        },
+        {
+          "start": 13.152,
+          "end": 13.856,
+          "text": "别担心。"
+        },
+        {
+          "start": 13.856,
+          "end": 16.96,
+          "text": "你并不孤单。现在，让我们试着帮你改善一下这种情况。"
+        },
+        {
+          "start": 16.96,
+          "end": 30,
+          "text": "虽然对你来说，醒来没什么特别的，但当你早上醒来时，身体会发生很多变化。比如，你的心率会加快，呼吸也会变得更急促。你的血流会增加，大脑也会开始产生不同类型的脑电波。"
+        }
+      ]
+    },
+    {
+      "language": "ja",
+      "waitMs": 36872,
+      "position": 2.955777,
+      "epoch": 2,
+      "segments": [
+        {
+          "start": 2.955774,
+          "end": 13.855774,
+          "text": "いつも疲れているようです。たとえ8時間眠ったとしても、時には12時間眠ったとしても、時には5時間だったりします。でも、どれだけよく眠ったと思っていても、いつも目覚めたときは、少しぼんやりとした気分になります。心配しないでください。"
+        },
+        {
+          "start": 13.955774,
+          "end": 16.971774,
+          "text": "あなただけではありません。それでは、あなたのために状況を改善してみましょう。"
+        },
+        {
+          "start": 17.055774,
+          "end": 35.083774,
+          "text": "あなたにとって目覚めることは特別なことではないかもしれませんが、あなたが朝目覚めるとき、体の中では多くのことが起こっています。例えば、心拍数が速くなり、呼吸も早くなります。血流が増加し、脳はさまざまな種類の脳波を生成し始めます。夜間は肝臓や腎臓は休眠状態でしたが、あなたが目覚めると、再び活動モードに戻ります。"
+        }
+      ]
+    }
+  ],
+  "source": {
+    "mime": "application/octet-stream",
+    "host": "upos-sz-estgcos.bilivideo.com",
+    "path": "25985482844-1-30216.m4s",
+    "duration": 536,
+    "trackId": "default"
+  },
+  "switchAt": 2.660226,
+  "japaneseAudioStarts": [
+    {
+      "mediaTime": 2.975007,
+      "error": 0.019233000000000278,
+      "rate": 1.6366972477064219,
+      "partial": false
+    }
+  ],
+  "after": {
+    "position": 9.711895,
+    "paused": false,
+    "muted": true
+  },
+  "rulesAfterStop": 0,
+  "passed": true
+}

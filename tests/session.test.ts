@@ -4,6 +4,7 @@ import type { PlaybackSession } from '../lib/types';
 const base = {
   id: 'current',
   epoch: 3,
+  language: 'en',
   originalVolume: 0.1,
   dubVolume: 0.8,
   subtitles: false,
@@ -29,5 +30,30 @@ it('keeps user volume and caption choices when delayed progress arrives', () => 
     originalVolume: 0.1,
     dubVolume: 0.8,
     subtitles: false,
+  });
+});
+
+it('rejects stale language results even if their epoch looks newer', () => {
+  for (const epoch of [2, 3, 4, 50])
+    expect(acceptEngineState(base, { ...base, epoch, language: 'zh' })).toBe(
+      null,
+    );
+  const switching = { ...base, epoch: 4, language: 'ja', segments: [] };
+  expect(acceptEngineState(switching, { ...base, epoch: 10 })).toBe(null);
+  expect(
+    acceptEngineState(switching, { ...switching, phase: 'playing' }),
+  ).toMatchObject({ language: 'ja', epoch: 4, subtitles: false });
+});
+
+it('isolates language revisions across seek epochs and round trips to the same language', () => {
+  const next = { ...base, epoch: 5, languageVersion: 2 };
+  expect(
+    acceptEngineState(next, { ...next, epoch: 100, languageVersion: 0 }),
+  ).toBe(null);
+  expect(
+    acceptEngineState(next, { ...next, epoch: 5, languageVersion: 1 }),
+  ).toBe(null);
+  expect(acceptEngineState(next, { ...next, epoch: 6 })).toMatchObject({
+    languageVersion: 2,
   });
 });
