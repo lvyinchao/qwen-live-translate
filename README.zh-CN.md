@@ -6,7 +6,7 @@
 
 [下载插件安装包](https://github.com/lvyinchao/timbradub/releases/latest) · [使用与反馈](https://github.com/lvyinchao/timbradub/issues) · [隐私说明](PRIVACY.md)
 
-MIT 开源项目。Chrome 商店状态以本仓库发布页为准。
+MIT 开源项目。Chrome 商店 v0.2.1 已于 2026-10-16 提交，目前待审核，通过后自动发布；GitHub 安装包已可下载。详见[商店状态](docs/store/STATUS.md)。
 
 **用原声的音色，听另一种语言。** 在原网页播放器上播放跟随视频时间轴的译音和双语字幕，无需自建后端。
 

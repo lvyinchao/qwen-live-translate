@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-16T12:15:14+08:00",
+  "version": "0.2.1",
+  "sourceCommit": "aff5b7414ae36ad4989bdaf4cc15c4ed9ba9eb02",
+  "storeItemId": "knlbmnbdcnnhhpimbeagojbacmjkcald",
+  "observedStoreStatus": "待审核",
+  "submitted": true,
+  "approved": false,
+  "autoPublishAfterApproval": true,
+  "languages": [
+    "en",
+    "zh-CN"
+  ],
+  "ownAccountRegistrationUrl": "https://qianwenai.com/",
+  "githubRepositoryVisibility": "public",
+  "githubRelease": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.1",
+  "ciRun": 38849239379,
+  "codeqlRun": 38849239373,
+  "releaseRun": 38849243562,
+  "webstoreZipSha256": "8af52fd190a2adbecc2782c0dc951b71d1b89379898c55d11676640029ee5abb",
+  "runtimeDependencyAudit": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 0,
+    "low": 0,
+    "scope": "npm audit --omit=dev, official npm registry; development dependencies excluded"
+  }
+}

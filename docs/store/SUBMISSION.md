@@ -1,6 +1,6 @@
 # Chrome Web Store submission packet
 
-This file is preparation, not a claim that the item has been submitted or approved. The live status is recorded separately in `STATUS.md`.
+This packet documents the version 0.2.1 submission. Actual Google review/publication status is recorded separately in `STATUS.md`; submission does not imply approval.
 
 ## Package and public links
 
