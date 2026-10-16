@@ -9,6 +9,7 @@ import {
   type ObservedMedia,
 } from '../lib/discovery';
 import { acceptEngineState } from '../lib/session';
+import { captionPreferences, mergeCaptionPreferences } from '../lib/captions';
 import { normalizeUILanguage, t } from '../lib/i18n';
 import {
   inspectPlayerMain,
@@ -84,7 +85,7 @@ export default defineBackground(() => {
       contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
     });
     if (saved && contexts.length) {
-      session = saved;
+      session = { ...saved, ...captionPreferences(saved) };
       for (const rule of await chrome.declarativeNetRequest.getSessionRules()) {
         const domain = rule.condition.requestDomains?.[0];
         if (rule.id >= 920000 && rule.id < 930000 && domain) {
@@ -125,6 +126,9 @@ export default defineBackground(() => {
     const existing = await chrome.runtime.getContexts({
       contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
     });
+    // Chrome exposes a newly created context before its scripts finish loading.
+    // Concurrent callers must share the pending creation before trusting it.
+    if (offscreenCreating) return offscreenCreating;
     if (existing.length) return;
     offscreenCreating ??= chrome.offscreen
       .createDocument({
@@ -808,7 +812,8 @@ export default defineBackground(() => {
               id: crypto.randomUUID(), epoch: 0, languageVersion: 0,
               candidate: fresh, language, phase: 'preparing', position: fresh.currentTime,
               rate: fresh.playbackRate ?? 1, readyThrough: fresh.currentTime, inputThrough: fresh.currentTime,
-              skipped: 0, originalVolume: 0, dubVolume: 1, subtitles: true, segments: [],
+              skipped: 0, originalVolume: 0, dubVolume: 1,
+              ...captionPreferences(), segments: [],
             };
             session = owner;
             try {
@@ -907,9 +912,9 @@ export default defineBackground(() => {
           const clamp = (value: unknown, previous: number) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(1, Number(value))) : previous;
           owner.originalVolume = clamp(message.originalVolume, owner.originalVolume);
           owner.dubVolume = clamp(message.dubVolume, owner.dubVolume);
-          owner.subtitles = Boolean(message.subtitles);
+          Object.assign(owner, mergeCaptionPreferences(owner, message));
           await chrome.storage.session.set({ activeSession: owner });
-          const changes = {sessionId: owner.id, languageVersion: owner.languageVersion ?? 0, originalVolume: owner.originalVolume, dubVolume: owner.dubVolume, subtitles: owner.subtitles};
+          const changes = {sessionId: owner.id, languageVersion: owner.languageVersion ?? 0, originalVolume: owner.originalVolume, dubVolume: owner.dubVolume, ...captionPreferences(owner)};
           await chrome.runtime.sendMessage({target: 'offscreen', type: 'engine:mix', ...changes});
           if (session?.id === owner.id) await toPlayer('player:mix', changes, owner);
           return true;

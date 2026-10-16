@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-16T08:35:59.768Z",
+  "at": "2026-10-16T09:22:31.378Z",
   "scope": "Isolated UI fixtures only; no model call or real-video acceptance",
   "errors": [],
   "checks": [
@@ -11,6 +11,7 @@
     "English and Chinese validation, settings labels and notices; key input cleared after saving",
     "Language preference propagates between panels without changing credentials or target language",
     "All session phases, buffer progress, speed, skips, errors and subtitle control localized; transcript unchanged",
+    "Both independent subtitle switches cover all four rendered combinations and remain effective after new segments, progress states and container fullscreen",
     "Caption toggle hides rendered pixels immediately; remains hidden after segment/state updates, fullscreen and reattachment; re-enabling restores text",
     "Built player overlay updates live and restores locale after navigation; content script can read only locale and cannot change it or access credentials",
     "Legacy settings default to English without losing existing values; removing credentials preserves UI and target languages",
@@ -100,6 +101,34 @@
       "width": 480,
       "overflow": false,
       "file": "outputs/ui-zh-session-480.png"
+    },
+    {
+      "locale": "zh",
+      "view": "captions",
+      "width": 360,
+      "overflow": false,
+      "file": "outputs/ui-zh-captions-360.png"
+    },
+    {
+      "locale": "zh",
+      "view": "captions",
+      "width": 480,
+      "overflow": false,
+      "file": "outputs/ui-zh-captions-480.png"
+    },
+    {
+      "locale": "en",
+      "view": "captions",
+      "width": 360,
+      "overflow": false,
+      "file": "outputs/ui-en-captions-360.png"
+    },
+    {
+      "locale": "en",
+      "view": "captions",
+      "width": 480,
+      "overflow": false,
+      "file": "outputs/ui-en-captions-480.png"
     }
   ],
   "passed": true

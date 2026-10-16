@@ -3,6 +3,7 @@ import ts from 'typescript';
 import { afterEach, expect, it, vi } from 'vitest';
 import { activeSegment, planDub, clockDiscontinuity } from '../lib/timeline';
 import { isOlderStateVersion } from '../lib/session';
+import { captionPreferences, mergeCaptionPreferences } from '../lib/captions';
 
 // Exercise the actual content-script methods without a synthetic reimplementation
 // of the scheduler. Browser playback is covered separately by the Chromium gate.
@@ -13,8 +14,9 @@ const javascript = ts.transpileModule(classSource, {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const Player = new Function('activeSegment', 'planDub', 'clockDiscontinuity',
-  'isOlderStateVersion', 'decode64', 't', 'locale', `${javascript}; return Player;`)(
+  'isOlderStateVersion', 'captionPreferences', 'mergeCaptionPreferences', 'decode64', 't', 'locale', `${javascript}; return Player;`)(
   activeSegment, planDub, clockDiscontinuity, isOlderStateVersion,
+  captionPreferences, mergeCaptionPreferences,
   () => new Uint8Array([0]), (_locale: string, message: string) => message, 'en');
 class AudioFixture extends EventTarget {
   src = 'blob:fixture';
@@ -51,7 +53,7 @@ function fixture(overrides: Record<string, unknown> = {}) {
     current, segments: [current], anchor: { media: 0, audio: 0 }, blob: 'blob:fixture',
     currentPreloadHit: true, tickGapMs: 0, maxTickGapMs: 0,
     started: new Set(['short']), skipped: new Set(), terminated: new Set(), endedMetrics: new Set(), pendingTerminals: [],
-    waiting: false, loaded: true, caption: { replaceChildren: vi.fn() },
+    waiting: false, loaded: true, caption: { replaceChildren: vi.fn(), toggleAttribute: vi.fn() },
     host: { remove: vi.fn() }, original: { muted: false, volume: 0.35 },
     epochStartPosition: 0, preloadUpcoming: vi.fn(),
     send: (type: string, data: Record<string, unknown>) => events.push({ type, ...data }),

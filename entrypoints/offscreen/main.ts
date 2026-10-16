@@ -5,6 +5,7 @@ import { archiveContext } from '../../lib/archive';
 import { translateWindow } from '../../lib/qwen';
 import { PlaybackEngine } from '../../lib/playback-engine';
 import { createBackgroundRpc } from '../../lib/background-rpc';
+import { mergeCaptionPreferences } from '../../lib/captions';
 import { closeDecodeWorker } from '../../lib/worker-lifecycle';
 import { cleanupMediaTemps, mediaTempSummary } from '../../lib/range-media';
 import { endpoint } from '../../lib/security';
@@ -80,11 +81,12 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
     }
     if (message.type === 'engine:mix') {
       const current = engine.session;
-      if (current && current.id === message.sessionId)
+      if (current && current.id === message.sessionId &&
+          (message.languageVersion === undefined || message.languageVersion === (current.languageVersion ?? 0)))
         Object.assign(current, {
           originalVolume: Number(message.originalVolume),
           dubVolume: Number(message.dubVolume),
-          subtitles: Boolean(message.subtitles),
+          ...mergeCaptionPreferences(current, message),
         });
       return true;
     }

@@ -6,6 +6,7 @@ import { pageVideos, inspectVideos, youtubePlayer } from '../lib/discovery';
 import type { PlaybackSession, TranslationSegment } from '../lib/types';
 import { normalizeUILanguage, t } from '../lib/i18n';
 import { isOlderStateVersion } from '../lib/session';
+import { captionPreferences, mergeCaptionPreferences } from '../lib/captions';
 import type { UILanguage } from '../lib/types';
 
 type TerminalReason = 'natural' | 'timeline-cut' | 'overlap-cut' | 'seek-stop' |
@@ -95,7 +96,7 @@ export default defineContentScript({
       frame?: number;
       constructor(video: HTMLVideoElement, session: PlaybackSession) {
         this.video = video;
-        this.session = session;
+        this.session = { ...session, ...captionPreferences(session) };
         this.epochStartPosition = session.position;
         this.sourceAtAttach = video.currentSrc || video.src;
         this.original = { muted: video.muted, volume: video.volume };
@@ -108,11 +109,11 @@ export default defineContentScript({
         const shadow = this.host.attachShadow({ mode: 'closed' });
         const style = document.createElement('style');
         style.textContent =
-          ':host{font-family:system-ui,sans-serif}.caption{position:absolute;bottom:12%;left:8%;right:8%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}.caption[hidden]{display:none!important}.line{max-width:100%;padding:6px 12px;background:rgba(10,18,30,.85);color:white;border-radius:6px;font-size:clamp(14px,2.3vw,25px);line-height:1.45;text-shadow:0 1px 2px #000;white-space:pre-wrap}.source{font-size:clamp(11px,1.4vw,17px);color:#cbd5e1}.note{font-size:12px;color:#f9cd87}';
+          ':host{font-family:system-ui,sans-serif}.caption{position:absolute;bottom:12%;left:8%;right:8%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}.caption[hidden],.caption[data-source-hidden] .source,.caption[data-target-hidden] .target{display:none!important}.line{max-width:100%;padding:6px 12px;background:rgba(10,18,30,.85);color:white;border-radius:6px;font-size:clamp(14px,2.3vw,25px);line-height:1.45;text-shadow:0 1px 2px #000;white-space:pre-wrap}.source{font-size:clamp(11px,1.4vw,17px);color:#cbd5e1}.note{font-size:12px;color:#f9cd87}';
         this.caption.className = 'caption';
         shadow.append(style, this.caption, this.audio);
         this.placeOverlay();
-        this.mix(session.originalVolume, session.dubVolume, session.subtitles);
+        this.mix(session.originalVolume, session.dubVolume, session.subtitles, session.sourceSubtitles, session.targetSubtitles);
         const listen = (name: string, fn: () => void) =>
           video.addEventListener(name, fn, { signal: this.abort.signal });
         listen('pause', () => {
@@ -451,8 +452,8 @@ export default defineContentScript({
           this.terminated.clear();
           this.endedMetrics.clear();
         }
-        this.session = next;
-        this.mix(next.originalVolume, next.dubVolume, next.subtitles);
+        this.session = { ...next, ...captionPreferences(next) };
+        this.mix(next.originalVolume, next.dubVolume, next.subtitles, next.sourceSubtitles, next.targetSubtitles);
         if (next.phase === 'error') {
           this.video.muted = this.original.muted;
           this.video.volume = this.original.volume;
@@ -484,15 +485,18 @@ export default defineContentScript({
         this.tick();
         return true;
       }
-      mix(original: number, dub: number, subtitles: boolean) {
+      mix(original: number, dub: number, subtitles?: boolean, sourceSubtitles?: boolean, targetSubtitles?: boolean) {
         this.session.originalVolume = original;
         this.session.dubVolume = dub;
-        this.session.subtitles = subtitles;
+        const captions = mergeCaptionPreferences(this.session, { subtitles, sourceSubtitles, targetSubtitles });
+        Object.assign(this.session, captions);
         this.video.muted = original === 0;
         this.video.volume = original;
         this.audio.volume = dub;
         if (this.preloaded) this.preloaded.audio.volume = dub;
-        this.caption.hidden = !subtitles;
+        this.caption.hidden = !captions.subtitles;
+        this.caption.toggleAttribute('data-source-hidden', !captions.sourceSubtitles);
+        this.caption.toggleAttribute('data-target-hidden', !captions.targetSubtitles);
       }
       placeOverlay() {
         const fullscreen = document.fullscreenElement;
@@ -584,7 +588,7 @@ export default defineContentScript({
             translated = document.createElement('div');
           source.className = 'line source';
           source.textContent = segment.sourceText;
-          translated.className = 'line';
+          translated.className = 'line target';
           translated.textContent = segment.text;
           this.caption.replaceChildren(
             ...(segment.sourceText ? [source] : []),
@@ -777,6 +781,8 @@ export default defineContentScript({
           message.originalVolume,
           message.dubVolume,
           message.subtitles,
+          message.sourceSubtitles,
+          message.targetSubtitles,
         );
         respond({ ok: true });
         return;

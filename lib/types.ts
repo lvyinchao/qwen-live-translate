@@ -103,6 +103,8 @@ export interface PlaybackSession {
   originalVolume: number;
   dubVolume: number;
   subtitles: boolean;
+  sourceSubtitles?: boolean;
+  targetSubtitles?: boolean;
   error?: string;
   diagnostic?: string;
   preparation?: PreparationStatus;

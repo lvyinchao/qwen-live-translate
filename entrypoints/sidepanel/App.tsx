@@ -29,6 +29,7 @@ import {
 import type { UILanguage } from '../../lib/types';
 import { EMPTY_FILE_STATUS, type LocalFileStatus } from '../../lib/archive';
 import { isOlderStateVersion } from '../../lib/session';
+import { captionPreferences, mergeCaptionPreferences } from '../../lib/captions';
 
 import { call, type PublicSettings } from './api';
 import { phaseNames, candidateKey, translator } from './ui';
@@ -74,8 +75,9 @@ export function App() {
     )
       return;
     sessionUpdates.current++;
-    sessionRef.current = next;
-    setSession(next);
+    const normalized = next ? { ...next, ...captionPreferences(next) } : null;
+    sessionRef.current = normalized;
+    setSession(normalized);
     if (next && !languagePending.current) setLanguage(next.language);
   };
   const changeLanguage = async (value: string) => {
@@ -250,12 +252,12 @@ export function App() {
   const mix = (changes: MixChanges) => {
     const current = sessionRef.current;
     if (!current) return;
-    const next = { ...current, ...changes };
+    const next = { ...current, ...changes, ...mergeCaptionPreferences(current, changes) };
     sessionRef.current = next;
     setSession(next);
     void call('session:mix', {
       sessionId: next.id, languageVersion: next.languageVersion ?? 0,
-      originalVolume: next.originalVolume, dubVolume: next.dubVolume, subtitles: next.subtitles,
+      originalVolume: next.originalVolume, dubVolume: next.dubVolume, ...captionPreferences(next),
     }).catch((error) => {
       if (sessionRef.current?.id === next.id &&
           (sessionRef.current.languageVersion ?? 0) === (next.languageVersion ?? 0)) setError(error.message);

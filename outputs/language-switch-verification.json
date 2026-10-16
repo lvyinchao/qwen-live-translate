@@ -1,10 +1,12 @@
 {
-  "at": "2026-10-16T08:36:59.349Z",
+  "at": "2026-10-16T09:21:22.811Z",
   "scope": "Real extension/background/offscreen/player in isolated Chrome; cached language fixtures use generated synthetic tones. No provider calls, recordings or language quality claim.",
   "checks": [
     "Enabled language selector switches active cached Chinese→English at actual current video time, preserving 1.5× playback, both volume settings and hidden subtitles",
+    "Actual sidepanel switches immediately select original only, target only, both or neither in the running webpage, and engine progress preserves each choice",
     "Delayed old-language state and segments are rejected, even with a misleading newer epoch; actual closed-shadow player stays on the selected language",
     "A simultaneous seek and language switch accepts the new language revision even when a seek epoch is not yet published; older revisions cannot return after selecting the same language again",
+    "Original-only captions survive cached and rapid target-language changes; fullscreen keeps the choice and accepts an immediate change to target-only",
     "Switch while paused keeps the exact paused position; four rapid consecutive choices resolve to the last language without resuming playback",
     "An uncached language immediately clears audio/src and old captions and pauses for preparation; switching back cancels that work, restores cache and allows normal resume",
     "Stop during an in-flight language change wins: session and overlay removed, authentication rules cleaned",

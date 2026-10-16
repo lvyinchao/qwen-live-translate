@@ -2,11 +2,13 @@ import { Headphones, Subtitles, Volume2 } from 'lucide-react';
 import type { PlaybackSession, UILanguage } from '../../../lib/types';
 import { phaseNames, time, translator } from '../ui';
 import { PreparationView } from './PreparationView';
-export type MixChanges = Partial<Pick<PlaybackSession, 'originalVolume' | 'dubVolume' | 'subtitles'>>;
+import { captionPreferences } from '../../../lib/captions';
+export type MixChanges = Partial<Pick<PlaybackSession, 'originalVolume' | 'dubVolume' | 'subtitles' | 'sourceSubtitles' | 'targetSubtitles'>>;
 export function PlaybackView({ session, mix, locale }: {
   session: PlaybackSession; mix: (changes: MixChanges) => void; locale: UILanguage;
 }) {
   const t = translator(locale);
+  const captions = captionPreferences(session);
   return (
 <section className="session-section">
                 <div className="session-line">
@@ -84,12 +86,23 @@ export function PlaybackView({ session, mix, locale }: {
                 <label className="toggle-row">
                   <span>
                     <Subtitles size={16} />
-                    {t('双语字幕')}
+                    {t('显示原语言字幕')}
                   </span>
                   <input
                     type="checkbox"
-                    checked={session.subtitles}
-                    onChange={(e) => mix({ subtitles: e.target.checked })}
+                    checked={captions.sourceSubtitles}
+                    onChange={(e) => mix({ sourceSubtitles: e.target.checked })}
+                  />
+                </label>
+                <label className="toggle-row">
+                  <span>
+                    <Subtitles size={16} />
+                    {t('显示目标语言字幕')}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={captions.targetSubtitles}
+                    onChange={(e) => mix({ targetSubtitles: e.target.checked })}
                   />
                 </label>
                 {session.skipped > 0 && (

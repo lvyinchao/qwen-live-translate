@@ -1,6 +1,6 @@
 # Chrome Web Store listing — English
 
-Name: **TimbraDub — Original-Voice Translation**
+Name: **TimbraDub — Original-Voice Video Translation**
 
 Short description: **Original-voice video translation in 29 languages, with synced audio and subtitles. Get your own API key at qianwenai.com.**
 
@@ -20,7 +20,7 @@ Chinese, English, Japanese, Korean, French, German, Spanish, Portuguese, Russian
 • Choose a detected video and one of 29 supported spoken target languages.
 • Switch target language while translating. Cached audio is reused; new content pauses until preparation is ready.
 • Use the webpage's pause, seek and 0.5–2× speed controls, plus fullscreen in the tested webpage-player containers.
-• Adjust original and translated audio separately, and turn subtitles on or off.
+• Adjust original and translated audio separately; independently show source captions, target captions, both or neither (both on by default).
 • Use an English or Simplified Chinese interface (English by default), with product/page titles and the toolbar tooltip following your saved choice when reopened. Chrome's extension-manager name and outer side-panel label follow Chrome's browser language.
 • Optionally save completed translated speech and scripts locally. Automatic saving is OFF by default. When enabled, speech is staged in segments and merged into one ZIP with WAV audio and subtitles.
 • See playback-cache, staged-archive and temporary-source storage separately, with explicit cleanup after stopping translation.

@@ -248,7 +248,7 @@ try {
     const snapshot = await cdp.send('Runtime.callFunctionOn', {
       objectId: resolved.object.objectId,
       functionDeclaration:
-        'function(){const a=this.querySelector("audio"),c=this.querySelector(".caption");return {caption:c.textContent,hidden:c.hidden,src:a.getAttribute("src"),paused:a.paused}}',
+        'function(){const a=this.querySelector("audio"),c=this.querySelector(".caption");const shown=(selector)=>{const e=c.querySelector(selector);return !!e&&e.getBoundingClientRect().height>0&&getComputedStyle(e).display!=="none";};return {caption:c.textContent,hidden:c.hidden,sourceVisible:shown(".source"),targetVisible:shown(".target"),src:a.getAttribute("src"),paused:a.paused}}',
       returnByValue: true,
     });
     await cdp.send('Runtime.releaseObject', { objectId: object.objectId });
@@ -262,6 +262,18 @@ try {
     'English player captions',
   );
   assert.equal((await playerSnapshot()).hidden, true);
+  const originalSwitch = panel.getByLabel('Show original-language subtitles', { exact: true });
+  const targetSwitch = panel.getByLabel('Show target-language subtitles', { exact: true });
+  for (const [sourceSubtitles, targetSubtitles] of [[true,true],[false,true],[false,false],[true,false]]) {
+    await originalSwitch.setChecked(sourceSubtitles);
+    await targetSwitch.setChecked(targetSubtitles);
+    await poll(async () => {
+      const s = await call('session:get'), v = await playerSnapshot();
+      return s.sourceSubtitles === sourceSubtitles && s.targetSubtitles === targetSubtitles &&
+        v.sourceVisible === sourceSubtitles && v.targetVisible === targetSubtitles;
+    }, `subtitle switches ${sourceSubtitles}/${targetSubtitles}`);
+  }
+  report.checks.push('Actual sidepanel switches immediately select original only, target only, both or neither in the running webpage, and engine progress preserves each choice');
   // A response from the old language must fail both progress and audio checks.
   const old = { ...active, language: 'zh', epoch: active.epoch + 50 };
   await call('engine:state', { session: old });
@@ -302,6 +314,10 @@ try {
       (await page.locator('video').evaluate((v) => v.currentTime)) - pausedAt,
     ) < 0.05,
   );
+  const captionChoice = await call('session:get');
+  assert.equal(captionChoice.sourceSubtitles, true);
+  assert.equal(captionChoice.targetSubtitles, false);
+  await poll(async () => { const v = await playerSnapshot(); return v.sourceVisible && !v.targetVisible; }, 'caption choice after target language switch');
   const pausedSession = await call('session:get');
   await panel.evaluate(async (s) => {
     const replies = await Promise.all([
@@ -363,6 +379,15 @@ try {
   }, 'latest rapid selection wins');
   assert.equal(await panel.locator('#language').inputValue(), 'en');
   const latest = await call('session:get');
+  assert.equal(latest.sourceSubtitles, true);
+  assert.equal(latest.targetSubtitles, false);
+  await page.locator('video').evaluate((v) => v.parentElement.requestFullscreen());
+  await poll(async () => { const v = await playerSnapshot(); return v.sourceVisible && !v.targetVisible; }, 'independent captions in fullscreen');
+  await originalSwitch.setChecked(false);
+  await targetSwitch.setChecked(true);
+  await poll(async () => { const v = await playerSnapshot(); return !v.sourceVisible && v.targetVisible; }, 'change caption choice during fullscreen');
+  await page.evaluate(() => document.exitFullscreen());
+  report.checks.push('Original-only captions survive cached and rapid target-language changes; fullscreen keeps the choice and accepts an immediate change to target-only');
   await panel.evaluate(
     (s) =>
       chrome.runtime.sendMessage({

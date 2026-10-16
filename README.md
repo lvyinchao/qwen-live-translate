@@ -17,7 +17,7 @@ An independent, open-source Chrome extension that translates video speech **in t
 
 [Download the extension](https://github.com/lvyinchao/timbradub/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/timbradub/issues/new/choose)
 
-> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.2 has been submitted and is pending review, with automatic publication selected after approval. It is not yet approved or publicly available in the store. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
+> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.2 was withdrawn; v0.2.3 is being prepared and its upload/submission is not complete. Store approval and public availability are not confirmed. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
 
 ## What it does
 
@@ -25,7 +25,7 @@ An independent, open-source Chrome extension that translates video speech **in t
 - **Prepares audio ahead.** Starts with 30 seconds of source time at 1× (45 seconds at 1.5×, 60 seconds at 2×), then keeps preparing future audio up to a 90-second ceiling. Model input is conservatively paced at 1×, so faster viewing can require further buffering. Missing translation pauses the video rather than playing untranslated scenes.
 - **Uses original-voice mode.** Requests Qwen's realtime voice cloning. Similarity is model-dependent and is not guaranteed.
 - **Switches languages during playback.** Choose another of the 29 supported speech-output languages. Reuse its cache or buffer from the current position; old-language results are isolated.
-- **Keeps you in control.** Separate original/dub volume, bilingual subtitles, English/Chinese UI (English by default). The panel brand, page title, original-voice label and toolbar tooltip follow the saved interface language. Chrome's own extension-management name and browser-managed side-panel heading follow the browser's language and cannot be renamed by this setting.
+- **Keeps you in control.** Separate original/dub volume, independent source/target captions in 0.2.3, English/Chinese UI (English by default). The panel brand, page title, original-voice label and toolbar tooltip follow the saved interface language. Chrome's own extension-management name and browser-managed side-panel heading follow the browser's language and cannot be renamed by this setting.
 - **Saves only when enabled.** Automatic file saving defaults **off**. When enabled, completed utterances are staged locally, then merged into one ZIP with WAV audio, bilingual scripts and timed subtitles.
 
 ## Install
@@ -41,6 +41,8 @@ Requires desktop Chrome 116+ and a compatible Model Studio account. Provider usa
 See the [bilingual installation guide and package comparison](docs/INSTALL.en.md), including the fix for “Manifest file is missing or unreadable”. Keep the extracted folder after installation.
 
 The extension pauses to prepare speech before resuming. New, uncached language selections also require preparation; this can take tens of seconds. Short utterances retain timeline gaps; long ones can speed up to 2× and truncate expired tails. This is sentence-level synchronization, not lip sync.
+
+In 0.2.3, **Show original-language subtitles** and **Show target-language subtitles** are independent: enable either one, both, or neither. Both default on for a new session. Hiding captions does not stop the translated audio.
 
 ## Bilibili example
 

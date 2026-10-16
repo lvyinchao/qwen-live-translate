@@ -285,7 +285,7 @@ try {
     .getByRole('alert')
     .filter({ hasText: 'Translation disconnected early (1006).' })
     .waitFor();
-  await panel.getByLabel('Bilingual subtitles', { exact: true }).waitFor();
+  await panel.getByLabel('Show original-language subtitles', { exact: true }).waitFor();
   assert.match(
     await panel.locator('.buffer-label').innerText(),
     /30s of audio ready ahead/,
@@ -298,12 +298,25 @@ try {
   await screenshot('en', 'session');
   await panel.locator('.locale-select').selectOption('zh');
   await waitLocale('zh');
-  await panel.getByLabel('双语字幕', { exact: true }).waitFor();
+  await panel.getByLabel('显示原语言字幕', { exact: true }).waitFor();
   await panel
     .getByRole('alert')
     .filter({ hasText: '翻译连接提前断开（1006）' })
     .waitFor();
   await screenshot('zh', 'session');
+  // A clean delivery screenshot demonstrates the new controls, without the
+  // deliberate error above or any credential fields.
+  await publish({ ...session, phase: 'playing', error: undefined,
+    sourceSubtitles: false, targetSubtitles: true });
+  await panel.waitForFunction(() => !document.querySelector('[role="alert"]'));
+  assert.equal(await panel.getByLabel('显示原语言字幕', { exact: true }).isChecked(), false);
+  assert.equal(await panel.getByLabel('显示目标语言字幕', { exact: true }).isChecked(), true);
+  await screenshot('zh', 'captions');
+  await panel.locator('.locale-select').selectOption('en');
+  await waitLocale('en');
+  await screenshot('en', 'captions');
+  await panel.locator('.locale-select').selectOption('zh');
+  await waitLocale('zh');
   await publish(null);
   result.checks.push(
     'All session phases, buffer progress, speed, skips, errors and subtitle control localized; transcript unchanged',
@@ -433,6 +446,32 @@ try {
   });
   assert.equal((await captionDisplay()).display, 'flex');
   assert.match(await caption(), /翻译内容/);
+  const captionLines = async () => {
+    const { found } = await captionNode();
+    const { object } = await cdp.send('DOM.resolveNode', { backendNodeId: found.backendNodeId });
+    const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId,
+      functionDeclaration: 'function(){ const shown=(selector)=>{const e=this.querySelector(selector);return !!e && e.getBoundingClientRect().height>0 && getComputedStyle(e).display!=="none";};return {source:shown(".source"),target:shown(".target")}; }',
+      returnByValue: true });
+    await cdp.send('Runtime.releaseObject', { objectId: object.objectId });
+    return result.value;
+  };
+  for (const [sourceSubtitles, targetSubtitles] of [[true,true],[true,false],[false,true],[false,false]]) {
+    const choices = { sourceSubtitles, targetSubtitles, subtitles: sourceSubtitles || targetSubtitles };
+    await playerMessage({ type: 'player:mix', sessionId: session.id, languageVersion: session.languageVersion ?? 0,
+      originalVolume: 0, dubVolume: 1, ...choices });
+    const visible = { source: sourceSubtitles, target: targetSubtitles };
+    assert.deepEqual(await captionLines(), visible);
+    await playerMessage({ type: 'player:segment', epoch: session.epoch, segment: {
+      ...session.segments[0], id: `caption-choice-${sourceSubtitles}-${targetSubtitles}`,
+      mediaId: candidate.mediaId, language: 'zh', voice: 'original-auto-v1', sourceText: 'Original fixture',
+      text: '翻译内容', audio: wav, audioDuration: 3.84 } });
+    await playerMessage({ type: 'player:state', session: { ...playing, ...choices } });
+    assert.deepEqual(await captionLines(), visible);
+    await video.locator('video').evaluate((v) => v.parentElement.requestFullscreen());
+    assert.deepEqual(await captionLines(), visible);
+    await video.evaluate(() => document.exitFullscreen());
+  }
+  result.checks.push('Both independent subtitle switches cover all four rendered combinations and remain effective after new segments, progress states and container fullscreen');
   await playerMessage({
     type: 'player:mix',
     originalVolume: 0,

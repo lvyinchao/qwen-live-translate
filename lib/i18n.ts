@@ -175,6 +175,8 @@ const english = {
   原声: 'Original',
   译音: 'Translated',
   双语字幕: 'Bilingual subtitles',
+  显示原语言字幕: 'Show original-language subtitles',
+  显示目标语言字幕: 'Show target-language subtitles',
   '为跟随画面，已有 {count} 处过长译音跳过尾部。完整译文仍可查看。':
     'To keep up with the video, {count} long audio tails were skipped. Full translations remain available.',
   译文片段: 'Transcript',

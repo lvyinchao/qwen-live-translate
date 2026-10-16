@@ -1,10 +1,10 @@
 # Chrome Web Store submission packet
 
-This packet describes the version 0.2.2 candidate. The last actual submission and Google review/publication status are recorded separately in `STATUS.md`; preparing this packet does not imply a new submission or approval.
+This packet describes the version 0.2.3 candidate. The last actual submission and Google review/publication status are recorded separately in `STATUS.md`; preparing this packet does not imply a new submission or approval.
 
 ## Package and public links
 
-- Candidate upload `outputs/timbradub-0.2.2-webstore.zip` (manifest at root).
+- Candidate upload `outputs/timbradub-0.2.3-webstore.zip` (manifest at root).
 - Homepage/support: https://github.com/lvyinchao/timbradub
 - Support issues: https://github.com/lvyinchao/timbradub/issues
 - Privacy policy: https://github.com/lvyinchao/timbradub/blob/main/PRIVACY.md

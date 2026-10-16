@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-16T09:21:32.439Z",
+  "version": "0.2.3",
+  "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "previousVersion": "0.2.2",
+  "previousRuntimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+  "changedBuiltFiles": [
+    "background.js",
+    "chunks/archive-DkvgNN7w.js",
+    "chunks/captions-Dv9vO2t6.js",
+    "chunks/offscreen-CdYDykTg.js",
+    "chunks/offscreen-LHCs9K46.js",
+    "chunks/sidepanel-B5Vipo2_.js",
+    "chunks/sidepanel-e_pTpOo5.js",
+    "content-scripts/player.js",
+    "manifest.json",
+    "offscreen.html",
+    "sidepanel.html"
+  ],
+  "changes": [
+    "Await a shared in-progress offscreen creation before sending requests",
+    "Independent source/target subtitle preferences, legacy compatibility, UI and rendered lines"
+  ],
+  "unitTests": 187,
+  "unitFiles": 30,
+  "typesPassed": true,
+  "buildPassed": true,
+  "scope": "The 0.2.2 live reports retain their own build identity and limits. This patch changes startup coordination and subtitle visibility; it does not claim a fresh 0.2.3 20-minute or real-provider timing run.",
+  "targetedBrowserUiPassed": true,
+  "targetedLanguageSwitchPassed": true,
+  "offscreenStartupReceipt": "offscreen-startup-verification.json",
+  "fullReleaseAndPublicSourceVerification": "Pending CI and public-release verification"
+}

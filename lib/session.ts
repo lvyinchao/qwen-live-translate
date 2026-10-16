@@ -1,4 +1,5 @@
 import type { PlaybackSession } from './types';
+import { captionPreferences } from './captions';
 
 /** An RPC retry may arrive after a more recent snapshot from the same epoch. */
 export function isOlderStateVersion(current: PlaybackSession, next: PlaybackSession) {
@@ -26,6 +27,6 @@ export function acceptEngineState(
     ...next,
     originalVolume: current.originalVolume,
     dubVolume: current.dubVolume,
-    subtitles: current.subtitles,
+    ...captionPreferences(current),
   };
 }

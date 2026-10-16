@@ -1,0 +1,135 @@
+{
+  "at": "2026-10-16T09:21:54.255Z",
+  "extensionVersion": "0.2.3",
+  "scope": "Real isolated Chromium using the final 0.2.3 build copied from .output/chrome-mv3 after the caption fixes; the fixture prepends a deliberate 1500 ms busy delay to the offscreen main module. This is a startup race injection, not an unmodified production timing measurement. No model calls or third-party network access.",
+  "delayInjectedMs": 1500,
+  "delayInjection": {
+    "path": "chunks/offscreen-CdYDykTg.js",
+    "originalSha256": "1b1639d3ce6d6d6c8a3415ca6b528c619f8c767fe9486c0b3492a31c3587a9fb",
+    "injectedSha256": "9637465de34f2fc24e899246f28ff819c7e41001cc0c2aca6261325d294788e0"
+  },
+  "originalBuiltFiles": {
+    "LICENSE": "a65a1e044fea455be0d529603676b9a82e78304ee9dbeeac3b8c3860e1153f8f",
+    "PRIVACY.md": "33740d400d485225145e8ccde0d10635c49bbf983db6da036fc6015c6cc4a523",
+    "THIRD_PARTY_NOTICES.md": "d98c6b7c891df5edc289dd12bbb3e697d976238f08247120868583cf4a3bb590",
+    "_locales/en/messages.json": "73c1f4238d9206f078aa2dfab99bcfbdc2420221d54057136d9615bd98b2a535",
+    "_locales/zh_CN/messages.json": "8c9933ecdefec71d5d3a39e2cdcad86810bc903b2346c0da4812d0f493b2d072",
+    "assets/decode-Dwj0VxtT.js": "2544640aab19892e5a92df0ef322adef038271ad75c4a41cc802b504deae92d8",
+    "assets/sidepanel-D_bjnzcH.css": "b7900858ab8b64ebdc311226a61d95dabc9eb9d8318bea8a35b11be5370ef1e5",
+    "background.js": "31718a3d2f8b6b7dd8b2b2515192d932b26526a64092dda9dc1a86216c32d37a",
+    "brand/logo.svg": "11aee6443689d639006647d5776930517547b8dff17728c4274d5d770aef8f15",
+    "chunks/captions-Dv9vO2t6.js": "0ff0686cfd6223c243c56cfcfb8d4e1c7959fa3011fb12f769e2c154283e67dd",
+    "chunks/offscreen-CdYDykTg.js": "1b1639d3ce6d6d6c8a3415ca6b528c619f8c767fe9486c0b3492a31c3587a9fb",
+    "chunks/sidepanel-B5Vipo2_.js": "6ac0d0b518b5435a9810eb2984c8bd994b4d00dbcf6434c47f38b5a9cb62ad16",
+    "content-scripts/player.js": "ba95d56ae37cd514750615b86911a3744da3169a34e42781e489913783d90fe3",
+    "content-scripts/tencent-media.js": "5600eee152213a10cda95673600d3bc62493d30ee5972c5908f098e33f2a244e",
+    "icons/128.png": "1d16b4e50d39ad0a5ef2ed95e0c6385f095215aae5a45b9aad07d0bfb9d75619",
+    "icons/16.png": "92f99b3b6c9db6a7ee3fbfc5204e6bbce127625368340a7ccd9d5b5858f377a5",
+    "icons/32.png": "8183eb0e42eaeb819ad082dc0d801a01804b3773ca18f1fbdefc25b2c5275df4",
+    "icons/48.png": "59e28bb446d16b7d13fedc631d3e0617ecefe755414b511392f77a33a20f0551",
+    "licenses/bufbuild-Apache-2.0.txt": "c04b4216f1cd4c5a4f7fb2f2a1b0ae70d847e9e0cac7c9dee9bf8cc03177c449",
+    "licenses/googlevideo-MIT.txt": "69bb14fee2d102583d6cccdf1e0e2ced4d2bbfd3c42b172e0a9f4e32a9c48c88",
+    "licenses/lucide-ISC.txt": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc",
+    "licenses/mediabunny-1.61.4-source.tgz": "974fbe5071a7be0d3de7cbf9567f65e7ca83a215a042f6a2d947e3387acda2c9",
+    "licenses/mediabunny-MPL-2.0.txt": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+    "licenses/react-MIT.txt": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "licenses/react-dom-MIT.txt": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "licenses/scheduler-MIT.txt": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "licenses/wxt-MIT.txt": "7b0b00fcdbc6a036078aad84d0bc0fae240ac67144b86c911149c2daa37c9f85",
+    "manifest.json": "3abed82029f00d3051ddf09b7d927b910a911269924bb0b36f84c1d67791e116",
+    "offscreen.html": "c227b9f5aaa676c02f2f8688ef2e9747796000d378650276be7c52441d6bd4b6",
+    "sidepanel.html": "58e8877e598e7f593e0c1524162355dcdaf1a674a45e7274c354d707dfc22dd2"
+  },
+  "checks": [
+    "Chrome exposes the offscreen context before createDocument resolves",
+    "Two concurrent files:status requests both wait until createDocument completes before forwarding",
+    "Both status replies succeed with one shared offscreen document creation"
+  ],
+  "results": {
+    "first": {
+      "ok": true,
+      "value": {
+        "pending": 0,
+        "staged": 0,
+        "saved": 0,
+        "saving": false
+      }
+    },
+    "second": {
+      "ok": true,
+      "value": {
+        "pending": 0,
+        "staged": 0,
+        "saved": 0,
+        "saving": false
+      }
+    }
+  },
+  "events": [
+    {
+      "at": 1792142512395,
+      "event": "contexts",
+      "count": 0
+    },
+    {
+      "at": 1792142512547,
+      "event": "contexts",
+      "count": 0
+    },
+    {
+      "at": 1792142512547,
+      "event": "create-begin"
+    },
+    {
+      "at": 1792142512587,
+      "event": "contexts",
+      "count": 1
+    },
+    {
+      "at": 1792142514092,
+      "event": "create-end"
+    },
+    {
+      "at": 1792142514092,
+      "event": "send-begin",
+      "type": "files:status",
+      "target": "offscreen"
+    },
+    {
+      "at": 1792142514092,
+      "event": "send-begin",
+      "type": "files:status",
+      "target": "offscreen"
+    },
+    {
+      "at": 1792142514246,
+      "event": "send-end",
+      "type": "files:status",
+      "reply": {
+        "ok": true,
+        "value": {
+          "pending": 0,
+          "staged": 0,
+          "saved": 0,
+          "saving": false
+        }
+      }
+    },
+    {
+      "at": 1792142514247,
+      "event": "send-end",
+      "type": "files:status",
+      "reply": {
+        "ok": true,
+        "value": {
+          "pending": 0,
+          "staged": 0,
+          "saved": 0,
+          "saving": false
+        }
+      }
+    }
+  ],
+  "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "runtimeSha256Algorithm": "SHA-256 of per-directory sorted recursive relative POSIX file paths followed by raw file bytes, including licenses and vendored assets; computed before fixture-only offscreen delay injection."
+}

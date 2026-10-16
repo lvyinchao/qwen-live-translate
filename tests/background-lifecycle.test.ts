@@ -123,6 +123,28 @@ beforeEach(async () => { vi.resetModules(); env = await setup(); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 const start = (tabId = 1) => env.call({ type: 'session:start', candidate: { id: 'player', frameId: 0, tabId }, language: 'zh' });
 
+it('waits for an offscreen creation already in progress even when Chrome exposes its context', async () => {
+  const creation = deferred<void>();
+  env.hooks.create = () => creation.promise;
+  const first = env.call({ type: 'files:status' });
+  await vi.waitFor(() => expect(env.browser.offscreen.createDocument).toHaveBeenCalledOnce());
+  const observed = deferred<void>();
+  env.browser.runtime.getContexts.mockImplementationOnce(async () => {
+    observed.resolve();
+    return [{ contextType: 'OFFSCREEN_DOCUMENT' }];
+  });
+  const second = env.call({ type: 'files:status' });
+  await observed.promise;
+  // Drain the real handler's await chain without completing document loading.
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(env.engineMessages).toEqual([]);
+  creation.resolve();
+  expect(await first).toEqual({ ok: true, value: true });
+  expect(await second).toEqual({ ok: true, value: true });
+  expect(env.browser.offscreen.createDocument).toHaveBeenCalledOnce();
+  expect(env.engineMessages.map((message) => message.type)).toEqual(['files:status', 'files:status']);
+});
+
 it('rolls back player attachment and active session when offscreen creation fails', async () => {
   env.hooks.create = async () => { throw new Error('createDocument rejected'); };
   expect(await start()).toMatchObject({ ok: false, error: 'createDocument rejected' });
@@ -371,4 +393,23 @@ it('still stops playback when terminal diagnostic forwarding fails', async () =>
   expect(await env.call({ type: 'session:stop' })).toEqual({ ok: true, value: true });
   expect(env.engineMessages.at(-1)).toMatchObject({ type: 'engine:stop', sessionId: owner.id });
   expect((await env.call({ type: 'session:get' })).value).toBeNull();
+});
+
+it('keeps independent caption choices through engine progress and rejects stale-language controls', async () => {
+  const owner = (await start()).value;
+  await env.call({ type: 'session:mix', sessionId: owner.id, languageVersion: 0,
+    sourceSubtitles: true, targetSubtitles: false });
+  expect((await env.call({ type: 'session:get' })).value)
+    .toMatchObject({ sourceSubtitles: true, targetSubtitles: false, subtitles: true });
+  await env.call({ type: 'engine:state', session: { ...owner, epoch: owner.epoch + 1,
+    sourceSubtitles: false, targetSubtitles: true } });
+  expect((await env.call({ type: 'session:get' })).value)
+    .toMatchObject({ sourceSubtitles: true, targetSubtitles: false });
+  expect(await env.call({ type: 'session:mix', sessionId: owner.id, languageVersion: 99,
+    sourceSubtitles: false, targetSubtitles: true })).toMatchObject({ ok: true, value: false });
+  expect((await env.call({ type: 'session:get' })).value)
+    .toMatchObject({ sourceSubtitles: true, targetSubtitles: false });
+  await env.call({ type: 'session:mix', sessionId: owner.id, subtitles: false });
+  expect((await env.call({ type: 'session:get' })).value)
+    .toMatchObject({ sourceSubtitles: false, targetSubtitles: false, subtitles: false });
 });

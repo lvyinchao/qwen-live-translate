@@ -1,15 +1,16 @@
 {
-  "at": "2026-10-16T09:05:48.647441+00:00",
-  "version": "0.2.2",
-  "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
-  "sourceBaseCommit": "b8952ac",
-  "releaseCommit": "792afbcdd728046799d57502962606528d0162fc",
+  "at": "2026-10-16T09:30:57.525836+00:00",
+  "version": "0.2.3",
+  "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "sourceBaseCommit": "fa142b83e2d38d81ce09ed495230e4e9c6a75a7a",
+  "releaseCommit": null,
   "storeItemId": "knlbmnbdcnnhhpimbeagojbacmjkcald",
-  "observedStoreStatus": "Pending review; v0.2.2 submitted after the previous v0.2.1 review was withdrawn",
-  "submitted": true,
+  "observedStoreStatus": "v0.2.2 review withdrawn; v0.2.3 uploaded as draft",
+  "submitted": false,
   "approved": false,
-  "autoPublishAfterApproval": true,
-  "webstoreZipSha256": "f3b6b25341216225650fe36dd946204adcba1d5bdab428cd05611344e6ce079f",
+  "autoPublishAfterApproval": null,
+  "storeUploadedRuntimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "webstoreZipSha256": "7ce13d5b68d6bdb381764d7df172c6228590becf3e90224a9727b27eac3f043b",
   "languages": [
     "en",
     "zh-CN"
@@ -17,47 +18,23 @@
   "ownAccountRegistrationUrl": "https://qianwenai.com/",
   "githubRepositoryVisibility": "public",
   "githubRelease": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.2",
-  "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38876940320",
-  "codeqlRun": "https://github.com/lvyinchao/timbradub/actions/runs/38876940163",
-  "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38876940892",
+  "candidateRelease": "v0.2.3",
+  "ciRun": null,
+  "codeqlRun": null,
+  "releaseRun": null,
   "localChrome": {
-    "observedVersion": "0.2.2",
-    "enabled": true,
     "extensionId": "pekbbjpciefeheaacfpnhlkbbbmhdhoo",
-    "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
-    "uiAndToolbarTitlesCheckedInBothLanguages": true,
-    "previousChinesePreferenceRestored": true
+    "observedVersion": "0.2.2",
+    "updateTo023Pending": true
   },
-  "dependencyAudit": {
-    "critical": 0,
-    "high": 0,
-    "moderate": 0,
-    "low": 0,
-    "scope": "Full npm audit, including development dependencies, official npm registry; checked 2026-10-16"
+  "softwareChecks": {
+    "unitTests": 187,
+    "unitFiles": 30,
+    "typeCheckPassed": true,
+    "buildPassed": true,
+    "targetedBrowserUiPassed": true,
+    "targetedLanguageSwitchPassed": true,
+    "offscreenDelayProbePassed": true
   },
-  "scope": "Published v0.2.2 packages are the exact validated release-workflow artifacts. Public Chrome downloads, root-folder installation and clean-source ZIP installation/types/unit/build/all nine browser gates passed. The runtime matches the local Chrome installation, submitted Store package and final live tests. Eligible onset P95 does not establish complete spoken coverage; see acceptance-0.2.2.json for cut and buffering limits. Store submission remains pending external review; approval and public Store availability are not confirmed.",
-  "storeSubmittedRuntimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
-  "candidateSourceValidation": {
-    "commit": "5cf3d09057d1ae09ba19f3df3ee5a90e4daa2330",
-    "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38875384478",
-    "runtimeMatchesInstalledAndSubmitted": true,
-    "cleanSourceCommandsPassed": true,
-    "sourceZipSha256": "47c60cc48e365287ccf6335b7fe92d7e64f1a6916372a52478eebc55278bfa5c"
-  },
-  "publishedArchiveSha256": {
-    "timbradub-0.2.2-chrome.zip": "e224e08d6750e1511517e00ce110f4b30a31af5f4edaeed5bf931e9d34f6f089",
-    "timbradub-0.2.2-webstore.zip": "f3b6b25341216225650fe36dd946204adcba1d5bdab428cd05611344e6ce079f",
-    "timbradub-0.2.2-source.zip": "c1371df9d3e7dd1b6988e37f24d1a5e93eed48de7fd3bdb4a3a16f5952c620d6"
-  },
-  "publicDownloadVerification": {
-    "passed": true,
-    "receipt": "release-smoke-verification.json",
-    "attachedPublicReceipt": "https://github.com/lvyinchao/timbradub/releases/download/v0.2.2/public-download-verification.json",
-    "matchesValidatedReleaseArchives": true,
-    "cleanSourceCommandsPassed": true
-  },
-  "codeScanning": {
-    "openAlerts": 0,
-    "scope": "GitHub CodeQL default branch after release commit; the test-only incomplete-host fixture finding was fixed, not dismissed"
-  }
+  "scope": "0.2.3 candidate snapshot. Shared release validation, public download/source verification, local Chrome reload and Store submission are pending. The 20-minute live results belong to 0.2.2 and retain that build hash; no fresh 0.2.3 model/20-minute run is claimed."
 }

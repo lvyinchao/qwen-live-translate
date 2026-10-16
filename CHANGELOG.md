@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3 — 2026-10-16
+
+- Fix concurrent Offscreen Document startup: a second caller must wait for the shared creation promise even when Chrome already lists the new document. This prevents an early message from returning no response while creation is still in progress.
+- Add independent source/target subtitle switches: source only, target only, both or neither. New sessions default to both; legacy `subtitles` booleans remain compatible. Caption selection does not change audio scheduling.
+- The initialization-fix stage passed types, 182 unit tests in 29 files and the build. Its isolated Chromium injection delaying Offscreen startup by 1500 ms confirms both requests wait for one creation and receive valid replies; its local-file gate also passes. The final build including independent captions still needs its complete test count, browser/CI and public-source verification.
+- The 0.2.2 runtime's 20-minute measurements remain versioned evidence for 0.2.2 and are not presented as a fresh 0.2.3 long run. Existing 0.2.2 packages and receipts are not overwritten.
+
 ## 0.2.2 — 2026-10-16
 
 - Fix translated-cache delivery beyond 90 seconds, including cached seeks and switching back to a prepared language. Playback readiness now requires the current player to acknowledge delivered utterances.
