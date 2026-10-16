@@ -1,7 +1,7 @@
 # Chrome Web Store status
 
-As of 2026-10-16: **not yet submitted**.
+As of 2026-10-16: **draft created; not yet submitted for review**.
 
-The developer console requires the account owner to complete Google passkey reauthentication before publisher status can be inspected or a package uploaded. Listing text, privacy disclosures and packaged assets are prepared in this directory; GitHub Releases is a separate distribution channel.
+Item ID: `knlbmnbdcnnhhpimbeagojbacmjkcald`. The account owner completed Google reauthentication. An earlier 0.2.0 package and listing were saved in the developer console; the TimbraDub 0.2.1 package, original-voice copy, language list and self-registration requirements are being updated before submission.
 
-No Chrome Store item ID, approved listing URL or review verdict is known. Replace this status only after checking the actual developer console. Do not display a Chrome Web Store install badge until an approved public listing exists.
+GitHub Releases is a separate installation channel. No approved public listing is confirmed. Do not display a Chrome Web Store install badge until the listing is actually approved and public.

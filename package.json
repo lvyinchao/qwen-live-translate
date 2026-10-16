@@ -1,7 +1,7 @@
 {
-  "name": "qwen-video-dub",
+  "name": "timbradub",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -39,15 +39,15 @@
     "ws": "^8.22.0",
     "wxt": "^0.20.0"
   },
-  "description": "Open-source Chrome extension for synchronized original-voice video translation with Qwen LiveTranslate.",
+  "description": "Translate video speech in the original voice, with synchronized audio, bilingual subtitles and 29 target languages.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lvyinchao/qwen-live-translate.git"
+    "url": "git+https://github.com/lvyinchao/timbradub.git"
   },
-  "homepage": "https://github.com/lvyinchao/qwen-live-translate",
+  "homepage": "https://github.com/lvyinchao/timbradub",
   "bugs": {
-    "url": "https://github.com/lvyinchao/qwen-live-translate/issues"
+    "url": "https://github.com/lvyinchao/timbradub/issues"
   },
   "engines": {
     "node": ">=22.12.0"

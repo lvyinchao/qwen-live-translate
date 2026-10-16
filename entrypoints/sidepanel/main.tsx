@@ -61,6 +61,17 @@ const phaseNames = {
   ended: '已结束',
   error: '需要处理',
 } as const;
+function ProviderNotice({ locale }: { locale: UILanguage }) {
+  return (
+    <p className="provider-notice">
+      {translate(locale, '翻译需要你自己的账号和 API Key。请前往')}{' '}
+      <a href="https://qianwenai.com/" target="_blank" rel="noopener noreferrer">
+        qianwenai.com
+      </a>{' '}
+      {translate(locale, '注册账号并申请 API Key，模型费用由你的账号按用量结算。')}
+    </p>
+  );
+}
 type PublicSettings = Omit<Settings, 'apiKey'> & { hasKey: boolean };
 function App() {
   const [view, setView] = useState<'videos' | 'settings'>('videos');
@@ -313,7 +324,7 @@ function App() {
           </span>
           <div>
             <strong>{t('听译')}</strong>
-            <span>QWEN VIDEO DUB</span>
+            <span>ORIGINAL VOICE</span>
           </div>
         </div>
         <div className="header-actions">
@@ -363,6 +374,7 @@ function App() {
                 '使用自己的账户调用模型。凭据只保存在本机，不会提供给视频网页。',
               )}
             </p>
+            <ProviderNotice locale={locale} />
             <section className="settings-form">
               <label htmlFor="api-key">
                 API Key{' '}
@@ -499,7 +511,7 @@ function App() {
               </button>
             </div>
             <p className="description">
-              {t('保留熟悉的播放器，换一种语言听懂内容。')}
+              {t('用原声的音色，听另一种语言。')}
             </p>
             <section className="video-list" aria-label={t('当前页面的视频')}>
               {videos.length ? (
@@ -606,6 +618,7 @@ function App() {
                   : t('先播放几秒，让浏览器发现音轨，再点击重新扫描。')}
               </p>
             )}
+            {!settings.hasKey && <ProviderNotice locale={locale} />}
             <section className="language-section">
               <label htmlFor="language">
                 <Languages size={17} />

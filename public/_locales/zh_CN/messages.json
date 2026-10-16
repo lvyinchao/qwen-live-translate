@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "TimbraDub 听译 — 原音色视频翻译"
+  },
+  "extensionDescription": {
+    "message": "保留原说话人音色，29 种语言同步译音与双语字幕。需自行到 qianwenai.com 注册账号并申请 API Key。"
+  }
+}

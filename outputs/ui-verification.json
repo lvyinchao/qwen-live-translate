@@ -1,10 +1,12 @@
 {
-  "at": "2026-10-16T03:52:11.235Z",
+  "at": "2026-10-16T04:09:08.078Z",
   "scope": "Isolated UI fixtures only; no model call or real-video acceptance",
   "errors": [],
   "checks": [
     "English default even in a zh-CN browser; target language remains Chinese",
+    "All 29 targets and a visible self-registration/API-key link on the English first-run page",
     "Chinese preference survives panel reload",
+    "Chinese settings explicitly require the user’s own account and API key",
     "Save toggle preserves unsaved credential fields and does not submit them",
     "English and Chinese validation, settings labels and notices; key input cleared after saving",
     "Language preference propagates between panels without changing credentials or target language",

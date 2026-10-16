@@ -3,9 +3,9 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: 'Qwen Video Dub',
-    description:
-      'Watch videos in their original player with synchronized translated audio and bilingual subtitles. Use your own Model Studio account.',
+    default_locale: 'en',
+    name: '__MSG_extensionName__',
+    description: '__MSG_extensionDescription__',
     minimum_chrome_version: '116',
     permissions: [
       'storage',
@@ -28,9 +28,9 @@ export default defineConfig({
       48: 'icons/48.png',
       128: 'icons/128.png',
     },
-    homepage_url: 'https://github.com/lvyinchao/qwen-live-translate',
+    homepage_url: 'https://github.com/lvyinchao/timbradub',
     action: {
-      default_title: 'Open Qwen Video Dub',
+      default_title: 'Open TimbraDub',
       default_icon: { 16: 'icons/16.png', 32: 'icons/32.png' },
     },
     side_panel: { default_path: 'sidepanel.html' },

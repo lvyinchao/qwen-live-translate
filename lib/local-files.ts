@@ -351,9 +351,10 @@ export class LocalFiles {
         segments: [],
         ready: true,
       });
-      const filename =
+      const filename = (
         old?.filename ??
-        base.replace(/\.zip$/, `-merged-${fingerprint.slice(0, 12)}.zip`);
+        base.replace(/\.zip$/, `-merged-${fingerprint.slice(0, 12)}.zip`)
+      ).replace(/^Qwen Video Dub\//, 'TimbraDub/');
       let id = old?.downloadId;
       try {
         if (id === undefined) {

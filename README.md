@@ -1,19 +1,21 @@
-<p align="center"><img src="public/brand/logo.svg" width="88" height="88" alt="Video Dub logo" /></p>
-<h1 align="center">Video Dub · 听译</h1>
-<p align="center">Watch in another language. Stay on the same timeline.</p>
+<p align="center"><img src="public/brand/logo.svg" width="88" height="88" alt="TimbraDub logo" /></p>
+<h1 align="center">TimbraDub · 听译</h1>
+<p align="center">The original voice. A new language. The same timeline.</p>
 <p align="center">
-  <a href="https://github.com/lvyinchao/qwen-live-translate/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/lvyinchao/qwen-live-translate/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/lvyinchao/timbradub/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/lvyinchao/timbradub/actions/workflows/ci.yml/badge.svg" /></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-164a3f" /></a>
   <img alt="Chrome 116+" src="https://img.shields.io/badge/Chrome-116%2B-164a3f" />
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-164a3f" />
 </p>
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-![Video Dub: another language, the same timeline](docs/assets/banner.svg)
+![TimbraDub: the original voice in another language](docs/assets/banner.svg)
 
-An independent, open-source Chrome extension that plays Qwen-translated speech alongside the **original webpage's video player**. Bring your own Alibaba Cloud Model Studio API key. No self-hosted server is required.
+An independent, open-source Chrome extension that translates video speech **in the original speaker’s voice**, with synchronized audio and bilingual subtitles in the **original webpage’s video player**. No self-hosted server is required.
 
-[Download the extension](https://github.com/lvyinchao/qwen-live-translate/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/qwen-live-translate/issues/new/choose)
+**Your own account and API key are required. Register at [qianwenai.com](https://qianwenai.com/) and apply for an API key before translating.** Configure your key, Workspace ID and matching region in the extension. Model usage is billed directly to your own provider account; this project does not supply keys or credits.
+
+[Download the extension](https://github.com/lvyinchao/timbradub/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/timbradub/issues/new/choose)
 
 > **Preview software.** Bilibili has short, real translated-playback checks. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store availability will be linked here once approved; GitHub downloads are available separately.
 
@@ -30,13 +32,23 @@ An independent, open-source Chrome extension that plays Qwen-translated speech a
 
 Requires desktop Chrome 116+ and a compatible Model Studio account. Provider usage is billed to your account.
 
-1. Download `qwen-video-dub-<version>-chrome.zip` from [Releases](https://github.com/lvyinchao/qwen-live-translate/releases/latest) and extract it.
+1. Download `timbradub-<version>-chrome.zip` from [Releases](https://github.com/lvyinchao/timbradub/releases/latest) and extract it.
 2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted `extension` folder containing `manifest.json`.
-3. Pin **Qwen Video Dub**, then refresh any already-open video pages.
-4. Open its side panel → settings. Enter your API key, Workspace ID and matching region. Save and test the connection.
+3. Pin **TimbraDub**, then refresh any already-open video pages.
+4. [Register at qianwenai.com and obtain your own API key](https://qianwenai.com/). Open the side panel → settings, enter the key, Workspace ID and matching region, then save and test the connection.
 5. Play a few seconds of a supported video so its audio source can be detected. Choose the video and target language, then **Start translation**.
 
 The extension pauses to prepare speech before resuming. New, uncached language selections also require preparation; this can take tens of seconds. Short utterances retain timeline gaps; long ones can speed up to 2× and truncate expired tails. This is sentence-level synchronization, not lip sync.
+
+## Bilibili example
+
+Try [this Bilibili video](https://www.bilibili.com/video/BV13rsaeaEgE/) used in our real checks. Play a few seconds, open TimbraDub, choose Chinese and start. Once prepared, change the target to Japanese while watching. The new target prepares from the current video position. Video/CDN availability can change.
+
+## All 29 spoken target languages
+
+Chinese, English, Japanese, Korean, French, German, Spanish, Portuguese, Russian, Arabic, Italian, Indonesian, Thai, Vietnamese, Turkish, Hindi, Malay, Dutch, Urdu, Norwegian Bokmål, Swedish, Danish, Hebrew, Finnish, Polish, Icelandic, Czech, Filipino, Persian.
+
+See the [English / Chinese language table and codes](docs/LANGUAGES.md). Every target uses original-voice mode; similarity depends on the model and source audio.
 
 ## Compatibility
 
@@ -62,8 +74,8 @@ Broad host access supports current-page media discovery, cross-origin audio and 
 Node.js **22.12+**, npm, and Git are required. Packaging uses `zip`/`unzip`. Browser fixture gates require Playwright's Chromium; media fixture gates also require FFmpeg.
 
 ```sh
-git clone https://github.com/lvyinchao/qwen-live-translate.git
-cd qwen-live-translate
+git clone https://github.com/lvyinchao/timbradub.git
+cd timbradub
 npm ci
 npm run check
 npm test
@@ -95,7 +107,7 @@ The package command produces a GitHub installation ZIP, a manifest-at-root Chrom
 
 ## Contribute and support
 
-Bug fixes, reproducible compatibility reports, accessibility improvements and tests are welcome. Start with [Contributing](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md), [Support](SUPPORT.md) and the [roadmap](docs/ROADMAP.md). Report security problems privately through [GitHub Security Advisories](https://github.com/lvyinchao/qwen-live-translate/security/advisories/new), not public issues.
+Bug fixes, reproducible compatibility reports, accessibility improvements and tests are welcome. Start with [Contributing](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md), [Support](SUPPORT.md) and the [roadmap](docs/ROADMAP.md). Report security problems privately through [GitHub Security Advisories](https://github.com/lvyinchao/timbradub/security/advisories/new), not public issues.
 
 ## License and attribution
 

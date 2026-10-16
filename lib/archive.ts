@@ -213,5 +213,5 @@ export async function archiveFilename(batch: ArchiveBatch): Promise<string> {
     )
       .slice(0, 55)
       .join('') || 'video';
-  return `Qwen Video Dub/${hash}-${title}/${batch.context.language}-${batch.context.voice}/${stamp(batch.start)}-${stamp(batch.end)}.zip`;
+  return `TimbraDub/${hash}-${title}/${batch.context.language}-${batch.context.voice}/${stamp(batch.start)}-${stamp(batch.end)}.zip`;
 }

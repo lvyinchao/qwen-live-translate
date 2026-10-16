@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Video Dub. English and Chinese issues and pull requests are welcome.
+Thanks for helping improve TimbraDub. English and Chinese issues and pull requests are welcome.
 
 ## Before changing code
 

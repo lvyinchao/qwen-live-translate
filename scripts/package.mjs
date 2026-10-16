@@ -7,7 +7,7 @@ const root = process.cwd();
 const { version } = JSON.parse(await fs.readFile('package.json', 'utf8'));
 const output = path.join(root, 'outputs');
 const stage = await fs.mkdtemp(path.join(os.tmpdir(), 'qvd-package-'));
-const name = `qwen-video-dub-${version}`;
+const name = `timbradub-${version}`;
 const zip = async (archive, cwd, entries) => {
   await fs.rm(archive, { force: true });
   execFileSync('zip', ['-q', '-r', archive, ...entries], { cwd });

@@ -4,10 +4,10 @@ This file is preparation, not a claim that the item has been submitted or approv
 
 ## Package and public links
 
-- Upload `outputs/qwen-video-dub-0.2.0-webstore.zip` (manifest at root).
-- Homepage/support: https://github.com/lvyinchao/qwen-live-translate
-- Support issues: https://github.com/lvyinchao/qwen-live-translate/issues
-- Privacy policy: https://github.com/lvyinchao/qwen-live-translate/blob/main/PRIVACY.md
+- Upload `outputs/timbradub-0.2.1-webstore.zip` (manifest at root).
+- Homepage/support: https://github.com/lvyinchao/timbradub
+- Support issues: https://github.com/lvyinchao/timbradub/issues
+- Privacy policy: https://github.com/lvyinchao/timbradub/blob/main/PRIVACY.md
 - Store icon: `public/icons/128.png`; small promo: `docs/store/assets/small-promo-440x280.png`.
 - Screenshots: `docs/store/assets/screenshot-*.png`, generated from the actual built extension. Captioned compositions describe the interface and must not imply unsupported live results.
 - English/Chinese copy: `LISTING.en.md`, `LISTING.zh-CN.md`.
@@ -44,7 +44,7 @@ If the dashboard asks about data types used/collected, disclose those categories
 
 1. Install the uploaded build in desktop Chrome 116+.
 2. Open the extension side panel. The interface defaults to English and supports Simplified Chinese from its header. Local saving defaults off and can be tested without a provider account.
-3. Translation requires a compatible **reviewer-owned Model Studio API key**, Workspace ID and region configured in settings. The project has no login, paid subscription or project-hosted account. Do not place a project owner's personal API key in a listing or source archive.
+3. Register at https://qianwenai.com/ and obtain a **reviewer-owned API key**; translation requires that key, Workspace ID and region configured in settings. The project has no login, paid subscription or project-hosted account. Do not place a project owner's personal API key in a listing or source archive.
 4. A tested public example is https://www.bilibili.com/video/BV13rsaeaEgE/ . Start it briefly, let the audio be detected, choose Chinese and start translation. Source/CDN availability may vary. Translation pauses the video to prepare approximately 30 seconds; this often takes 30–45 seconds, with no fixed timing guarantee.
 5. Test pause/resume and change target language to Japanese while translating. The old audio clears immediately; after new preparation the original player resumes. A user-paused video stays paused.
 6. Stop translation to restore the original audio settings. Toggle automatic local saving only if you wish to create merged ZIPs in Chrome's download folder.

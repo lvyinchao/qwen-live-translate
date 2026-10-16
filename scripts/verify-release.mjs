@@ -6,7 +6,7 @@ const { version, license } = JSON.parse(
   await fs.readFile('package.json', 'utf8'),
 );
 assert.equal(license, 'MIT');
-const prefix = `qwen-video-dub-${version}`;
+const prefix = `timbradub-${version}`;
 const checksumText = await fs.readFile('outputs/SHA256SUMS.txt', 'utf8');
 const checksums = new Map(
   checksumText

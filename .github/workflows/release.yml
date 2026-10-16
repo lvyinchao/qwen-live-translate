@@ -30,7 +30,7 @@ jobs:
         run: |
           printf '%s\n' 'Open-source preview. See README for site compatibility and remaining validation limits.' '' 'Download the Chrome ZIP and load its extracted extension folder through chrome://extensions. The webstore ZIP is the separate manifest-at-root submission package. Source and SHA-256 checksums are included. Chrome Store availability is tracked independently in docs/store/STATUS.md.' > /tmp/release-notes.md
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" outputs/qwen-video-dub-*.zip outputs/SHA256SUMS.txt --clobber
+            gh release upload "$RELEASE_TAG" outputs/timbradub-*.zip outputs/SHA256SUMS.txt --clobber
           else
-            gh release create "$RELEASE_TAG" outputs/qwen-video-dub-*.zip outputs/SHA256SUMS.txt --verify-tag --title "$RELEASE_TAG · Open-source preview" --notes-file /tmp/release-notes.md --latest
+            gh release create "$RELEASE_TAG" outputs/timbradub-*.zip outputs/SHA256SUMS.txt --verify-tag --title "$RELEASE_TAG · Open-source preview" --notes-file /tmp/release-notes.md --latest
           fi

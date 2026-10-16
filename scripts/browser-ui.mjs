@@ -87,6 +87,10 @@ try {
   result.checks.push(
     'English default even in a zh-CN browser; target language remains Chinese',
   );
+  assert.equal(await panel.locator('#language option').count(), 29);
+  assert.equal(await panel.locator('.provider-notice a').getAttribute('href'), 'https://qianwenai.com/');
+  assert.match(await panel.locator('.provider-notice').innerText(), /register an account and obtain an API key/);
+  result.checks.push('All 29 targets and a visible self-registration/API-key link on the English first-run page');
   await screenshot('en', 'videos');
   await panel.locator('.locale-select').selectOption('zh');
   await waitLocale('zh');
@@ -98,6 +102,9 @@ try {
   await waitLocale('zh');
   result.checks.push('Chinese preference survives panel reload');
   await panel.getByRole('button', { name: '打开设置', exact: true }).click();
+  assert.match(await panel.locator('.provider-notice').innerText(), /注册账号并申请 API Key/);
+  assert.equal(await panel.locator('.provider-notice a').getAttribute('href'), 'https://qianwenai.com/');
+  result.checks.push('Chinese settings explicitly require the user’s own account and API key');
   await panel.getByLabel('Workspace ID').fill('invalid workspace');
   await panel.getByLabel('API Key').fill('test-not-a-real-key');
   await panel.getByRole('button', { name: '保存配置', exact: true }).click();
@@ -331,7 +338,7 @@ try {
     const { found } = await captionNode();
     assert.ok(found, 'caption exists in the closed shadow root');
     const { object } = await cdp.send('DOM.resolveNode', {
-      nodeId: found.nodeId,
+      backendNodeId: found.backendNodeId,
     });
     const { result } = await cdp.send('Runtime.callFunctionOn', {
       objectId: object.objectId,

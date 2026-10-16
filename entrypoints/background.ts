@@ -594,7 +594,7 @@ export default defineBackground(() => {
             filename = String(message.filename);
           if (
             !url.startsWith(`blob:${chrome.runtime.getURL('')}`) ||
-            !filename.startsWith('Qwen Video Dub/') ||
+            !filename.startsWith('TimbraDub/') ||
             !filename.endsWith('.zip') ||
             /[\\\x00-\x1f]/.test(filename) ||
             filename.split('/').some((p) => !p || p === '.' || p === '..')

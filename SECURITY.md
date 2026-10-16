@@ -6,7 +6,7 @@ Security fixes target the latest published preview release. Older previews are n
 
 ## Report privately
 
-Use [GitHub private vulnerability reporting](https://github.com/lvyinchao/qwen-live-translate/security/advisories/new). Do not open a public issue containing an API key, cookie, account information, exploitable details or a signed private-media URL. Share a minimal reproduction, affected version, impact and sanitized evidence. There is no guaranteed response time or paid bounty program.
+Use [GitHub private vulnerability reporting](https://github.com/lvyinchao/timbradub/security/advisories/new). Do not open a public issue containing an API key, cookie, account information, exploitable details or a signed private-media URL. Share a minimal reproduction, affected version, impact and sanitized evidence. There is no guaranteed response time or paid bounty program.
 
 If you accidentally expose a key, revoke/rotate it through its provider immediately; deleting a post or commit does not invalidate a credential.
 

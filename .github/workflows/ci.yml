@@ -33,8 +33,8 @@ jobs:
         with:
           name: chrome-preview
           path: |
-            outputs/qwen-video-dub-*-chrome.zip
-            outputs/qwen-video-dub-*-webstore.zip
-            outputs/qwen-video-dub-*-source.zip
+            outputs/timbradub-*-chrome.zip
+            outputs/timbradub-*-webstore.zip
+            outputs/timbradub-*-source.zip
             outputs/SHA256SUMS.txt
           retention-days: 14

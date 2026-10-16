@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-10-16
+
+- Product, repository, toolbar, store listing, downloads and artwork renamed to **TimbraDub / 听译**, independent of the model provider brand.
+- Original-speaker voice is the lead message; all 29 spoken target languages are listed in both languages.
+- Public walkthrough and reviewer example use Bilibili. YouTube remains only in compatibility/developer validation.
+- Extension first-run/settings pages and English/Chinese documentation link to qianwenai.com and require user-owned registration and API keys; usage is billed to that account.
+- Existing local cache/archive identifiers are retained; new exports use `TimbraDub/`.
+
 ## 0.2.0 — 2026-10-16
 
 First prepared public open-source release, continuing the 0.1.x preview.

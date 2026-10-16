@@ -74,9 +74,9 @@ const english = {
   本地保存路径无效: 'Invalid local save path.',
   '本地文件保存中断，请重试': 'File saving was interrupted. Please retry.',
   '本地文件保存超时，请重试': 'File saving timed out. Please retry.',
-  听译: 'Qwen Dub',
-  '听译 · 视频译音': 'Qwen Video Dub',
-  打开听译: 'Open Qwen Video Dub',
+  听译: 'TimbraDub',
+  '听译 · 视频译音': 'TimbraDub',
+  打开听译: 'Open TimbraDub',
   界面语言: 'Interface language',
   打开设置: 'Open settings',
   未开始: 'Not started',
@@ -91,6 +91,10 @@ const english = {
   连接你的百炼: 'Connect Model Studio',
   '使用自己的账户调用模型。凭据只保存在本机，不会提供给视频网页。':
     'Use your own Alibaba Cloud Model Studio account. Credentials stay on this device and are never shared with video pages.',
+  '翻译需要你自己的账号和 API Key。请前往':
+    'Translation requires your own account and API key. Visit',
+  '注册账号并申请 API Key，模型费用由你的账号按用量结算。':
+    'to register an account and obtain an API key. Model usage is billed to your account.',
   已保存: 'Saved',
   待填写: 'Required',
   '留空保留已保存的 Key': 'Leave blank to keep the saved key',
@@ -114,15 +118,15 @@ const english = {
   当前页面: 'Current page',
   选择要观看的视频: 'Choose a video',
   重新扫描视频: 'Rescan videos',
-  '保留熟悉的播放器，换一种语言听懂内容。':
-    'Watch in the original player. Listen in another language.',
+  '用原声的音色，听另一种语言。':
+    'The original voice. A new language.',
   当前页面的视频: 'Videos on this page',
   网页视频: 'Web video',
   音轨已识别: 'Audio track found',
   等待识别音轨: 'Waiting for audio track',
   让视频先出现: 'Find a video first',
-  '打开 YouTube 或 Bilibili 点播页面，播放几秒后重新扫描。':
-    'Open a YouTube or Bilibili video, play a few seconds, then rescan.',
+  '打开 Bilibili 点播页面，播放几秒后重新扫描。':
+    'Open a Bilibili video, play a few seconds, then rescan.',
   重新扫描: 'Rescan',
   'YouTube 长视频尚未通过连续译音验收；遇到音轨播放验证限制时会停止翻译。':
     'Continuous dubbing of long YouTube videos is not yet verified. Translation stops if audio playback verification blocks access.',

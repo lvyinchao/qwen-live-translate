@@ -775,3 +775,17 @@ footer {
     transition: none !important;
   }
 }
+
+.provider-notice {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid #d3e2d8;
+  border-radius: 10px;
+  background: #f1f6ef;
+  color: #354d40;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.provider-notice a { color: #164a3f; text-decoration: underline; text-underline-offset: 2px; }
+.provider-notice a:focus-visible { outline: 2px solid #164a3f; outline-offset: 3px; }

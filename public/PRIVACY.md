@@ -1,8 +1,8 @@
 # Privacy policy / 隐私政策
 
-Effective: 2026-10-16 · Applies to Video Dub / Qwen Video Dub / 听译, version 0.2.0.
+Effective: 2026-10-16 · Applies to TimbraDub / 听译, version 0.2.1.
 
-Video Dub is an independent open-source Chrome extension maintained at [lvyinchao/qwen-live-translate](https://github.com/lvyinchao/qwen-live-translate). It has no project-operated server, analytics, ads or data-broker integration. Questions can be raised through [GitHub issues](https://github.com/lvyinchao/qwen-live-translate/issues); report sensitive information privately via [Security](SECURITY.md).
+TimbraDub is an independent open-source Chrome extension maintained at [lvyinchao/timbradub](https://github.com/lvyinchao/timbradub). It has no project-operated server, analytics, ads or data-broker integration. Questions can be raised through [GitHub issues](https://github.com/lvyinchao/timbradub/issues); report sensitive information privately via [Security](SECURITY.md).
 
 ## What the extension accesses
 
