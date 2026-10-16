@@ -29,5 +29,16 @@
   "targetedBrowserUiPassed": true,
   "targetedLanguageSwitchPassed": true,
   "offscreenStartupReceipt": "offscreen-startup-verification.json",
-  "fullReleaseAndPublicSourceVerification": "Pending CI and public-release verification"
+  "fullReleaseAndPublicSourceVerification": "Passed: CI and release checks, all nine offline browser gates, actual public ZIP downloads, extracted-root installation and clean public source reproduction",
+  "finalVerificationAt": "2026-10-16T09:42:35.813685+00:00",
+  "releaseCommit": "d06ce4b1bfbb1bc6f48eab0d63b406170baa2ba5",
+  "releaseUrl": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.3",
+  "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041376",
+  "codeqlRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041378",
+  "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041375",
+  "publicDownloadReceipt": "https://github.com/lvyinchao/timbradub/releases/download/v0.2.3/public-download-verification.json",
+  "offlineBrowserGates": 9,
+  "ciPassed": true,
+  "codeqlPassed": true,
+  "publicCleanSourcePassed": true
 }

@@ -17,7 +17,7 @@ An independent, open-source Chrome extension that translates video speech **in t
 
 [Download the extension](https://github.com/lvyinchao/timbradub/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/timbradub/issues/new/choose)
 
-> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.2 was withdrawn; v0.2.3 is being prepared and its upload/submission is not complete. Store approval and public availability are not confirmed. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
+> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.3 is submitted and pending review, with automatic publication selected after approval. It is not yet approved or publicly available in the store. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
 
 ## What it does
 

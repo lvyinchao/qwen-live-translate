@@ -1,15 +1,14 @@
 {
-  "at": "2026-10-16T09:30:57.525836+00:00",
+  "at": "2026-10-16T09:42:35.811368+00:00",
   "version": "0.2.3",
   "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
   "sourceBaseCommit": "fa142b83e2d38d81ce09ed495230e4e9c6a75a7a",
-  "releaseCommit": null,
+  "releaseCommit": "d06ce4b1bfbb1bc6f48eab0d63b406170baa2ba5",
   "storeItemId": "knlbmnbdcnnhhpimbeagojbacmjkcald",
-  "observedStoreStatus": "v0.2.2 review withdrawn; v0.2.3 uploaded as draft",
-  "submitted": false,
+  "observedStoreStatus": "v0.2.3 submitted and pending review; earlier v0.2.1/v0.2.2 reviews withdrawn",
+  "submitted": true,
   "approved": false,
-  "autoPublishAfterApproval": null,
-  "storeUploadedRuntimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "autoPublishAfterApproval": true,
   "webstoreZipSha256": "7ce13d5b68d6bdb381764d7df172c6228590becf3e90224a9727b27eac3f043b",
   "languages": [
     "en",
@@ -17,15 +16,19 @@
   ],
   "ownAccountRegistrationUrl": "https://qianwenai.com/",
   "githubRepositoryVisibility": "public",
-  "githubRelease": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.2",
-  "candidateRelease": "v0.2.3",
-  "ciRun": null,
-  "codeqlRun": null,
-  "releaseRun": null,
+  "githubRelease": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.3",
+  "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041376",
+  "codeqlRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041378",
+  "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041375",
   "localChrome": {
     "extensionId": "pekbbjpciefeheaacfpnhlkbbbmhdhoo",
-    "observedVersion": "0.2.2",
-    "updateTo023Pending": true
+    "observedVersion": "0.2.3",
+    "enabled": true,
+    "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+    "uiAndToolbarTitlesCheckedInBothLanguages": true,
+    "previousChinesePreferenceRestored": true,
+    "autoSaveFiles": false,
+    "existingStagedArchiveDataPreserved": true
   },
   "softwareChecks": {
     "unitTests": 187,
@@ -34,7 +37,24 @@
     "buildPassed": true,
     "targetedBrowserUiPassed": true,
     "targetedLanguageSwitchPassed": true,
-    "offscreenDelayProbePassed": true
+    "offscreenDelayProbePassed": true,
+    "offlineBrowserGates": 9,
+    "ciCleanSourceZipPassed": true,
+    "dependencyAuditOpenVulnerabilities": 0,
+    "codeqlOpenAlerts": 0,
+    "publicDownloadCleanSourcePassed": true
   },
-  "scope": "0.2.3 candidate snapshot. Shared release validation, public download/source verification, local Chrome reload and Store submission are pending. The 20-minute live results belong to 0.2.2 and retain that build hash; no fresh 0.2.3 model/20-minute run is claimed."
+  "scope": "The exact validated 0.2.3 release artifacts match the local Chrome installation and Store-submitted runtime. 187 unit tests, all nine offline browser gates, clean-source CI reproduction and independent reproduction from publicly downloaded source passed. Store review remains external; approval and public availability are not confirmed. No fresh 0.2.3 real-provider 20-minute timing run is claimed; 0.2.2 measurements keep their original build identity.",
+  "storeSubmittedRuntimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "publishedArchiveSha256": {
+    "timbradub-0.2.3-chrome.zip": "09825102af0bad54b46cee250d8465c9a04dfd17ad5e6d97d0edc3378a027345",
+    "timbradub-0.2.3-webstore.zip": "7ce13d5b68d6bdb381764d7df172c6228590becf3e90224a9727b27eac3f043b",
+    "timbradub-0.2.3-source.zip": "8431341be00e04767c6246886df1a6b26b81b86982dccf2e525e8896f33b7c17"
+  },
+  "publicDownloadVerification": {
+    "passed": true,
+    "receipt": "https://github.com/lvyinchao/timbradub/releases/download/v0.2.3/public-download-verification.json",
+    "downloadHashesMatchCi": true,
+    "source": "public-release"
+  }
 }
