@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "googlevideo": "file:vendor/googlevideo-4.1.1-qvd.96d1418.tgz",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.56.0",
     "mediabunny": "1.61.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
