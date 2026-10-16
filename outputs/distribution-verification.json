@@ -1,12 +1,17 @@
 {
-  "at": "2026-10-16T12:15:14+08:00",
-  "version": "0.2.1",
-  "sourceCommit": "aff5b7414ae36ad4989bdaf4cc15c4ed9ba9eb02",
+  "at": "2026-10-16T08:37:33.766Z",
+  "version": "0.2.2",
+  "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+  "sourceBaseCommit": "b8952ac",
+  "releaseCommit": null,
   "storeItemId": "knlbmnbdcnnhhpimbeagojbacmjkcald",
-  "observedStoreStatus": "待审核",
-  "submitted": true,
+  "observedStoreStatus": "draft; the previous v0.2.1 review was withdrawn",
+  "submitted": false,
   "approved": false,
-  "autoPublishAfterApproval": true,
+  "autoPublishAfterApproval": null,
+  "uploadedDraftVersion": "0.2.2",
+  "uploadedDraftRuntimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+  "webstoreZipSha256": "f3b6b25341216225650fe36dd946204adcba1d5bdab428cd05611344e6ce079f",
   "languages": [
     "en",
     "zh-CN"
@@ -14,15 +19,24 @@
   "ownAccountRegistrationUrl": "https://qianwenai.com/",
   "githubRepositoryVisibility": "public",
   "githubRelease": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.1",
-  "ciRun": 38849239379,
-  "codeqlRun": 38849239373,
-  "releaseRun": 38849243562,
-  "webstoreZipSha256": "8af52fd190a2adbecc2782c0dc951b71d1b89379898c55d11676640029ee5abb",
-  "runtimeDependencyAudit": {
+  "candidateRelease": "v0.2.2",
+  "ciRun": null,
+  "codeqlRun": null,
+  "releaseRun": null,
+  "localChrome": {
+    "observedVersion": "0.2.2",
+    "enabled": true,
+    "extensionId": "pekbbjpciefeheaacfpnhlkbbbmhdhoo",
+    "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+    "uiAndToolbarTitlesCheckedInBothLanguages": true,
+    "previousChinesePreferenceRestored": true
+  },
+  "dependencyAudit": {
     "critical": 0,
     "high": 0,
     "moderate": 0,
     "low": 0,
-    "scope": "npm audit --omit=dev, official npm registry; development dependencies excluded"
-  }
+    "scope": "Full npm audit, including development dependencies, official npm registry; checked 2026-10-16"
+  },
+  "scope": "Candidate snapshot. A draft upload and local installation are not Store submission, approval or GitHub v0.2.2 publication. Final current-build live and source-archive validation are still in progress."
 }

@@ -1,5 +1,6 @@
 import { CACHE_LIMIT, type TranslationSegment } from './types';
 import { mergeCoverage, type Coverage } from './timeline';
+import { mergeArchiveSegments } from './archive';
 
 type RecordItem = {
   key: string;
@@ -152,13 +153,9 @@ export class SegmentCache {
           };
         }),
       );
-    const segments = [
-      ...new Map(
-        windows
-          .flatMap((r) => r.segments)
-          .map((s) => [`${s.start}:${s.end}`, s]),
-      ).values(),
-    ].sort((a, b) => a.start - b.start);
+    const segments = mergeArchiveSegments(
+      [], windows.sort((a, b) => a.touched - b.touched).flatMap((r) => r.segments),
+    );
     return {
       segments,
       ranges: mergeCoverage(

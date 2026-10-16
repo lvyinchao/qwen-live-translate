@@ -148,6 +148,7 @@ export function inspectVideos(mainOnly = false) {
       width: v.videoWidth || v.clientWidth,
       height: v.videoHeight || v.clientHeight,
       paused: v.paused,
+      playbackRate: v.playbackRate,
       index,
       url: v.currentSrc || v.src || v.querySelector('source')?.src || '',
       frameUrl: location.href,
@@ -165,6 +166,7 @@ export function inspectVideos(mainOnly = false) {
           true),
       displayWidth: box.width,
       displayHeight: box.height,
+      bilibiliMain: Boolean(v.closest('.bpx-player-video-wrap,.bilibili-player-video-wrap')),
       youtubeMain:
         Boolean(v.closest('#movie_player')) &&
         v.classList.contains('html5-main-video'),
@@ -183,4 +185,13 @@ export function youtubePlayer(videos: ReturnType<typeof inspectVideos>) {
         a.index - b.index,
     )
     .slice(0, 1);
+}
+
+/** Only one native Bilibili player may own the page's main audio metadata. */
+export function bilibiliPlayer(videos: ReturnType<typeof inspectVideos>) {
+  const visible = videos.filter((video) => video.displayed);
+  const main = visible.filter((video) => video.bilibiliMain);
+  return (main.length ? main : visible).sort((a, b) =>
+    b.displayWidth * b.displayHeight - a.displayWidth * a.displayHeight ||
+    Number(a.paused) - Number(b.paused) || a.index - b.index).slice(0, 1);
 }

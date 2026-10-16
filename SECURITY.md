@@ -15,6 +15,7 @@ If you accidentally expose a key, revoke/rotate it through its provider immediat
 - Content scripts receive player/session data and presentation preferences, never the API key.
 - Credentials use extension-local storage restricted to trusted extension contexts, not sync storage. This is browser-local storage, not an operating-system password vault.
 - Model traffic goes to the chosen Model Studio region/workspace. Temporary authorization rules target the extension's own requests and the exact allowed model endpoint.
+- Media observation is limited to panel-selected tabs with renewable leases and the active translation tab; stored request metadata expires on use/startup. Media identities separate files, frames and tracks before cache/archive lookup.
 - Webpage-origin callers cannot change settings, install auth rules, start model sessions or download private archive files.
 - Remote executable code, telemetry and a project-hosted proxy are not part of the architecture.
 - Playback caches, temporary source files and optional export archives have different lifetimes; consult [Privacy](PRIVACY.md).

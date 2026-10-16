@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-16T08:24:04.233Z",
+  "version": "0.2.2",
+  "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+  "baselineRuntimeSha256": "8823267ec4059126957ab3e709ba6ffb56f5bf87e540c4ef509d1c04fb8482f3",
+  "intermediateRuntimeSha256": "876c219bd2c2cdbdd1221a974b8eb733f9cb2b5c4d5fa697958c729a433a35ae",
+  "changesFromBaseline": [
+    "Serialized preferences/credential writes",
+    "YouTube direct audio-track identity and selection",
+    "Localized product/page/toolbar titles and original-voice label",
+    "Short audio tails complete naturally before source end; all timeline cuts and per-play termination classified",
+    "Owner-checked terminal delivery; separate bounded debug and critical diagnostics with drop counters"
+  ],
+  "playbackSourceComparison": [
+    {
+      "file": "lib/playback-engine.ts",
+      "unchangedFromBaseline": false
+    },
+    {
+      "file": "entrypoints/player.content.ts",
+      "unchangedFromBaseline": false
+    },
+    {
+      "file": "workers/decode.ts",
+      "unchangedFromBaseline": true
+    },
+    {
+      "file": "lib/qwen.ts",
+      "unchangedFromBaseline": true
+    },
+    {
+      "file": "lib/range-media.ts",
+      "unchangedFromBaseline": true
+    },
+    {
+      "file": "lib/cache.ts",
+      "unchangedFromBaseline": true
+    },
+    {
+      "file": "lib/local-files.ts",
+      "unchangedFromBaseline": true
+    }
+  ],
+  "scope": "Earlier reports retain their actual build hashes. The final runtime receives a fresh 20-minute real-provider check, multilingual/1.5x playback, browser gates and source-archive verification; only completed checks are reported as passed."
+}

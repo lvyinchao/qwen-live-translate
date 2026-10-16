@@ -1,3 +1,4 @@
+import { isolatedTestEnv } from './test-environment.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -8,6 +9,7 @@ await fs.cp('.output/chrome-mv3', extension, { recursive: true });
 const context = await chromium.launchPersistentContext(
   path.join(directory, 'profile'),
   {
+    env: isolatedTestEnv(),
     channel: 'chromium',
     headless: true,
     ignoreDefaultArgs: ['--disable-extensions'],

@@ -8,6 +8,7 @@ export type StoredPart = Omit<TranslationSegment, 'audio'> & {
   path: string;
   fingerprint: string;
   samples: number;
+  storedAt?: number;
 };
 export const digest = async (bytes: Uint8Array<ArrayBuffer>) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]

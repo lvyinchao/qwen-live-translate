@@ -1,12 +1,12 @@
 # Privacy policy / 隐私政策
 
-Effective: 2026-10-16 · Applies to TimbraDub / 听译, version 0.2.1.
+Effective: 2026-10-16 · Applies to TimbraDub / 听译, version 0.2.2.
 
 TimbraDub is an independent open-source Chrome extension maintained at [lvyinchao/timbradub](https://github.com/lvyinchao/timbradub). It has no project-operated server, analytics, ads or data-broker integration. Questions can be raised through [GitHub issues](https://github.com/lvyinchao/timbradub/issues); report sensitive information privately via [Security](SECURITY.md).
 
 ## What the extension accesses
 
-On supported HTTP/HTTPS pages it inspects video elements, player metadata, page/video identity, current video time, and relevant media requests to find playable audio. It may process the page URL/title and media URLs plus the Origin/Referer headers needed to fetch that media. It does not intentionally collect unrelated page text, browsing history, cookies, passwords, payment information or private messages. Broad host permission enables this media-specific behavior across websites; it is not an analytics permission.
+While the side panel is open, it inspects the selected HTTP/HTTPS tab's video elements, player metadata, page/video identity, current video time and relevant media requests to find playable audio. A 15-second observation lease is renewed by the panel; the active translation tab remains observed until the task stops. Other tabs' media responses are ignored before their URLs or headers are stored. Closing the panel or switching its selected tab releases observation of the previous tab unless that tab still has the active translation task. Observed media metadata has a 60-second validity period; expired records are removed on the next scan or service-worker startup, rather than by an always-running timer. For Tencent pages, a small page-local bridge can retain recent media metadata before the panel opens, so it can replay that information on a later scan; background retention still requires the observation lease. It may process the page URL/title and media URLs plus the Origin/Referer headers needed to fetch that media. It does not intentionally collect unrelated page text, browsing history, cookies, passwords, payment information or private messages. Broad host permission enables this media-specific behavior across websites; it is not an analytics permission.
 
 ## What leaves the browser
 
@@ -24,8 +24,8 @@ The current version sends audio rather than full video files or video frames to 
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | API key, workspace, region and preferences                    | Chrome extension-local storage, restricted to trusted extension contexts; not Chrome sync              | Forget credentials in settings; uninstall removes extension storage                                          |
 | Translated speech, text and prepared ranges                   | Browser IndexedDB playback cache, with a default 128 MiB LRU limit                                     | Stop translation, then clear playback cache in settings                                                      |
-| Temporary original-media bytes for servers without HTTP Range | Browser-private temporary files; at most two sources, each capped at 2 GiB                             | Reclaimed by source lifecycle/next temporary-source creation; removing extension site data also removes them |
-| Optional completed-utterance archives                         | Browser-private local files; retained for merge/retry                                                  | Automatic saving is **off by default**; old staged files remain until extension storage/site data is removed |
+| Temporary original-media bytes for servers without HTTP Range | Browser-private temporary files; each decoder keeps at most two sources, each capped at 2 GiB. Retiring and new decoders can briefly coexist during a switch. | Decoder shutdown releases files and reclaims unused sources; after stopping, clear temporary media in settings. Locked files are skipped and their remaining space stays visible. |
+| Optional completed-utterance archives | Browser-private local files; retained for merge/retry, with unreferenced parts reclaimed | Automatic saving is **off by default**; after stopping, clear staged archives separately in settings. This does not delete Chrome downloads. |
 | Exported WAV, scripts and subtitles                           | A ZIP in your Chrome download folder when auto-save is enabled or you explicitly request a merge/retry | Delete downloaded files using your file manager; uninstall does not delete them                              |
 
 Turning automatic file saving off prevents new archive staging and new automatic downloads. It does not turn off the playback cache, remove previous archives, or cancel an already-issued Chrome download. Stopping a task closes its model work and clears temporary authentication rules. Provider-side retention is controlled separately by the provider.
@@ -42,4 +42,4 @@ Changes to processing or permissions will be documented here and in release note
 
 只有你点击开始翻译后，音轨才会由扩展直接发送至所选地域和 Workspace 的百炼服务，同时请求原音色译音。项目维护者没有接收这些数据的自建后端；没有广告、分析统计或数据出售。原视频服务器/CDN 仍会收到正常媒体请求。百炼如何保留请求数据，以你使用的服务条款和账号配置为准。
 
-凭据保存在受限的扩展本地存储，不进入网页或 Chrome 同步。译音播放缓存、无 Range 音轨所需临时文件与可选永久归档是不同存储。自动保存默认关闭；关闭不删除旧文件，也不禁用播放缓存。设置页可忘记凭据、清理播放缓存；清除扩展全部站点数据或卸载会移除扩展内部存储，下载目录中的文件需要你自行删除。完整范围、权限和保留规则见上表。
+凭据保存在受限的扩展本地存储，不进入网页或 Chrome 同步。译音播放缓存、无 Range 音轨所需临时文件与可选永久归档是不同存储。自动保存默认关闭；关闭不删除旧文件，也不禁用播放缓存。设置页可忘记凭据，并分别查看和清理播放缓存、临时原媒体及分段归档的空间；清理归档不会删除下载目录中的 ZIP。打开侧栏时只观察所选标签，正在翻译的标签持续观察至停止；关闭侧栏或切换后释放其他标签的观察。观察租约为 15 秒，资源信息有效期为 60 秒，过期内容在扫描或后台重新启动时清理。清除扩展全部站点数据或卸载会移除扩展内部存储，下载目录中的文件需要你自行删除。完整范围、权限和保留规则见上表。

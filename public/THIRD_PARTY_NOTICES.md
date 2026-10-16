@@ -13,3 +13,5 @@ This extension is independently implemented. No FetchV implementation code is in
 - **WXT** — MIT. Copyright WXT contributors. https://github.com/wxt-dev/wxt
 
 Development-only dependencies and validation scripts are not part of the browser extension bundle. See `package-lock.json` in the source distribution for pinned dependency versions.
+
+Development/distribution tooling uses **fflate 0.8.3** (MIT; https://github.com/101arrowz/fflate) to create and inspect UTF-8 ZIP archives consistently across platforms. It is a development dependency and is not included in the browser extension runtime. The installed Mediabunny version and the corresponding source tarball are automatically checked against the lockfile SHA-512 by `scripts/check-media-source.mjs` during build and release validation.

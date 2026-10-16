@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-16T08:36:34.123Z",
+  "scope": "Actual built content script; synthetic local fixture; no live video or model acceptance",
+  "checks": [
+    "Old seek, language, retried snapshot and replaced-session errors cannot destroy the current player",
+    "A retried playing snapshot cannot override a newer pause in the same epoch",
+    "A stale session-scoped stop cannot detach the new player",
+    "Delivery ACK rejects old-language and wrong-video audio",
+    "Switching back to the same language retains language-version isolation",
+    "A current terminal error detaches once and restores the original mute setting",
+    "Changing the src of a reused generic video element detaches old translation and restores the original volume"
+  ],
+  "errors": []
+}

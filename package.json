@@ -1,7 +1,7 @@
 {
   "name": "timbradub",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -15,13 +15,16 @@
     "prepare:brand": "node scripts/prepare-brand.mjs",
     "package": "node scripts/package.mjs",
     "verify:release": "node scripts/verify-release.mjs",
-    "test:browser": "node scripts/browser-ui.mjs && node scripts/gate-discovery.mjs && node scripts/gate-youtube-player.mjs",
-    "prepare:store": "node scripts/prepare-store-assets.mjs"
+    "test:browser": "node scripts/browser-ui.mjs && node scripts/gate-discovery.mjs && node scripts/gate-youtube-player.mjs && node scripts/gate-playback-state.mjs && node scripts/gate-playback-audio.mjs && node scripts/gate-panel-storage.mjs && node scripts/gate-language-switch.mjs && node scripts/gate-range-source.mjs && node scripts/gate-local-files.mjs",
+    "prepare:store": "node scripts/prepare-store-assets.mjs",
+    "verify:media-source": "node scripts/check-media-source.mjs",
+    "audit:deps": "npm audit --audit-level=low --registry=https://registry.npmjs.org",
+    "test:release": "node scripts/release-smoke.mjs"
   },
   "dependencies": {
     "googlevideo": "file:vendor/googlevideo-4.1.1-qvd.96d1418.tgz",
     "lucide-react": "^0.468.0",
-    "mediabunny": "^1.0.0",
+    "mediabunny": "1.61.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -31,13 +34,15 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/ws": "^8.18.2",
-    "@wxt-dev/module-react": "^1.1.3",
+    "@wxt-dev/module-react": "1.2.2",
     "fake-indexeddb": "^6.0.0",
     "playwright": "^1.56.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0",
+    "vitest": "4.1.12",
     "ws": "^8.22.0",
-    "wxt": "^0.20.0"
+    "wxt": "0.21.4",
+    "vite": "8.3.4",
+    "fflate": "0.8.3"
   },
   "description": "Translate video speech in the original voice, with synchronized audio, bilingual subtitles and 29 target languages.",
   "license": "MIT",

@@ -208,3 +208,21 @@ it('cleans temporary files after an interrupted origin stream and does not leave
   await cache.close();
   expect(backing.removed).toBe(true);
 });
+it('evicts a failed sequential source so an automatic retry can open a healthy origin stream', async () => {
+  const disks: ReturnType<typeof disk>[] = [];
+  let requests = 0;
+  const cache = new RangeMediaCache(
+    async () => {
+      requests++;
+      return requests === 1
+        ? new Response(new ReadableStream({ start(c) { c.error(new Error('temporary outage')); } }), { headers: { 'Content-Length': '4' } })
+        : sequential(new Uint8Array([1, 2, 3, 4]));
+    },
+    async () => { const next = disk(); disks.push(next); return next; },
+  );
+  await expect((await cache.fetch('https://x.test/retry', request(0, 3))).arrayBuffer()).rejects.toThrow('temporary outage');
+  expect(new Uint8Array(await (await cache.fetch('https://x.test/retry', request(0, 3))).arrayBuffer())).toEqual(new Uint8Array([1, 2, 3, 4]));
+  expect(requests).toBe(2);
+  await cache.close();
+  expect(disks.every((backing) => backing.removed)).toBe(true);
+});

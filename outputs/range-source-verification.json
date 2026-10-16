@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-15T13:47:03.741Z",
+  "at": "2026-10-16T08:37:51.377Z",
   "scope": "Real Chrome worker, synthetic AAC/MP4 with tail metadata beyond the 8 MiB cache; localhost 200/206 HTTP responses; no model call",
   "fixtureBytes": 10633462,
   "checks": [
@@ -10,7 +10,7 @@
     "PCM samples from the 200 disk path exactly matched normal 206 range decoding",
     "Full-length MP4 and HLS both decode 1180.15–1210.15 seconds; MP4 also seeks backward and forward without rebasing timestamps",
     "Rejects a short unrelated file before translation, rather than shifting its timestamps into the requested window",
-    "A fresh worker reclaimed unlocked temporary files left by termination"
+    "Graceful worker shutdown removes all original-media files before termination"
   ],
   "cases": [
     {
@@ -211,7 +211,7 @@
     },
     {
       "path": "/long.m4a",
-      "range": "bytes=921285-"
+      "range": "bytes=659141-"
     },
     {
       "path": "/long.m4a",
@@ -251,14 +251,6 @@
     },
     {
       "path": "/hls-long-122.ts",
-      "range": "bytes=0-"
-    },
-    {
-      "path": "/hls-long-123.ts",
-      "range": "bytes=0-"
-    },
-    {
-      "path": "/hls-long-124.ts",
       "range": "bytes=0-"
     },
     {

@@ -18,15 +18,16 @@ All 29 spoken target languages:
 Chinese, English, Japanese, Korean, French, German, Spanish, Portuguese, Russian, Arabic, Italian, Indonesian, Thai, Vietnamese, Turkish, Hindi, Malay, Dutch, Urdu, Norwegian Bokmål, Swedish, Danish, Hebrew, Finnish, Polish, Icelandic, Czech, Filipino, Persian.
 
 • Choose a detected video and one of 29 supported spoken target languages.
-• Switch target language while translating. Cached audio is reused; new content pauses briefly for preparation.
-• Use the webpage's pause, seek, fullscreen and 0.5–2× speed controls.
+• Switch target language while translating. Cached audio is reused; new content pauses until preparation is ready.
+• Use the webpage's pause, seek and 0.5–2× speed controls, plus fullscreen in the tested webpage-player containers.
 • Adjust original and translated audio separately, and turn subtitles on or off.
-• Use an English or Simplified Chinese interface (English by default).
+• Use an English or Simplified Chinese interface (English by default), with product/page titles and the toolbar tooltip following your saved choice when reopened. Chrome's extension-manager name and outer side-panel label follow Chrome's browser language.
 • Optionally save completed translated speech and scripts locally. Automatic saving is OFF by default. When enabled, speech is staged in segments and merged into one ZIP with WAV audio and subtitles.
+• See playback-cache, staged-archive and temporary-source storage separately, with explicit cleanup after stopping translation.
 
 REQUIRES YOUR OWN ACCOUNT AND API KEY: Register at https://qianwenai.com/ and apply for your own API key. Enter it with the matching Workspace ID and region in extension settings. Provider usage is billed to your account. The extension has no subscription, project-operated backend, advertising or analytics. Audio is sent directly to your configured Model Studio service only after you start translation. API keys are restricted to extension-local storage and the model's authentication endpoint.
 
-This is an open-source preview. Bilibili has real short playback checks. YouTube discovery and some audio windows work, but sustained playback has unresolved playback-verification limits. Tencent support is verified for one clear HLS episode. Other sites may be detected without an audio source that can be translated. Unencrypted, ahead-readable audio is required; live streams, DRM decryption, full-video downloads and delayed tab recording are not supported. Preparation may take tens of seconds, depending on source access and the provider.
+This is an open-source preview. Bilibili has real original-player translation checks; the repository records each tested build and its current acceptance limits, including failed timing results. Some tested runs still have delayed speech starts, truncated long sentences and frequent buffering, especially at faster speeds; complete spoken translation of every sentence is not guaranteed. YouTube discovery and some audio windows work, but sustained playback has unresolved playback-verification limits. Tencent support is verified for one clear HLS episode. Other sites may be detected without an audio source that can be translated. Unencrypted, ahead-readable audio is required; live streams, DRM decryption, full-video downloads and delayed tab recording are not supported. Captions in native video-element fullscreen and picture-in-picture are not supported; fullscreen checks cover the webpage player's container. Preparation may take tens of seconds, depending on source access and the provider.
 
 Source, installation downloads, current limitations, privacy policy and support:
 https://github.com/lvyinchao/timbradub

@@ -57,3 +57,13 @@ it('isolates language revisions across seek epochs and round trips to the same l
     languageVersion: 2,
   });
 });
+
+it('rejects late retries that would revive a terminal task or rewind its progress', () => {
+  const current = { ...base, phase: 'error' as const, position: 90, stateVersion: 8 };
+  for (const stateVersion of [undefined, 6, 7]) {
+    expect(acceptEngineState(current, { ...current, phase: 'playing', position: 20, stateVersion })).toBe(null);
+  }
+  expect(acceptEngineState(current, { ...current, stateVersion: 8 })).toMatchObject({ phase: 'error' });
+  expect(acceptEngineState(current, { ...current, epoch: 4, phase: 'buffering', stateVersion: 1 }))
+    .toMatchObject({ epoch: 4, phase: 'buffering' });
+});

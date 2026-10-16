@@ -1,3 +1,5 @@
+import { isolatedTestEnv } from './test-environment.mjs';
+import { syntheticWav } from '../tests/fixtures/audio.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -13,6 +15,7 @@ await fs.cp(
   { recursive: true },
 );
 const context = await chromium.launchPersistentContext(profile, {
+  env: isolatedTestEnv(),
   channel: 'chromium',
   headless: !!process.env.HEADLESS,
   locale: 'zh-CN', // A Chinese browser must still start with the English UI.
@@ -28,6 +31,14 @@ const result = {
   screens: [],
 };
 try {
+  // Fixture routes below override this default deny rule. Never contact real sites/models.
+  await context.route(/^https?:/, (route) => route.abort('blockedbyclient'));
+  await context.routeWebSocket(/^wss?:/, (socket) =>
+    socket.close({
+      code: 1000,
+      reason: 'Offline test: no external WebSockets',
+    }),
+  );
   context.setDefaultTimeout(10000);
   const root = await context.browser().newBrowserCDPSession();
   const { id } = await root.send('Extensions.loadUnpacked', {
@@ -58,6 +69,15 @@ try {
     await page.locator('.locale-select:enabled').waitFor();
     assert.equal(await page.locator('.locale-select').inputValue(), locale);
     assert.equal(await call('ui:get'), locale);
+    const productTitle = locale === 'zh'
+      ? '听译 · 原音色视频翻译'
+      : 'TimbraDub · Original-Voice Video Translation';
+    await page.waitForFunction((title) => document.title === title, productTitle);
+    assert.equal(await page.locator('.header').getAttribute('aria-label'), productTitle);
+    assert.equal(await page.locator('.brand strong').innerText(), locale === 'zh' ? '听译' : 'TimbraDub');
+    assert.equal(await page.locator('.brand span').last().innerText(), locale === 'zh' ? '原声音色' : 'ORIGINAL VOICE');
+    await page.waitForFunction(async (title) => (await chrome.action.getTitle({})) === title,
+      locale === 'zh' ? '打开听译 · 原音色视频翻译' : 'Open TimbraDub · Original-Voice Video Translation');
   };
   const screenshot = async (locale, view) => {
     for (const width of [360, 480]) {
@@ -88,9 +108,17 @@ try {
     'English default even in a zh-CN browser; target language remains Chinese',
   );
   assert.equal(await panel.locator('#language option').count(), 29);
-  assert.equal(await panel.locator('.provider-notice a').getAttribute('href'), 'https://qianwenai.com/');
-  assert.match(await panel.locator('.provider-notice').innerText(), /register an account and obtain an API key/);
-  result.checks.push('All 29 targets and a visible self-registration/API-key link on the English first-run page');
+  assert.equal(
+    await panel.locator('.provider-notice a').getAttribute('href'),
+    'https://qianwenai.com/',
+  );
+  assert.match(
+    await panel.locator('.provider-notice').innerText(),
+    /register an account and obtain an API key/,
+  );
+  result.checks.push(
+    'All 29 targets and a visible self-registration/API-key link on the English first-run page',
+  );
   await screenshot('en', 'videos');
   await panel.locator('.locale-select').selectOption('zh');
   await waitLocale('zh');
@@ -102,9 +130,17 @@ try {
   await waitLocale('zh');
   result.checks.push('Chinese preference survives panel reload');
   await panel.getByRole('button', { name: '打开设置', exact: true }).click();
-  assert.match(await panel.locator('.provider-notice').innerText(), /注册账号并申请 API Key/);
-  assert.equal(await panel.locator('.provider-notice a').getAttribute('href'), 'https://qianwenai.com/');
-  result.checks.push('Chinese settings explicitly require the user’s own account and API key');
+  assert.match(
+    await panel.locator('.provider-notice').innerText(),
+    /注册账号并申请 API Key/,
+  );
+  assert.equal(
+    await panel.locator('.provider-notice a').getAttribute('href'),
+    'https://qianwenai.com/',
+  );
+  result.checks.push(
+    'Chinese settings explicitly require the user’s own account and API key',
+  );
   await panel.getByLabel('Workspace ID').fill('invalid workspace');
   await panel.getByLabel('API Key').fill('test-not-a-real-key');
   await panel.getByRole('button', { name: '保存配置', exact: true }).click();
@@ -375,9 +411,7 @@ try {
         chrome.tabs.sendMessage(tabId, message, { frameId: 0 }),
       { tabId, message },
     );
-  const wav = (await fs.readFile('outputs/原音色译音示例.wav')).toString(
-    'base64',
-  );
+  const wav = syntheticWav().toString('base64');
   const playing = {
     ...session,
     candidate: { ...session.candidate, tabId },
@@ -556,9 +590,9 @@ try {
   assert.equal(invalid.ok, false);
   assert.equal(await call('ui:get'), 'zh');
   const title = await panel.evaluate(() => chrome.action.getTitle({}));
-  assert.equal(title, '打开听译');
+  assert.equal(title, '打开听译 · 原音色视频翻译');
   result.checks.push(
-    'Unsupported UI locale rejected; toolbar tooltip follows saved preference',
+    'Unsupported UI locale rejected; panel brand/title, original-voice label and toolbar title follow the saved preference across switches and reloads',
   );
   assert.deepEqual(result.errors, []);
   result.passed = true;

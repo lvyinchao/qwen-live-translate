@@ -1,3 +1,5 @@
+import { isolatedTestEnv } from './test-environment.mjs';
+import { syntheticWav } from '../tests/fixtures/audio.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -34,6 +36,7 @@ const bytes = await fs.readFile(media);
 const context = await chromium.launchPersistentContext(
   path.join(directory, 'profile'),
   {
+    env: isolatedTestEnv(),
     channel: 'chromium',
     headless: true,
     ignoreDefaultArgs: ['--disable-extensions'],
@@ -46,7 +49,7 @@ const context = await chromium.launchPersistentContext(
 const report = {
   at: new Date().toISOString(),
   scope:
-    'Real extension/background/offscreen/player in isolated Chrome; cached language fixtures reuse a real translated WAV. No new provider call or language quality claim.',
+    'Real extension/background/offscreen/player in isolated Chrome; cached language fixtures use generated synthetic tones. No provider calls, recordings or language quality claim.',
   checks: [],
 };
 const poll = async (fn, description, timeout = 12000) => {
@@ -59,6 +62,14 @@ const poll = async (fn, description, timeout = 12000) => {
   throw new Error('Timeout: ' + description);
 };
 try {
+  // Fixture routes below override this default deny rule. Never contact real sites/models.
+  await context.route(/^https?:/, (route) => route.abort('blockedbyclient'));
+  await context.routeWebSocket(/^wss?:/, (socket) =>
+    socket.close({
+      code: 1000,
+      reason: 'Offline test: no external WebSockets',
+    }),
+  );
   const root = await context.browser().newBrowserCDPSession();
   const { id } = await root.send('Extensions.loadUnpacked', {
     path: extension,
@@ -111,7 +122,7 @@ try {
     });
   });
   // Prevent an uncached case from making an accidental paid provider request.
-  await context.routeWebSocket(/dashscope/, (socket) =>
+  await context.routeWebSocket(/(?:maas\.aliyuncs\.com|dashscope)/, (socket) =>
     socket.close({ code: 1000, reason: 'Fixture: no provider calls' }),
   );
   const page = await context.newPage();
@@ -125,9 +136,7 @@ try {
   );
   const candidate = (await call('media:discover', { tabId }))[0];
   assert.ok(candidate.source, JSON.stringify(candidate));
-  const wav = (await fs.readFile('outputs/原音色译音示例.wav')).toString(
-    'base64',
-  );
+  const wav = syntheticWav().toString('base64');
   await panel.evaluate(
     async ({ candidate, wav }) => {
       const request = indexedDB.open('qwen-video-dub', 2);

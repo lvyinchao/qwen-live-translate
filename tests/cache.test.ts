@@ -48,3 +48,13 @@ it('keeps the byte budget when two translation lanes commit concurrently', async
   expect(data.segments.length).toBeGreaterThan(0);
   expect(data.segments.length).toBeLessThan(12);
 });
+it('keeps simultaneous speakers at identical timestamps when loading cached windows', async () => {
+  const cache = new SegmentCache(10000, crypto.randomUUID());
+  await cache.put('v', 'zh', 'Tina', { start: 0, end: 30 }, [
+    { ...segment('speaker-a'), speaker: 0 },
+    { ...segment('speaker-b'), speaker: 1, text: '另一位说话人' },
+  ]);
+  const loaded = await cache.load('v', 'zh', 'Tina');
+  expect(loaded.segments).toHaveLength(2);
+  expect(loaded.segments.map((s) => s.speaker)).toEqual([0, 1]);
+});

@@ -1,4 +1,6 @@
 {
+  "historical": true,
+  "scope": "Historical 30-test release snapshot; its version and date were not recorded. This is not v0.2.2 acceptance. See release-smoke-verification.json attached to the matching CI/release artifacts.",
   "archiveLoaded": true,
   "sourceInstall": true,
   "typecheck": true,

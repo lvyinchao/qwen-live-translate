@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { youtubePlayer, type inspectVideos } from '../lib/discovery';
+import { youtubePlayer, bilibiliPlayer, type inspectVideos } from '../lib/discovery';
 type Video = ReturnType<typeof inspectVideos>[number];
 const video = (extra: Partial<Video>): Video => ({
   id: 'main',
@@ -10,6 +10,7 @@ const video = (extra: Partial<Video>): Video => ({
   width: 1280,
   height: 720,
   paused: false,
+  playbackRate: 1,
   index: 0,
   url: 'blob:https://www.youtube.com/stream',
   frameUrl: 'https://www.youtube.com/watch?v=sample',
@@ -18,6 +19,7 @@ const video = (extra: Partial<Video>): Video => ({
   displayWidth: 640,
   displayHeight: 360,
   youtubeMain: true,
+  bilibiliMain: false,
   ...extra,
 });
 it('keeps only the active main player, not a hidden higher resolution or an oversized preview', () => {
@@ -42,4 +44,12 @@ it('returns one control target while a new main-player variant is mounted', () =
     ]).map((v) => v.id),
   ).toEqual(['active']);
   expect(youtubePlayer([video({ displayed: false })])).toEqual([]);
+});
+
+it('keeps Bilibili native metadata bound to the main player rather than a preview', () => {
+  expect(bilibiliPlayer([
+    video({id: 'preview', displayWidth: 2000, displayHeight: 1000}),
+    video({id: 'main', bilibiliMain: true}),
+    video({id: 'hidden-main', bilibiliMain: true, displayed: false}),
+  ]).map((item) => item.id)).toEqual(['main']);
 });

@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-16T04:09:31.942Z",
+  "at": "2026-10-16T08:36:27.959Z",
   "scope": "Real Chrome extension, controlled YouTube DOM plus optional live watch page. No model calls.",
   "checks": [
     "Hidden 4K element, larger preview and duplicate embedded player collapse to one top-level main video",

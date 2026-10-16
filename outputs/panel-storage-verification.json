@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-16T08:36:51.963Z",
+  "scope": "Isolated browser-private storage fixtures; no account, model or user download data",
+  "checks": [
+    "Three independent categories report seeded playback cache, source media and archive bytes",
+    "Each visible clear action removes its own browser-private bytes and returns refreshed totals",
+    "Automatic saving remains off; Chinese storage copy explains downloaded files; 360/480 px do not overflow",
+    "Active tasks disable all destructive storage actions; rate-adjusted buffer targets and measured preparation limits are visible",
+    "The sidepanel ignores older same-epoch retries and retains a newer terminal error"
+  ],
+  "errors": []
+}

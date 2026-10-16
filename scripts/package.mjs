@@ -2,15 +2,34 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { zipSync } from 'fflate';
 const root = process.cwd();
 const { version } = JSON.parse(await fs.readFile('package.json', 'utf8'));
 const output = path.join(root, 'outputs');
 const stage = await fs.mkdtemp(path.join(os.tmpdir(), 'qvd-package-'));
 const name = `timbradub-${version}`;
 const zip = async (archive, cwd, entries) => {
-  await fs.rm(archive, { force: true });
-  execFileSync('zip', ['-q', '-r', archive, ...entries], { cwd });
+  const files = Object.create(null);
+  const walk = async (relative) => {
+    const absolute = path.join(cwd, relative);
+    const stat = await fs.lstat(absolute);
+    if (stat.isSymbolicLink())
+      throw new Error('Release archives must not contain symbolic links');
+    if (stat.isDirectory()) {
+      if (relative)
+        files[relative.replaceAll(path.sep, '/') + '/'] = new Uint8Array();
+      for (const name of (await fs.readdir(absolute)).sort())
+        await walk(path.join(relative, name));
+    } else {
+      files[relative.replaceAll(path.sep, '/')] = await fs.readFile(absolute);
+    }
+  };
+  for (const entry of entries) await walk(entry === '.' ? '' : entry);
+  // The explicit ZIP implementation sets UTF-8 flags for Chinese names on every OS.
+  await fs.writeFile(
+    archive,
+    zipSync(files, { level: 6, mtime: new Date(1980, 0, 1) }),
+  );
 };
 try {
   await fs.mkdir(output, { recursive: true });
@@ -21,33 +40,15 @@ try {
   const webstore = path.join(output, `${name}-webstore.zip`);
   await zip(webstore, extension, ['.']);
   const install = path.join(stage, 'install');
-  await fs.mkdir(install);
-  await fs.cp(extension, path.join(install, 'extension'), { recursive: true });
-  for (const file of [
-    'README.md',
-    'README.zh-CN.md',
-    'LICENSE',
-    'PRIVACY.md',
-    'THIRD_PARTY_NOTICES.md',
-  ])
-    await fs.copyFile(file, path.join(install, file));
-  await fs.cp('docs', path.join(install, 'docs'), { recursive: true });
-  await fs.mkdir(path.join(install, 'public/brand'), { recursive: true });
+  // The installation ZIP is itself loadable after extraction. No nested root.
+  await fs.cp(extension, install, { recursive: true });
+  await fs.copyFile('docs/INSTALL.en.md', path.join(install, 'README.md'));
   await fs.copyFile(
-    'public/brand/logo.svg',
-    path.join(install, 'public/brand/logo.svg'),
+    'docs/INSTALL.zh-CN.md',
+    path.join(install, 'README.zh-CN.md'),
   );
   const chrome = path.join(output, `${name}-chrome.zip`);
-  await zip(chrome, install, [
-    'extension',
-    'README.md',
-    'README.zh-CN.md',
-    'LICENSE',
-    'PRIVACY.md',
-    'THIRD_PARTY_NOTICES.md',
-    'docs',
-    'public',
-  ]);
+  await zip(chrome, install, ['.']);
   const source = path.join(stage, name);
   await fs.mkdir(source);
   for (const file of [
@@ -83,8 +84,11 @@ try {
   await fs.mkdir(path.join(source, 'outputs'));
   // Historical text/metrics remain reproducible references. Third-party media,
   // screenshots, local profiles and credential files are not redistributed.
+  // The smoke receipt is generated after packaging and published separately;
+  // including an older receipt here would attest to a different source ZIP.
   for (const file of await fs.readdir(output))
-    if (file.endsWith('.json') || file === '真实验收记录.md')
+    if (file !== 'release-smoke-verification.json' &&
+      (file.endsWith('.json') || file === '真实验收记录.md'))
       await fs.copyFile(
         path.join(output, file),
         path.join(source, 'outputs', file),

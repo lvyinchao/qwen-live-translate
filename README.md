@@ -17,15 +17,15 @@ An independent, open-source Chrome extension that translates video speech **in t
 
 [Download the extension](https://github.com/lvyinchao/timbradub/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/timbradub/issues/new/choose)
 
-> **Preview software.** Bilibili has short, real translated-playback checks. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.1 was submitted on October 16, 2026 and is pending review, with automatic publication after approval. GitHub downloads are already available separately. See [store status](docs/store/STATUS.md).
+> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). The earlier Chrome Web Store v0.2.1 submission was withdrawn and v0.2.2 is uploaded as a draft; it has not yet been resubmitted or approved. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
 
 ## What it does
 
-- **Dubs in the existing player.** Speech segments follow the source video's time, including pause, seek, fullscreen and 0.5–2× video speed.
-- **Prepares audio ahead.** Starts with about 30 seconds, then keeps preparing future audio. Missing translation pauses the video rather than playing untranslated scenes.
+- **Dubs in the existing player.** Speech segments follow the source video's time, including pause, seek, player-container fullscreen and 0.5–2× video speed. Captions in native video-element fullscreen or picture-in-picture are not supported.
+- **Prepares audio ahead.** Starts with 30 seconds of source time at 1× (45 seconds at 1.5×, 60 seconds at 2×), then keeps preparing future audio up to a 90-second ceiling. Model input is conservatively paced at 1×, so faster viewing can require further buffering. Missing translation pauses the video rather than playing untranslated scenes.
 - **Uses original-voice mode.** Requests Qwen's realtime voice cloning. Similarity is model-dependent and is not guaranteed.
 - **Switches languages during playback.** Choose another of the 29 supported speech-output languages. Reuse its cache or buffer from the current position; old-language results are isolated.
-- **Keeps you in control.** Separate original/dub volume, bilingual subtitles, English/Chinese UI (English by default).
+- **Keeps you in control.** Separate original/dub volume, bilingual subtitles, English/Chinese UI (English by default). The panel brand, page title, original-voice label and toolbar tooltip follow the saved interface language. Chrome's own extension-management name and browser-managed side-panel heading follow the browser's language and cannot be renamed by this setting.
 - **Saves only when enabled.** Automatic file saving defaults **off**. When enabled, completed utterances are staged locally, then merged into one ZIP with WAV audio, bilingual scripts and timed subtitles.
 
 ## Install
@@ -33,10 +33,12 @@ An independent, open-source Chrome extension that translates video speech **in t
 Requires desktop Chrome 116+ and a compatible Model Studio account. Provider usage is billed to your account.
 
 1. Download `timbradub-<version>-chrome.zip` from [Releases](https://github.com/lvyinchao/timbradub/releases/latest) and extract it.
-2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted `extension` folder containing `manifest.json`.
+2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted root folder **directly containing `manifest.json`**. From v0.2.2 there is no extra `extension` subfolder.
 3. Pin **TimbraDub**, then refresh any already-open video pages.
 4. [Register at qianwenai.com and obtain your own API key](https://qianwenai.com/). Open the side panel → settings, enter the key, Workspace ID and matching region, then save and test the connection.
 5. Play a few seconds of a supported video so its audio source can be detected. Choose the video and target language, then **Start translation**.
+
+See the [bilingual installation guide and package comparison](docs/INSTALL.en.md), including the fix for “Manifest file is missing or unreadable”. Keep the extracted folder after installation.
 
 The extension pauses to prepare speech before resuming. New, uncached language selections also require preparation; this can take tens of seconds. Short utterances retain timeline gaps; long ones can speed up to 2× and truncate expired tails. This is sentence-level synchronization, not lip sync.
 
@@ -54,24 +56,24 @@ See the [English / Chinese language table and codes](docs/LANGUAGES.md). Every t
 
 | Source                    | Current evidence                                                                      | Limits                                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Bilibili VOD              | Real Chinese/English playback, controls, seeks, and Chinese→Japanese target switching | CDN, account, codec and page changes can affect availability                               |
+| Bilibili VOD              | Real English→Chinese, Chinese→English and Japanese→Chinese playback, controls, seeks, and in-playback target switching | CDN, account, codec and page changes can affect availability; faster viewing can buffer and truncate speech |
 | YouTube VOD               | Main-player selection, resolution deduplication, some audio windows                   | Long playback has unresolved SABR verification failures                                    |
 | Tencent Video             | One specified episode: clear HLS, middle-of-video decoding and English dubbing        | Not a claim of all episodes, qualities or protected content                                |
 | Youku, iQIYI, other sites | Generic player and media-request discovery                                            | Translation requires an unencrypted, ahead-readable audio source; no universal DASH parser |
 
-Live streams, DRM decryption, captured-tab compatibility mode, full video downloads, Firefox and mobile browsers are outside the current scope. Full 20-minute acceptance and broad P95 synchronization targets remain unfinished.
+Live streams, DRM decryption, captured-tab compatibility mode, full video downloads, Firefox and mobile browsers are outside the current scope. The original cross-site acceptance matrix remains incomplete; measured onset timing does not establish complete spoken coverage, voice similarity or lip sync. Sustained 1.5× checks showed substantial buffering and truncation, especially Chinese→English. Read the sample counts and limits in the [validation record](docs/VALIDATION.md).
 
 ## Privacy and permissions
 
 Translation audio is sent directly from the extension to the configured Model Studio endpoint **only after you start translation**. Original text and translated text/audio are received from that provider. API credentials stay in restricted extension-local storage and are not exposed to webpage messages, Chrome sync or project telemetry. There is no project-operated backend, analytics or advertising.
 
-A bounded IndexedDB playback cache is separate from optional archive files. Some range-less media sources also need temporary, browser-private disk storage. Turning automatic saving off disables new archives and automatic downloads; it does not disable the cache or delete existing files.
+Settings show three separate storage areas: the bounded playback cache, optional archive staging, and temporary source media. Stop translation before explicitly clearing any of them. Clearing archive staging does not delete files already downloaded. A bounded IndexedDB playback cache is separate from optional archive files. Some range-less media sources also need temporary, browser-private disk storage. Turning automatic saving off disables new archives and automatic downloads; it does not disable the cache or delete existing files.
 
-Broad host access supports current-page media discovery, cross-origin audio and extension-origin WebSocket authentication. Runtime authentication rules are scoped to the extension and exact Model Studio endpoint and removed after use. See [Privacy](PRIVACY.md), [permission explanations](docs/ARCHITECTURE.md#permissions) and [Security](SECURITY.md).
+Broad host access supports current-page media discovery, cross-origin audio and extension-origin WebSocket authentication. Media observation is enabled for a panel-selected tab or the active translation task, with a 15-second renewable panel lease and 60-second validity for discovered media addresses and request-header context; expired information is removed on a subsequent scan or background startup. Closing the panel or changing to an unrelated tab ends its observation lease; the active task may continue observing its own tab. Runtime authentication rules are scoped to the extension and exact Model Studio endpoint and removed after use. See [Privacy](PRIVACY.md), [permission explanations](docs/ARCHITECTURE.md#permissions) and [Security](SECURITY.md).
 
 ## Develop
 
-Node.js **22.12+**, npm, and Git are required. Packaging uses `zip`/`unzip`. Browser fixture gates require Playwright's Chromium; media fixture gates also require FFmpeg.
+Node.js **22.12+**, npm, and Git are required. Packaging uses `zip`/`unzip` and `tar`. Browser fixture gates require Playwright's Chromium; media fixture gates also require FFmpeg. The unit, browser and release checks use original synthetic fixtures and require no provider account.
 
 ```sh
 git clone https://github.com/lvyinchao/timbradub.git
@@ -89,9 +91,14 @@ npx playwright install chromium
 HEADLESS=1 npm run test:browser
 npm run package
 npm run verify:release
+npm run test:release
 ```
 
-The package command produces a GitHub installation ZIP, a manifest-at-root Chrome Web Store ZIP, a source ZIP, and SHA-256 checksums in `outputs/`. Release verification checks archive layout, licenses, icons and unexpected credential files. Model gates are **manual and may incur provider costs**; they are excluded from CI. Read [Contributing](CONTRIBUTING.md) before running them.
+The package command produces a GitHub installation ZIP, a manifest-at-root Chrome Web Store ZIP, a source ZIP, and SHA-256 checksums in `outputs/`. Release verification checks directly loadable archive layout, licenses, icons, secret patterns and the corresponding Mediabunny source against the installed version and lockfile SHA-512. `test:release` downloads the actual ZIPs through Chrome, extracts and loads the installation folder, then runs `npm ci`, type/unit checks, a build and every offline browser gate from the clean source ZIP. CI and tag releases share this validation workflow; release publication uses its exact validated artifacts. Model gates are **manual and may incur provider costs**; they are excluded from CI. Read [Contributing](CONTRIBUTING.md) before running them.
+
+The [0.2.2 review and repair record](docs/REVIEW-2026-10-16.md) maps the confirmed issues to fixes and regression checks, with live-acceptance limits recorded separately.
+
+The release-smoke receipt is generated after the run and attached separately to CI/release artifacts. It is excluded from the source ZIP and identifies the archive hashes actually verified.
 
 ## Project map
 

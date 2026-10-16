@@ -1,12 +1,12 @@
 {
-  "at": "2026-10-16T04:09:36.713Z",
-  "scope": "Real Chrome OPFS migration, quiet chunk staging and one merged download using an existing real translated WAV; no new model call",
+  "at": "2026-10-16T08:38:01.739Z",
+  "scope": "Real Chrome OPFS migration, quiet chunk staging and one merged download using a generated synthetic WAV; no model calls or third-party recordings",
   "checks": [
     "Legacy 0.1.2 queued windows migrated to two actual OPFS WAV chunks; no download request or save prompt during staging, even with downloads denied",
     "Offscreen recreation restores quiet staged chunks without automatically retrying or starting downloads",
     "Automatic saving defaults off; the real engine loads a different cached video and stops without staging new WAVs or starting downloads, while old chunks remain",
     "English/Chinese save switch takes effect immediately and retains on/off choices after panel reload, without requiring model credentials",
-    "Actual engine translation-end path creates exactly one merged ZIP; WAV PCM equals both original-voice clips in source order, with separate audio/video SRT and JSON timelines",
+    "Actual engine translation-end path creates exactly one merged ZIP; WAV PCM equals both generated synthetic-tone clips in source order, with separate audio/video SRT and JSON timelines",
     "Repeated stop does not download again; clearing playback cache retains both staged WAVs and the final disk file",
     "Interrupted final save retains original chunks; reopening stays quiet and explicit retry succeeds with one final snapshot",
     "Webpage/content-script access to file metadata and direct offscreen commands rejected",
@@ -14,7 +14,7 @@
   ],
   "files": [
     {
-      "relative": "TimbraDub/169a1061de8770b9-Quiet merge 原音色/zh-original-auto-v1/0000023000-0000062504-merged-28cbf0c2eac0.zip",
+      "relative": "TimbraDub/169a1061de8770b9-Quiet merge 原音色/zh-original-auto-v1/0000023000-0000062504-merged-68b596b69069.zip",
       "zipCrcPassed": true,
       "chunkCount": 2,
       "downloadCount": 1,

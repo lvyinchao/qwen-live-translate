@@ -193,7 +193,7 @@ export interface TranslateWindowOptions {
   afterClose: () => Promise<void>;
   onSegment: (segment: TranslationSegment) => void;
   onProgress: (inputThrough: number, readyThrough: number) => void;
-  waitForHeadroom?: (position: number) => Promise<void>;
+  waitForHeadroom?: (position: number, signal: AbortSignal) => Promise<void>;
   onEvent?: (event: ProviderEvent) => void;
 }
 export const abortError = () => new DOMException('任务已取消', 'AbortError');
@@ -234,9 +234,11 @@ export async function translateWindow(
         sending = false;
       let inputThrough = options.start;
       let timer: ReturnType<typeof setTimeout>;
+      const senderAbort = new AbortController();
       const done = (error?: unknown) => {
         if (settled) return;
         settled = true;
+        senderAbort.abort();
         clearTimeout(timer);
         options.signal.removeEventListener('abort', abort);
         ws.close();
@@ -329,10 +331,11 @@ export async function translateWindow(
             void (async () => {
               for (let i = 0; i < options.samples.length; i += 1600) {
                 if (settled || options.signal.aborted) return;
-                await options.waitForHeadroom?.(options.start + i / 16000);
+                await options.waitForHeadroom?.(options.start + i / 16000, senderAbort.signal);
                 if (settled || options.signal.aborted) return;
-                while (ws.bufferedAmount > 256 * 1024)
-                  await delay(100, options.signal);
+                while (!settled && ws.bufferedAmount > 256 * 1024)
+                  await delay(100, senderAbort.signal);
+                if (settled || options.signal.aborted) return;
                 send({
                   type: 'input_audio_buffer.append',
                   audio: encode64(pcm16(options.samples.subarray(i, i + 1600))),
@@ -343,7 +346,7 @@ export async function translateWindow(
                   Math.min(i + 1600, options.samples.length) / 16000;
                 options.onProgress(inputThrough, assembler.coverage());
                 // Do not assume the provider accepts faster-than-real-time input.
-                await delay(100, options.signal);
+                await delay(100, senderAbort.signal);
               }
               sending = false;
               if (!settled) {

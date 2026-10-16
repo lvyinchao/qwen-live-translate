@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.2 — 2026-10-16
+
+- Fix translated-cache delivery beyond 90 seconds, including cached seeks and switching back to a prepared language. Playback readiness now requires the current player to acknowledge delivered utterances.
+- Isolate media identities across clips, frames and audio tracks; reject obsolete errors, starts, stops and language results. Failed initialization restores the native player's audio settings.
+- Replace shifted retry utterances in local archives, preserve overlapping speakers, reclaim obsolete WAV files and protect an in-progress merge from concurrent cleanup.
+- Recover sequential media sources after interrupted transfers, cancel retired decoders and clean temporary source files on task retirement.
+- Limit media observation to the visible panel and active task, expire source context, reject late responses after observation changes and replay Tencent metadata when discovery begins.
+- Serialize settings read/modify/write operations so preference changes cannot revive removed API credentials or overwrite a replacement. Follow up YouTube direct-source and fallback selection with explicit audio-track identity.
+- Show separate playback-cache, staged-archive and temporary-source usage with explicit cleanup. Scale startup preparation with video speed and display measured preparation throughput.
+- Preload translated utterances and tighten scheduling after initial real-video synchronization measurements exceeded the onset target. Final measurements and remaining limits are recorded separately from fixture results.
+- Fix premature pauses/seeks of short audio tails; record every positive timeline/overlap cut, deliver ownership-checked terminal reasons through lifecycle acknowledgements and retain critical metrics separately from debug stages. Preserve unknown completion counts in legacy reports.
+- Make in-panel product, page and toolbar titles follow the saved interface language. Chrome's installed-extension name and outer side-panel frame remain governed by Chrome's language.
+- Put `manifest.json` at the installation ZIP root, include short English/Chinese installation guides and replace historical voice recordings in tests with generated tones.
+- Require the same complete offline validation for CI and tag releases. Verify downloaded ZIP installation and clean-source reproduction; publish the exact validated artifacts and check corresponding Mediabunny source integrity.
+- Upgrade the development dependency chain; the refreshed full dependency audit reports zero known vulnerabilities at verification time.
+- Split playback, media observation, lifecycle and side-panel behavior into testable modules. See the [review and repair record](docs/REVIEW-2026-10-16.md) for regression coverage and live-acceptance boundaries.
+- The current candidate passed 181 unit tests in 29 files, all nine offline browser gates, type checks, the build and a zero-vulnerability dependency audit, including 13 added player regressions and seven real-browser audio checks. The updated source package and current 20-minute provider run are still pending; unfinished runs are not counted as passes.
+- Preserve all six historical real cases, including the intermediate build's **failed 471.932 ms onset P95** and 328 unclassified terminals in the earlier 20-minute baseline. The repaired candidate starts a fresh long/multilingual/1.5× cohort. Build identities, completion coverage, resource use and reported-usage cost lower bounds remain separate; the complete site matrix and perceptual voice evaluation are unfinished.
+- Two repaired-build 1.5× cases have complete terminal accounting and meet the eligible onset target, but still show 62.16% / 80.49% all-positive cuts and 53.05% / 58.09% sampled buffering. The new 20-minute case remains in progress; the stricter cut counter is not directly comparable with legacy reports.
+- Preserve stored settings and the opt-in export preference. Repair old shifted archive duplicates without automatic download retries; do not reuse ambiguous legacy page-level media caches for newly isolated generic videos.
+
+Original-speaker voice mode, user-owned Model Studio credentials without a self-hosted backend, and automatic local export **off by default** are unchanged. This release does not add DRM playback, live streams or a delayed tab-capture fallback.
+
 ## 0.2.1 — 2026-10-16
 
 - Product, repository, toolbar, store listing, downloads and artwork renamed to **TimbraDub / 听译**, independent of the model provider brand.

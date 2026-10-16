@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-16T04:09:08.078Z",
+  "at": "2026-10-16T08:35:59.768Z",
   "scope": "Isolated UI fixtures only; no model call or real-video acceptance",
   "errors": [],
   "checks": [
@@ -14,7 +14,7 @@
     "Caption toggle hides rendered pixels immediately; remains hidden after segment/state updates, fullscreen and reattachment; re-enabling restores text",
     "Built player overlay updates live and restores locale after navigation; content script can read only locale and cannot change it or access credentials",
     "Legacy settings default to English without losing existing values; removing credentials preserves UI and target languages",
-    "Unsupported UI locale rejected; toolbar tooltip follows saved preference"
+    "Unsupported UI locale rejected; panel brand/title, original-voice label and toolbar title follow the saved preference across switches and reloads"
   ],
   "screens": [
     {

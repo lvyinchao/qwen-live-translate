@@ -32,6 +32,8 @@ export interface AudioSource {
 export interface MediaCandidate {
   id: string;
   mediaId: string;
+  /** Page lifecycle identity, separate from the selected media cache identity. */
+  pageId?: string;
   tabId: number;
   frameId: number;
   frameMediaId?: string;
@@ -43,6 +45,7 @@ export interface MediaCandidate {
   width: number;
   height: number;
   paused: boolean;
+  playbackRate?: number;
   ad: boolean;
   source?: AudioSource;
   detectionOnly?: boolean;
@@ -73,10 +76,22 @@ export type Phase =
   | 'buffering'
   | 'error'
   | 'ended';
+export interface PreparationStatus {
+  videoRate: number;
+  startupTargetSeconds: number;
+  maintainTargetSeconds: number;
+  maxAheadSeconds: number;
+  inputRealtimeFactor: number;
+  preparedRealtimeFactor?: number;
+  netBufferSecondsPerSecond: number;
+  limitedByRealtimeInput: boolean;
+}
 export interface PlaybackSession {
   id: string;
   epoch: number;
   languageVersion?: number;
+  /** Monotonic engine snapshot sequence within this seek/language revision. */
+  stateVersion?: number;
   candidate: MediaCandidate;
   language: string;
   phase: Phase;
@@ -90,6 +105,7 @@ export interface PlaybackSession {
   subtitles: boolean;
   error?: string;
   diagnostic?: string;
+  preparation?: PreparationStatus;
   segments: Pick<
     TranslationSegment,
     'id' | 'start' | 'end' | 'sourceText' | 'text' | 'speaker' | 'skipped'

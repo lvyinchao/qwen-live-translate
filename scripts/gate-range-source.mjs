@@ -1,3 +1,4 @@
+import { isolatedTestEnv } from './test-environment.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -163,6 +164,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const context = await chromium.launchPersistentContext(
   path.join(directory, 'profile'),
   {
+    env: isolatedTestEnv(),
     channel: 'chromium',
     headless: true,
     ignoreDefaultArgs: ['--disable-extensions'],
@@ -191,9 +193,9 @@ try {
     path.join(directory, 'hls.m3u8'),
     'utf8',
   );
-  const run = async (asset, cases) =>
+  const run = async (asset, cases, graceful = true) =>
     setup.evaluate(
-      async ({ asset, cases, base, inlinePlaylist }) => {
+      async ({ asset, cases, base, inlinePlaylist, graceful }) => {
         const worker = new Worker(chrome.runtime.getURL('assets/' + asset), {
           type: 'module',
         });
@@ -253,11 +255,26 @@ try {
             results.push({ ...test, ...result });
           }
         } finally {
-          worker.terminate();
+          if (graceful) {
+            const shutdown = await new Promise((resolve) => {
+              const timer = setTimeout(
+                () => resolve({ ok: false, error: 'Worker shutdown timeout' }),
+                2500,
+              );
+              worker.addEventListener('message', (event) => {
+                if (event.data.type !== 'shutdown') return;
+                clearTimeout(timer);
+                resolve(event.data);
+              });
+              worker.postMessage({ type: 'shutdown', id: 'shutdown' });
+            });
+            worker.terminate();
+            if (!shutdown.ok) throw new Error(shutdown.error);
+          } else worker.terminate();
         }
         return results;
       },
-      { asset, cases, base, inlinePlaylist },
+      { asset, cases, base, inlinePlaylist, graceful },
     );
   const case0 = { path: '/ignored.m4a', start: 1, end: 3 };
   if (process.env.BASELINE_DIR) {
@@ -270,7 +287,7 @@ try {
       recursive: true,
       force: false,
     });
-    const [failure] = await run(original, [case0]);
+    const [failure] = await run(original, [case0], false);
     report.baseline = failure;
     assert.equal(failure.ok, false);
     assert.match(failure.error, /already-evicted/);
@@ -357,10 +374,10 @@ try {
     for await (const [n] of d.entries()) names.push(n);
     return names.length;
   });
-  assert.equal(afterTermination, 2);
-  assert.equal(afterRestart, 1);
+  assert.equal(afterTermination, 0);
+  assert.equal(afterRestart, 0);
   report.checks.push(
-    'A fresh worker reclaimed unlocked temporary files left by termination',
+    'Graceful worker shutdown removes all original-media files before termination',
   );
   report.passed = true;
 } catch (error) {

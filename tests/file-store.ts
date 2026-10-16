@@ -21,4 +21,7 @@ export class MemoryFiles implements FileStore {
   async remove(path: string) {
     this.files.delete(path);
   }
+  async list() {
+    return [...this.files].map(([path, blob]) => ({ path, size: blob.size }));
+  }
 }

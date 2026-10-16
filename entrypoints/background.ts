@@ -1,9 +1,11 @@
+import { SessionTransitions } from '../lib/async-lifecycle';
 import { parseTencentMedia } from '../lib/tencent-media';
 import {
   inspectVideos,
   mediaKind,
   chooseGenericSource,
   youtubePlayer,
+  bilibiliPlayer,
   type ObservedMedia,
 } from '../lib/discovery';
 import { acceptEngineState } from '../lib/session';
@@ -13,6 +15,7 @@ import {
   mediaIdentity,
   normalizeAudioRequest,
   observedAudio,
+  youtubeSourceMatches,
 } from '../lib/adapters';
 import {
   AUTH_RULE,
@@ -35,21 +38,24 @@ import {
 import { encode64 } from '../lib/audio';
 import { decode64 } from '../lib/audio';
 import { VideoPlaybackAbrRequest } from 'googlevideo/protos';
+import { candidatePageId, mediaResourceIdentity } from '../lib/media-identity';
+import { ObservationScope } from '../lib/observation-scope';
+import { registerMediaObserver, type SourceRecord, type DiscoveryRecord } from '../lib/media-observer';
 
 export default defineBackground(() => {
-  const sources = new Map<number, { identity: string; source: AudioSource }>();
-  const detected = new Map<
-    number,
-    { identity: string; items: ObservedMedia[] }
-  >();
-  const requests = new Map<string, Record<string, string>>();
-  const bodies = new Map<string, string>();
-  const scopes = new Map<string, Promise<string | undefined>>();
+  const sources = new Map<number, SourceRecord>();
+  const detected = new Map<number, DiscoveryRecord>();
+  const observation = new ObservationScope();
+  const panels = new Map<chrome.runtime.Port, { tabId?: number; windowId?: number }>();
   const captureStats = { responses: 0, accepted: 0, lastError: '' };
   let offscreenCreating: Promise<void> | undefined;
   let mediaRuleId = 920000;
   const rules = new Map<string, number>();
   let session: PlaybackSession | null = null;
+  const transitions = new SessionTransitions();
+  let languageRequest = 0;
+  const observedTaskTab = () => session && !['error', 'ended'].includes(session.phase)
+    ? session.candidate.tabId : undefined;
   const trusted = (sender: chrome.runtime.MessageSender) =>
     sender.id === chrome.runtime.id &&
     !!sender.url?.startsWith(chrome.runtime.getURL(''));
@@ -70,7 +76,7 @@ export default defineBackground(() => {
     });
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
     await chrome.action.setTitle({
-      title: t((await loadSettings()).uiLanguage, '打开听译'),
+      title: t((await loadSettings()).uiLanguage, '打开听译 · 原音色视频翻译'),
     });
     const saved = (await chrome.storage.session.get('activeSession'))
       .activeSession as PlaybackSession | undefined;
@@ -90,6 +96,9 @@ export default defineBackground(() => {
       await cleanRules();
       await chrome.storage.session.remove('activeSession');
     }
+    // Observation leases do not survive worker shutdown. Do not revive signed
+    // media URLs collected by an old panel or an unrelated page.
+    await pruneObservations();
   };
   const initialized = initialize();
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -144,7 +153,7 @@ export default defineBackground(() => {
     };
   };
   async function publishLocale(language: UILanguage) {
-    await chrome.action.setTitle({ title: t(language, '打开听译') });
+    await chrome.action.setTitle({ title: t(language, '打开听译 · 原音色视频翻译') });
     const tabs = await chrome.tabs.query({
       url: ['http://*/*', 'https://*/*'],
     });
@@ -156,19 +165,57 @@ export default defineBackground(() => {
         ),
     );
   }
-  async function toPlayer(type: string, data: Record<string, unknown> = {}) {
-    if (!session) return;
+  async function toPlayer(type: string, data: Record<string, unknown> = {}, owner = session) {
+    if (!owner) return;
     try {
-      return await chrome.tabs.sendMessage(
-        session.candidate.tabId,
-        { type, ...data },
-        { frameId: session.candidate.frameId },
+      const reply = await chrome.tabs.sendMessage(
+        owner.candidate.tabId,
+        { type, sessionId: owner.id, ...data },
+        { frameId: owner.candidate.frameId },
       );
+      // Diagnostic transport must not turn an acknowledged media delivery into
+      // a playback failure. The normal event channel also submits these records.
+      await forwardTerminals(owner, reply?.terminals).catch(() => {});
+      return reply;
     } catch {
       /* Navigation is handled by the session owner. */
     }
   }
+  async function forwardTerminals(owner: PlaybackSession, entries: unknown) {
+    if (!Array.isArray(entries)) return;
+    const events = entries.filter((event) => event && event.type === 'player:metric' &&
+      event.kind === 'terminal' && event.sessionId === owner.id &&
+      Number.isInteger(event.epoch) && event.epoch <= owner.epoch &&
+      Number.isInteger(event.languageVersion ?? 0) &&
+      (event.languageVersion ?? 0) <= (owner.languageVersion ?? 0));
+    if (events.length) await chrome.runtime.sendMessage({ target: 'offscreen',
+      type: 'engine:terminals', sessionId: owner.id, events });
+  }
+  function releaseObservation(tabId: number) {
+    observation.release(tabId);
+    sources.delete(tabId);
+    detected.delete(tabId);
+    void chrome.storage.session.remove([`source:${tabId}`, `detected:${tabId}`]);
+  }
+  async function pruneObservations() {
+    for (const id of observation.expired()) if (observedTaskTab() !== id) releaseObservation(id);
+    const now = Date.now();
+    const persisted = await chrome.storage.session.get(null);
+    const expired = Object.entries(persisted).filter(([key, value]) => {
+      if (!/^(?:source|detected):\d+$/.test(key)) return false;
+      const tabId = Number(key.split(':')[1]);
+      const record = value as SourceRecord | DiscoveryRecord;
+      return !observation.allows(tabId, observedTaskTab()) || !record.expiresAt || record.expiresAt <= now;
+    }).map(([key]) => key);
+    for (const key of expired) {
+      const id = Number(key.split(':')[1]);
+      (key.startsWith('source:') ? sources : detected).delete(id);
+    }
+    if (expired.length) await chrome.storage.session.remove(expired);
+  }
   async function discover(tabId: number): Promise<MediaCandidate[]> {
+    observation.watch(tabId);
+    await pruneObservations();
     const [frames, metadata, tab] = await Promise.all([
       chrome.scripting.executeScript({
         target: { tabId, allFrames: true },
@@ -184,12 +231,18 @@ export default defineBackground(() => {
     ]);
     const meta = metadata[0]?.result;
     if (!meta) return [];
+    if (meta.site === 'tencent') {
+      // The page may have loaded before the panel granted an observation lease.
+      // Ask the isolated bridge to replay the already-parsed MAIN-world metadata.
+      await chrome.tabs.sendMessage(tabId, {type: 'player:rescan-media'}).catch(() => {});
+    }
     const saved = (sources.get(tabId) ??
       (await chrome.storage.session.get(`source:${tabId}`))[
         `source:${tabId}`
-      ]) as { identity: string; source: AudioSource } | undefined;
+      ]) as SourceRecord | undefined;
     const observed =
-      saved?.identity === meta.identity &&
+      saved?.expiresAt && saved.expiresAt > Date.now() && saved.identity === meta.identity &&
+      (meta.site !== 'youtube' || youtubeSourceMatches(saved.source, meta)) &&
       (saved.source.sabrRequest ||
         observedAudio(saved.source.url, saved.source.mime ?? ''))
         ? (saved.source as AudioSource)
@@ -216,16 +269,17 @@ export default defineBackground(() => {
       detected.get(tabId) ??
       ((await chrome.storage.session.get(`detected:${tabId}`))[
         `detected:${tabId}`
-      ] as { identity: string; items: ObservedMedia[] } | undefined);
-    const items = resources?.identity === meta.identity ? resources.items : [];
-    const candidates = frames.flatMap((frame) => {
+      ] as DiscoveryRecord | undefined);
+    const items = resources?.expiresAt && resources.expiresAt > Date.now() && resources.identity === meta.identity
+      ? resources.items.filter((item) => item.at > Date.now() - 60000) : [];
+    const candidates = await Promise.all(frames.flatMap((frame) => {
       // Watch-page previews and embedded players must not inherit the main
       // video's identity, audio source or playback controls.
-      if (meta.site === 'youtube' && frame.frameId !== 0) return [];
+      if (native && frame.frameId !== 0) return [];
       const scanned =
         meta.site === 'youtube'
           ? youtubePlayer(frame.result ?? [])
-          : (frame.result ?? []);
+          : meta.site === 'bilibili' ? bilibiliPlayer(frame.result ?? []) : (frame.result ?? []);
       const visible = scanned.filter(
         (v) => v.displayed && v.width > 100 && v.height > 60,
       );
@@ -233,21 +287,26 @@ export default defineBackground(() => {
         ? visible.filter((v) => v.duration > 0)
         : visible;
       const frameItems = items.filter((r) => r.frameId === frame.frameId);
-      return players.map((v) => {
+      return players.map(async (v) => {
         const resolved = native
-          ? { source }
+          ? { source, reason: source ? undefined : meta.sourceReason }
           : chooseGenericSource(v, frameItems, meta.identity, players.length);
         const reason = v.protected
           ? '检测到受保护视频，暂不支持提前翻译'
           : resolved.reason;
-        const selectedSource = v.protected ? undefined : resolved.source;
+        let selectedSource = v.protected ? undefined : resolved.source;
+        const identity = !native && selectedSource
+          ? await mediaResourceIdentity(meta.identity, v.frameUrl, selectedSource)
+          : meta.identity;
+        if (selectedSource) selectedSource = {...selectedSource, identity};
         return {
           ...v,
           tabId,
           frameId: frame.frameId,
           frameMediaId: mediaIdentity(v.frameUrl),
           site: meta.site,
-          mediaId: meta.identity,
+          mediaId: identity,
+          pageId: meta.identity,
           title: meta.title,
           ad: meta.ad,
           source: selectedSource,
@@ -265,7 +324,7 @@ export default defineBackground(() => {
               : 'discovering',
         } as MediaCandidate;
       });
-    });
+    }));
     // Show observed streams even when the site has not exposed a controllable
     // video element. Discovery alone must not imply synchronous playback support.
     for (const frameId of new Set(items.map((r) => r.frameId))) {
@@ -296,221 +355,69 @@ export default defineBackground(() => {
         });
       }
     }
+    const active = session;
+    if (active?.candidate.tabId === tabId && !['error', 'ended'].includes(active.phase)) {
+      const current = candidates.find((c) => c.id === active.candidate.id && c.frameId === active.candidate.frameId);
+      const youtubeTrackChanged = meta.site === 'youtube' &&
+        ((meta.currentAudioTrackId && meta.currentAudioTrackId !== active.candidate.source?.trackId) ||
+          (current?.source && current.source.trackId !== active.candidate.source?.trackId));
+      if ((current?.source && current.mediaId !== active.candidate.mediaId) || youtubeTrackChanged)
+        await stop(active.id);
+    }
     return candidates;
   }
-  chrome.webRequest.onBeforeRequest.addListener(
-    (details) => {
-      if (
-        details.tabId < 0 ||
-        details.initiator?.startsWith('chrome-extension:')
-      )
-        return undefined;
-      scopes.set(
-        details.requestId,
-        chrome.tabs
-          .get(details.tabId)
-          .then((tab) => {
-            const url = tab.pendingUrl ?? tab.url;
-            return url ? mediaIdentity(url) : undefined;
-          })
-          .catch(() => undefined),
-      );
-      if (scopes.size > 500) scopes.delete(scopes.keys().next().value!);
-      if (
-        details.method !== 'POST' ||
-        !new URL(details.url).hostname.endsWith('.googlevideo.com')
-      )
-        return undefined;
-      const raw = details.requestBody?.raw;
-      if (!raw?.length) return undefined;
-      const length = raw.reduce((n, r) => n + (r.bytes?.byteLength ?? 0), 0);
-      if (length === 0 || length > 98304) return undefined;
-      const bytes = new Uint8Array(length);
-      let offset = 0;
-      for (const part of raw)
-        if (part.bytes) {
-          bytes.set(new Uint8Array(part.bytes), offset);
-          offset += part.bytes.byteLength;
-        }
-      bodies.set(details.requestId, encode64(bytes));
-      if (bodies.size > 30) bodies.delete(bodies.keys().next().value!);
-      return undefined;
-    },
-    {
-      urls: ['http://*/*', 'https://*/*'],
-      types: ['media', 'xmlhttprequest', 'other'],
-    },
-    ['requestBody'],
-  );
-  chrome.webRequest.onBeforeSendHeaders.addListener(
-    (details) => {
-      if (
-        details.tabId < 0 ||
-        details.initiator?.startsWith('chrome-extension:')
-      )
-        return undefined;
-      const headers: Record<string, string> = {};
-      for (const h of details.requestHeaders ?? [])
-        if (['origin', 'referer'].includes(h.name.toLowerCase()) && h.value)
-          headers[h.name] = h.value;
-      requests.set(details.requestId, headers);
-      if (requests.size > 200) requests.delete(requests.keys().next().value!);
-      return undefined;
-    },
-    {
-      urls: ['http://*/*', 'https://*/*'],
-      types: ['media', 'xmlhttprequest', 'other'],
-    },
-    ['requestHeaders', 'extraHeaders'],
-  );
-  chrome.webRequest.onResponseStarted.addListener(
-    (details) => {
-      captureStats.responses++;
-      const headers = requests.get(details.requestId) ?? {};
-      requests.delete(details.requestId);
-      const sabrRequest = bodies.get(details.requestId);
-      bodies.delete(details.requestId);
-      const scope = scopes.get(details.requestId);
-      scopes.delete(details.requestId);
-      const mime =
-        details.responseHeaders?.find(
-          (h) => h.name.toLowerCase() === 'content-type',
-        )?.value ?? '';
-      const sabr = !!sabrRequest && mime.includes('yt-ump');
-      if (
-        details.tabId < 0 ||
-        details.initiator?.startsWith('chrome-extension:') ||
-        details.statusCode < 200 ||
-        details.statusCode >= 300 ||
-        (!sabr &&
-          !observedAudio(details.url, mime) &&
-          !mediaKind(details.url, mime))
-      )
-        return;
-      captureStats.accepted++;
-      void chrome.tabs
-        .get(details.tabId)
-        .then(async (tab) => {
-          if (!tab.url) return;
-          const identity = mediaIdentity(tab.url);
-          if ((await scope) !== identity) return;
-          const host = new URL(tab.url).hostname;
-          if (!/(^|\.)(youtube\.com|bilibili\.com)$/.test(host)) {
-            const kind = mediaKind(details.url, mime);
-            if (!kind) return;
-            const persisted =
-              detected.get(details.tabId) ??
-              ((await chrome.storage.session.get(`detected:${details.tabId}`))[
-                `detected:${details.tabId}`
-              ] as { identity: string; items: ObservedMedia[] } | undefined);
-            const previous = detected.get(details.tabId) ?? persisted;
-            const items = previous?.identity === identity ? previous.items : [];
-            const updated = [
-              ...items.filter(
-                (r) =>
-                  !(r.url === details.url && r.frameId === details.frameId),
-              ),
-              {
-                url: details.url,
-                mime,
-                kind,
-                frameId: details.frameId,
-                at: Date.now(),
-                headers,
-              },
-            ];
-            const state = {
-              identity,
-              items: (['file', 'hls', 'dash', 'fragment'] as const).flatMap(
-                (k) => updated.filter((r) => r.kind === k).slice(-10),
-              ),
-            };
-            if (
-              detected.get(details.tabId)?.identity &&
-              detected.get(details.tabId)?.identity !== identity
-            )
-              return;
-            detected.set(details.tabId, state);
-            await chrome.storage.session.set({
-              [`detected:${details.tabId}`]: state,
-            });
-            void chrome.runtime
-              .sendMessage({ type: 'sources:updated', tabId: details.tabId })
-              .catch(() => {});
-            return;
-          }
-          // Native sites may request video-only files after audio. Generic
-          // discovery must never overwrite a native audio source with those.
-          if (!sabr && !observedAudio(details.url, mime)) return;
-          const trackId = sabr
-            ? VideoPlaybackAbrRequest.decode(decode64(sabrRequest!))
-                .clientAbrState?.audioTrackId || 'default'
-            : 'default';
-          if (
-            session?.candidate.tabId === details.tabId &&
-            session.candidate.mediaId === identity &&
-            (session.candidate.source?.trackId ?? 'default') !== trackId
-          ) {
-            await stop();
-          }
-          const saved = {
-            identity,
-            source: {
-              url: sabr ? details.url : normalizeAudioRequest(details.url),
-              mime,
-              headers,
-              identity,
-              trackId,
-              ...(sabr ? { sabrRequest } : {}),
-            },
-          };
-          sources.set(details.tabId, saved);
-          void chrome.storage.session.set({
-            [`source:${details.tabId}`]: saved,
-          });
-          void chrome.runtime
-            .sendMessage({ type: 'sources:updated', tabId: details.tabId })
-            .catch(() => {});
-        })
-        .catch((error) => {
-          captureStats.lastError = messageError(error);
-        });
-    },
-    {
-      urls: ['http://*/*', 'https://*/*'],
-      types: ['media', 'xmlhttprequest', 'other'],
-    },
-    ['responseHeaders'],
-  );
-  chrome.webRequest.onErrorOccurred.addListener(
-    (details) => {
-      scopes.delete(details.requestId);
-      bodies.delete(details.requestId);
-      requests.delete(details.requestId);
-    },
-    {
-      urls: ['http://*/*', 'https://*/*'],
-      types: ['media', 'xmlhttprequest', 'other'],
-    },
-  );
-  const stop = async () => {
-    const previous = session;
-    const detach = previous ? toPlayer('player:stop') : Promise.resolve();
-    // A stop also invalidates language changes awaiting their player reply.
-    session = null;
-    await detach;
-    if (previous) {
-      await chrome.runtime
-        .sendMessage({ target: 'offscreen', type: 'engine:stop' })
-        .catch(() => {});
-    }
-    await chrome.storage.session.remove('activeSession');
-    await cleanRules();
-    void chrome.runtime
-      .sendMessage({ type: 'session:updated', session: null })
+  const stopOwned = async (previous: PlaybackSession | null, detached?: Promise<unknown>) => {
+    if (previous && session?.id === previous.id) session = null;
+    await (detached ?? (previous ? toPlayer('player:stop', {}, previous) : Promise.resolve()));
+    if (previous) await chrome.runtime
+      .sendMessage({ target: 'offscreen', type: 'engine:stop', sessionId: previous.id })
       .catch(() => {});
+    if (previous && ![...panels.values()].some((p) => p.tabId === previous.candidate.tabId))
+      releaseObservation(previous.candidate.tabId);
+    // A new start cannot overtake this cleanup: all lifecycle work shares a queue.
+    if (!session) {
+      await chrome.storage.session.remove('activeSession');
+      await cleanRules();
+      void chrome.runtime.sendMessage({ type: 'session:updated', session: null }).catch(() => {});
+    }
   };
+  const stop = (expectedId?: string): Promise<void> => {
+    if (expectedId && session?.id !== expectedId) return Promise.resolve();
+    transitions.invalidate();
+    languageRequest++;
+    const previous = session;
+    session = null;
+    const detached = previous ? toPlayer('player:stop', {}, previous) : Promise.resolve();
+    return transitions.run(() => stopOwned(previous, detached));
+  };
+  registerMediaObserver({scope: observation, sources, detected, captureStats, getSession: () => observedTaskTab() !== undefined ? session : null, stop: () => stop()});
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name !== 'timbradub-panel' || !port.sender || !trusted(port.sender)) return;
+    const watch: {tabId?: number; windowId?: number} = {};
+    panels.set(port, watch);
+    port.onMessage.addListener((message) => {
+      if (message.type !== 'watch' || !Number.isInteger(message.tabId)) return;
+      if (watch.tabId !== undefined && watch.tabId !== message.tabId && observedTaskTab() !== watch.tabId)
+        releaseObservation(watch.tabId);
+      watch.tabId = message.tabId;
+      watch.windowId = message.windowId;
+      observation.watch(message.tabId);
+    });
+    port.onDisconnect.addListener(() => {
+      panels.delete(port);
+      if (watch.tabId !== undefined && ![...panels.values()].some((p) => p.tabId === watch.tabId) && observedTaskTab() !== watch.tabId)
+        releaseObservation(watch.tabId);
+    });
+  });
+  chrome.tabs.onActivated.addListener(({tabId, windowId}) => {
+    for (const watch of panels.values()) if (watch.windowId === undefined || watch.windowId === windowId) {
+      if (watch.tabId !== undefined && watch.tabId !== tabId && observedTaskTab() !== watch.tabId) releaseObservation(watch.tabId);
+      watch.tabId = tabId;
+      observation.watch(tabId);
+    }
+  });
   chrome.tabs.onRemoved.addListener((id) => {
+    observation.release(id);
     sources.delete(id);
     detected.delete(id);
     void chrome.storage.session.remove([`source:${id}`, `detected:${id}`]);
@@ -518,6 +425,7 @@ export default defineBackground(() => {
   });
   chrome.tabs.onUpdated.addListener((id, change) => {
     if (change.url) {
+      observation.invalidate(id);
       if (detected.get(id)?.identity !== mediaIdentity(change.url)) {
         detected.delete(id);
         void chrome.storage.session.remove(`detected:${id}`);
@@ -529,7 +437,7 @@ export default defineBackground(() => {
       }
       if (
         session?.candidate.tabId === id &&
-        session.candidate.mediaId !== mediaIdentity(change.url)
+        candidatePageId(session.candidate) !== mediaIdentity(change.url)
       )
         void stop();
     }
@@ -548,6 +456,7 @@ export default defineBackground(() => {
       switch (message.type) {
         case 'files:set-enabled': {
           if (!privileged) throw new Error('不允许网页修改配置');
+          return transitions.run(async () => {
           const next = {
             ...(await loadSettings()),
             autoSaveFiles: message.enabled === true,
@@ -561,6 +470,7 @@ export default defineBackground(() => {
           if (!configured?.ok)
             throw new Error(configured?.error ?? '本地保存暂不可用');
           return publicSettings(await loadSettings());
+          });
         }
         case 'files:status':
         case 'files:merge':
@@ -651,21 +561,25 @@ export default defineBackground(() => {
           return (await loadSettings()).uiLanguage;
         case 'ui:set': {
           if (!privileged) throw new Error('不允许网页修改配置');
-          if (message.language !== 'en' && message.language !== 'zh')
+          const language = message.language;
+          if (language !== 'en' && language !== 'zh')
             throw new Error('无效的界面语言');
+          return transitions.run(async () => {
           const next: Settings = {
             ...(await loadSettings()),
-            uiLanguage: message.language,
+            uiLanguage: language,
           };
           await chrome.storage.local.set({ settings: next });
           await publishLocale(next.uiLanguage);
           return next.uiLanguage;
+          });
         }
         case 'settings:get':
           if (!privileged) throw new Error('不允许网页读取配置');
           return publicSettings(await loadSettings());
         case 'settings:save': {
           if (!privileged) throw new Error('不允许网页修改配置');
+          return transitions.run(async () => {
           const input = message.settings as Partial<Settings>,
             current = await loadSettings();
           const next = {
@@ -678,7 +592,10 @@ export default defineBackground(() => {
                 : input.autoSaveFiles === true,
           };
           endpoint(next);
-          if (!/^[a-z]{2,3}$/.test(next.language))
+          if (observedTaskTab() !== undefined &&
+              (next.apiKey !== current.apiKey || next.workspace !== current.workspace || next.region !== current.region))
+            throw new Error('请先停止翻译，再修改服务凭据');
+          if (!LANGUAGES.some(([code]) => code === next.language))
             throw new Error('无效的目标语言');
           if (next.uiLanguage !== 'en' && next.uiLanguage !== 'zh')
             throw new Error('无效的界面语言');
@@ -686,10 +603,13 @@ export default defineBackground(() => {
           if (next.uiLanguage !== current.uiLanguage)
             await publishLocale(next.uiLanguage);
           return publicSettings(next);
+          });
         }
         case 'settings:forget': {
           if (!privileged) throw new Error('不允许网页修改配置');
-          await stop();
+          const stopping = stop();
+          return transitions.run(async () => {
+          await stopping;
           const current = await loadSettings();
           const next = {
             ...DEFAULT_SETTINGS,
@@ -699,21 +619,26 @@ export default defineBackground(() => {
           };
           await chrome.storage.local.set({ settings: next });
           return publicSettings(next);
-        }
-        case 'settings:test':
-          if (!privileged) throw new Error('不允许网页测试凭据');
-          if (session) throw new Error('请先停止翻译再测试连接');
-          await ensureOffscreen();
-          return chrome.runtime.sendMessage({
-            target: 'offscreen',
-            type: 'engine:probe',
-            settings: await loadSettings(),
           });
+        }
+        case 'settings:test': {
+          if (!privileged) throw new Error('不允许网页测试凭据');
+          return transitions.run(async () => {
+            if (session) throw new Error('请先停止翻译再测试连接');
+            await ensureOffscreen();
+            const settings = await loadSettings();
+            if (session) throw new Error('请先停止翻译再测试连接');
+            return chrome.runtime.sendMessage({target: 'offscreen', type: 'engine:probe', settings});
+          });
+        }
         case 'media:tencent-info': {
           if (!sender.tab?.id || !sender.url?.startsWith('https://v.qq.com/'))
             throw new Error('不允许网页触发扫描');
+          if (!observation.allows(sender.tab.id, observedTaskTab())) return false;
+          const observedRevision = observation.revision(sender.tab.id);
+          const stillObserved = () => observation.allows(sender.tab!.id!, observedTaskTab()) && observation.revision(sender.tab!.id!) === observedRevision;
           const tab = await chrome.tabs.get(sender.tab.id);
-          if (!tab.url) return false;
+          if (!tab.url || !stillObserved()) return false;
           const supplied = message.media as {
             videoId?: string;
             url?: string;
@@ -746,6 +671,7 @@ export default defineBackground(() => {
           const items = previous?.identity === identity ? previous.items : [];
           const state = {
             identity,
+            expiresAt: Date.now() + 60000,
             items: [
               ...items.filter(
                 (r) =>
@@ -770,10 +696,18 @@ export default defineBackground(() => {
               },
             ],
           };
+          if (!stillObserved()) return false;
           detected.set(sender.tab.id, state);
           await chrome.storage.session.set({
             [`detected:${sender.tab.id}`]: state,
           });
+          if (!stillObserved()) {
+            if (!detected.has(sender.tab.id) || detected.get(sender.tab.id) === state) {
+              detected.delete(sender.tab.id);
+              await chrome.storage.session.remove(`detected:${sender.tab.id}`);
+            }
+            return false;
+          }
           void chrome.runtime
             .sendMessage({ type: 'sources:updated', tabId: sender.tab.id })
             .catch(() => {});
@@ -793,7 +727,7 @@ export default defineBackground(() => {
             throw new Error('翻译任务已过期');
           const fresh = sources.get(session.candidate.tabId);
           if (
-            fresh?.identity === session.candidate.mediaId &&
+            fresh?.expiresAt && fresh.expiresAt > Date.now() && fresh.identity === candidatePageId(session.candidate) &&
             (fresh.source.sabrRequest ||
               observedAudio(fresh.source.url, fresh.source.mime ?? ''))
           )
@@ -802,7 +736,15 @@ export default defineBackground(() => {
               ...fresh.source,
               sabrFormats: session.candidate.source?.sabrFormats,
             };
-          return session.candidate.source;
+          const owner = session;
+          if (owner.candidate.site !== 'youtube' && owner.candidate.site !== 'bilibili') {
+            const candidates = await discover(owner.candidate.tabId);
+            if (session?.id !== owner.id || session.epoch !== owner.epoch || session.languageVersion !== owner.languageVersion) throw new Error('翻译任务已过期');
+            const current = candidates.find((c) => c.id === owner.candidate.id && c.frameId === owner.candidate.frameId);
+            if (current?.source && current.mediaId === owner.candidate.mediaId) return current.source;
+            if (current?.source) throw new Error('视频或音轨已变化，请重新扫描');
+          }
+          return owner.candidate.source;
         }
         case 'media:diagnostics':
           if (!privileged) throw new Error('不允许网页读取诊断');
@@ -840,60 +782,61 @@ export default defineBackground(() => {
           });
         case 'session:start': {
           if (!privileged) throw new Error('不允许网页触发翻译');
-          await stop();
-          const choice = message.candidate as MediaCandidate;
-          const fresh = (await discover(choice.tabId)).find(
-            (v) => v.id === choice.id && v.frameId === choice.frameId,
-          );
-          if (!fresh) throw new Error('视频已变化，请重新扫描');
-          if (fresh.sourceReason && !fresh.source)
-            throw new Error(fresh.sourceReason);
-          if (fresh.ad) throw new Error('请等待广告结束，再选择正片');
-          if (!fresh.duration) throw new Error('首版仅支持普通点播视频');
-          if (!fresh.source)
-            throw new Error(
-              '尚未发现可预取的音轨。请先播放几秒，再重新扫描；本版本不会以滞后采集代替同步。',
+          const ticket = transitions.invalidate();
+          languageRequest++;
+          return transitions.run(async () => {
+            if (!transitions.current(ticket)) return session;
+            await stopOwned(session);
+            if (!transitions.current(ticket)) return session;
+            const choice = message.candidate as MediaCandidate;
+            const fresh = (await discover(choice.tabId)).find(
+              (v) => v.id === choice.id && v.frameId === choice.frameId,
             );
-          const settings = await loadSettings();
-          endpoint(settings);
-          if (!settings.apiKey) throw new Error('请先在设置中填写百炼凭据');
-          session = {
-            id: crypto.randomUUID(),
-            epoch: 0,
-            languageVersion: 0,
-            candidate: fresh,
-            language: String(message.language ?? settings.language),
-            phase: 'preparing',
-            position: fresh.currentTime,
-            rate: 1,
-            readyThrough: fresh.currentTime,
-            inputThrough: fresh.currentTime,
-            skipped: 0,
-            originalVolume: 0,
-            dubVolume: 1,
-            subtitles: true,
-            segments: [],
-          };
-          const attached = await toPlayer('player:attach', { session });
-          if (!attached?.ok) {
-            session = null;
-            throw new Error('播放器已被页面替换，请重新扫描');
-          }
-          await ensureOffscreen();
-          const result = await chrome.runtime.sendMessage({
-            target: 'offscreen',
-            type: 'engine:start',
-            session,
-            settings,
+            if (!transitions.current(ticket)) return session;
+            if (!fresh) throw new Error('视频已变化，请重新扫描');
+            if (fresh.sourceReason && !fresh.source) throw new Error(fresh.sourceReason);
+            if (fresh.ad) throw new Error('请等待广告结束，再选择正片');
+            if (!fresh.duration) throw new Error('首版仅支持普通点播视频');
+            if (!fresh.source) throw new Error('尚未发现可预取的音轨。请先播放几秒，再重新扫描；本版本不会以滞后采集代替同步。');
+            const settings = await loadSettings();
+            endpoint(settings);
+            if (!settings.apiKey) throw new Error('请先在设置中填写百炼凭据');
+            const language = String(message.language ?? settings.language);
+            if (!LANGUAGES.some(([code]) => code === language)) throw new Error('无效的目标语言');
+            if (!transitions.current(ticket)) return session;
+            const owner: PlaybackSession = {
+              id: crypto.randomUUID(), epoch: 0, languageVersion: 0,
+              candidate: fresh, language, phase: 'preparing', position: fresh.currentTime,
+              rate: fresh.playbackRate ?? 1, readyThrough: fresh.currentTime, inputThrough: fresh.currentTime,
+              skipped: 0, originalVolume: 0, dubVolume: 1, subtitles: true, segments: [],
+            };
+            session = owner;
+            try {
+              const attached = await toPlayer('player:attach', { session: owner }, owner);
+              if (!attached?.ok) throw new Error('播放器已被页面替换，请重新扫描');
+              if (Number.isFinite(attached.rate) && attached.rate > 0) owner.rate = attached.rate;
+              if (Number.isFinite(attached.position)) {
+                owner.position = attached.position;
+                owner.readyThrough = owner.inputThrough = attached.position;
+              }
+              if (!transitions.current(ticket)) { await stopOwned(owner); return session; }
+              await ensureOffscreen();
+              if (!transitions.current(ticket)) { await stopOwned(owner); return session; }
+              const result = await chrome.runtime.sendMessage({target: 'offscreen', type: 'engine:start', session: owner, settings});
+              if (result?.ok !== true) throw new Error(result?.error ?? '翻译启动失败，请重试');
+              if (!transitions.current(ticket)) { await stopOwned(owner); return session; }
+              return session;
+            } catch (error) {
+              await stopOwned(owner).catch(() => {});
+              throw error;
+            }
           });
-          if (result?.ok === false) {
-            await stop();
-            throw new Error(result.error);
-          }
-          return session;
         }
         case 'session:language': {
           if (!privileged) throw new Error('不允许网页触发翻译');
+          const request = ++languageRequest;
+          return transitions.run(async () => {
+          if (request !== languageRequest) return session;
           const language = String(message.language);
           if (!LANGUAGES.some(([code]) => code === language))
             throw new Error('无效的目标语言');
@@ -915,10 +858,11 @@ export default defineBackground(() => {
             diagnostic: undefined,
           };
           session = next;
-          const clock = await toPlayer('player:language', { session: next });
+          try {
+          const clock = await toPlayer('player:language', { session: next }, next);
           if (session !== next) return session;
           if (!clock?.ok) {
-            await stop();
+            await stopOwned(next);
             throw new Error('播放器已被页面替换，请重新扫描');
           }
           next.position = clock.position;
@@ -941,42 +885,35 @@ export default defineBackground(() => {
             session.language !== language
           )
             return session;
-          if (result?.ok === false) {
-            await stop();
-            throw new Error(result.error);
+          if (result?.ok !== true) {
+            await stopOwned(next);
+            throw new Error(result?.error ?? '翻译启动失败，请重试');
           }
           return session;
+          } catch (error) {
+            if (session?.id === next.id) await stopOwned(next).catch(() => {});
+            throw error;
+          }
+          });
         }
         case 'session:stop':
           if (!privileged) throw new Error('不允许网页停止翻译');
           await stop();
           return true;
-        case 'session:mix':
-          if (!privileged || !session) return false;
-          session.originalVolume = Math.max(
-            0,
-            Math.min(1, Number(message.originalVolume)),
-          );
-          session.dubVolume = Math.max(
-            0,
-            Math.min(1, Number(message.dubVolume)),
-          );
-          session.subtitles = Boolean(message.subtitles);
-          await chrome.storage.session.set({ activeSession: session });
-          await chrome.runtime.sendMessage({
-            target: 'offscreen',
-            type: 'engine:mix',
-            sessionId: session.id,
-            originalVolume: session.originalVolume,
-            dubVolume: session.dubVolume,
-            subtitles: session.subtitles,
-          });
-          await toPlayer('player:mix', {
-            originalVolume: session.originalVolume,
-            dubVolume: session.dubVolume,
-            subtitles: session.subtitles,
-          });
+        case 'session:mix': {
+          if (!privileged || !session || (message.sessionId && message.sessionId !== session.id) ||
+            (message.languageVersion !== undefined && message.languageVersion !== (session.languageVersion ?? 0))) return false;
+          const owner = session;
+          const clamp = (value: unknown, previous: number) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(1, Number(value))) : previous;
+          owner.originalVolume = clamp(message.originalVolume, owner.originalVolume);
+          owner.dubVolume = clamp(message.dubVolume, owner.dubVolume);
+          owner.subtitles = Boolean(message.subtitles);
+          await chrome.storage.session.set({ activeSession: owner });
+          const changes = {sessionId: owner.id, languageVersion: owner.languageVersion ?? 0, originalVolume: owner.originalVolume, dubVolume: owner.dubVolume, subtitles: owner.subtitles};
+          await chrome.runtime.sendMessage({target: 'offscreen', type: 'engine:mix', ...changes});
+          if (session?.id === owner.id) await toPlayer('player:mix', changes, owner);
           return true;
+        }
         case 'auth:install':
           if (!privileged) throw new Error('不允许网页安装鉴权规则');
           if (
@@ -1000,6 +937,9 @@ export default defineBackground(() => {
           return true;
         case 'media:headers': {
           if (!privileged) throw new Error('不允许网页修改请求规则');
+          if (message.sessionId && (session?.id !== message.sessionId || session.epoch !== message.epoch ||
+              (session.languageVersion ?? 0) !== (message.languageVersion ?? 0)))
+            throw new Error('翻译任务已过期');
           const source = message.source as AudioSource;
           if (!safeMediaUrl(source.url, true))
             throw new Error('媒体域名不在允许范围');
@@ -1055,11 +995,21 @@ export default defineBackground(() => {
           );
           if (accepted) {
             session = accepted;
-            await chrome.storage.session.set({ activeSession: session });
-            if (session.phase === 'error') await cleanRules();
-            await toPlayer('player:state', { session });
-            void chrome.runtime
-              .sendMessage({ type: 'session:updated', session })
+            if (['error', 'ended'].includes(accepted.phase) &&
+                ![...panels.values()].some((panel) => panel.tabId === accepted.candidate.tabId))
+              releaseObservation(accepted.candidate.tabId);
+            await chrome.storage.session.set({ activeSession: accepted });
+            if (session !== accepted) return false;
+            if (['error', 'ended'].includes(accepted.phase)) {
+              // Rule cleanup is serialized with starts; an old error cannot
+              // remove the next task's authentication or media headers.
+              void transitions.run(async () => {
+                if (session === accepted) await cleanRules();
+              });
+            }
+            await toPlayer('player:state', { session: accepted }, accepted);
+            if (session === accepted) void chrome.runtime
+              .sendMessage({ type: 'session:updated', session: accepted })
               .catch(() => {});
           }
           return true;
@@ -1074,12 +1024,13 @@ export default defineBackground(() => {
               session.language
           )
             return false;
-          await toPlayer('player:segment', {
+          const owner = session;
+          const delivered = await toPlayer('player:segment', {
             segment: message.segment,
             epoch: message.epoch,
             languageVersion: message.languageVersion,
-          });
-          return true;
+          }, owner);
+          return delivered?.ok === true;
         case 'player:clock':
         case 'player:seek':
         case 'player:lost':
@@ -1093,6 +1044,7 @@ export default defineBackground(() => {
           )
             return false;
           if (message.type === 'player:lost') {
+            await forwardTerminals(session, message.terminals).catch(() => {});
             await stop();
             return true;
           }
@@ -1100,14 +1052,20 @@ export default defineBackground(() => {
             ...message,
             target: 'offscreen',
           });
+        case 'storage:summary':
         case 'cache:clear':
+        case 'media:clear':
+        case 'archives:clear': {
           if (!privileged) throw new Error('不允许网页清理缓存');
-          if (session) throw new Error('请先停止翻译，再清理缓存');
-          await ensureOffscreen();
-          return chrome.runtime.sendMessage({
-            target: 'offscreen',
-            type: 'cache:clear',
-          });
+          const operation = async () => {
+            if (message.type !== 'storage:summary' && session) throw new Error('请先停止翻译，再清理缓存');
+            await ensureOffscreen();
+            const result = await chrome.runtime.sendMessage({target: 'offscreen', type: message.type});
+            if (!result?.ok) throw new Error(result?.error ?? '本地保存暂不可用');
+            return result.value;
+          };
+          return message.type === 'storage:summary' ? operation() : transitions.run(operation);
+        }
         default:
           return undefined;
       }

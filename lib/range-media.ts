@@ -19,39 +19,101 @@ interface SyncFile {
   read(data: Uint8Array, options: { at: number }): number;
   close(): void;
 }
+type MediaDirectory = FileSystemDirectoryHandle & {
+  entries(): AsyncIterable<[string, FileSystemHandle]>;
+};
+export interface MediaTempSummary {
+  bytes: number;
+  files: number;
+}
+export interface MediaTempCleanup extends MediaTempSummary {
+  removedBytes: number;
+  removedFiles: number;
+}
+// Serialize creation and cleanup across extension contexts. A live worker's sync
+// handle additionally prevents deletion of the original media it is reading.
+async function mediaDirectoryLock<T>(operation: () => Promise<T>): Promise<T> {
+  return navigator.locks
+    ? navigator.locks.request('timbradub-media-temp-directory', operation)
+    : operation();
+}
+async function mediaDirectory(create = false) {
+  return (await (await navigator.storage.getDirectory()).getDirectoryHandle(
+    'qwen-video-dub-media-tmp', { create },
+  )) as MediaDirectory;
+}
+async function inspectMediaTemps(remove: boolean): Promise<MediaTempCleanup> {
+  let directory: MediaDirectory;
+  const summary = { bytes: 0, files: 0, removedBytes: 0, removedFiles: 0 };
+  try {
+    directory = await mediaDirectory();
+  } catch (error) {
+    if ((error as DOMException).name === 'NotFoundError') return summary;
+    throw error;
+  }
+  for await (const [name, entry] of directory.entries()) {
+    if (entry.kind !== 'file') continue;
+    const file = await (entry as FileSystemFileHandle).getFile();
+    if (remove) {
+      try {
+        await directory.removeEntry(name);
+        summary.removedBytes += file.size;
+        summary.removedFiles++;
+        continue;
+      } catch (error) {
+        // Locked by a live decoder: preserve it. Other errors should be visible
+        // to an explicit cleanup request instead of claiming that bytes vanished.
+        if (!['NoModificationAllowedError', 'InvalidStateError'].includes((error as DOMException).name))
+          throw error;
+      }
+    }
+    summary.bytes += file.size;
+    summary.files++;
+  }
+  return summary;
+}
+export async function mediaTempSummary(): Promise<MediaTempSummary> {
+  const { bytes, files } = await mediaDirectoryLock(() => inspectMediaTemps(false));
+  return { bytes, files };
+}
+/** Safe after worker termination and while another worker is decoding. */
+export async function cleanupMediaTemps(): Promise<MediaTempCleanup> {
+  return mediaDirectoryLock(() => inspectMediaTemps(true));
+}
 export async function privateMediaDisk(): Promise<MediaDisk> {
   try {
-    const root = await navigator.storage.getDirectory();
-    const directory = (await root.getDirectoryHandle(
-      'qwen-video-dub-media-tmp',
-      {
+    return await mediaDirectoryLock(async () => {
+      const directory = await mediaDirectory(true);
+      await inspectMediaTemps(true);
+      const name = crypto.randomUUID();
+      const file = (await directory.getFileHandle(name, {
         create: true,
-      },
-    )) as FileSystemDirectoryHandle & {
-      entries(): AsyncIterable<[string, FileSystemHandle]>;
-    };
-    // A live worker holds an exclusive sync handle: Chrome refuses to remove
-    // those files. Closed files left by terminated workers can be reclaimed.
-    for await (const [name] of directory.entries())
-      await directory.removeEntry(name).catch(() => {});
-    const name = crypto.randomUUID();
-    const file = (await directory.getFileHandle(name, {
-      create: true,
-    })) as FileSystemFileHandle & {
-      createSyncAccessHandle(): Promise<SyncFile>;
-    };
-    const handle = await file.createSyncAccessHandle();
-    let removed = false;
-    return {
-      write: (data, position) => handle.write(data, { at: position }),
-      read: (data, position) => handle.read(data, { at: position }),
-      async remove() {
-        if (removed) return;
-        removed = true;
-        handle.close();
-        await directory.removeEntry(name);
-      },
-    };
+      })) as FileSystemFileHandle & {
+        createSyncAccessHandle(): Promise<SyncFile>;
+      };
+      let handle: SyncFile;
+      try {
+        handle = await file.createSyncAccessHandle();
+      } catch (error) {
+        await directory.removeEntry(name).catch(() => { });
+        throw error;
+      }
+      let removed = false;
+      return {
+        write: (data, position) => handle.write(data, { at: position }),
+        read: (data, position) => handle.read(data, { at: position }),
+        async remove() {
+          if (removed) return;
+          removed = true;
+          await mediaDirectoryLock(async () => {
+            handle.close();
+            await directory.removeEntry(name).catch((error) => {
+              if ((error as DOMException).name !== 'NotFoundError') throw error;
+            });
+          });
+        },
+      };
+    });
   } catch {
     throw new Error(MEDIA_RANGE_ERRORS.storage);
   }
@@ -69,6 +131,7 @@ class SequentialFile {
     private disk: MediaDisk,
     private controller: AbortController,
     private idleMs: number,
+    private onFailure: () => void,
   ) {
     this.reader = response.body!.getReader();
     const length = response.headers.get('Content-Length');
@@ -122,6 +185,7 @@ class SequentialFile {
     this.queue = operation.catch((error) => {
       this.failure = error;
       this.controller.abort();
+      this.onFailure();
     });
     return operation;
   }
@@ -179,20 +243,21 @@ class SequentialFile {
     if (this.closed) return;
     this.closed = true;
     this.controller.abort();
-    await this.reader.cancel().catch(() => {});
+    await this.reader.cancel().catch(() => { });
     await this.queue;
     await this.disk.remove();
   }
 }
 export class RangeMediaCache {
   private files = new Map<string, Promise<SequentialFile>>();
+  private cleaning = new Set<Promise<unknown>>();
   private closed = false;
   constructor(
     private network: typeof fetch = (input, init) =>
       globalThis.fetch(input, init),
     private createDisk: () => Promise<MediaDisk> = privateMediaDisk,
     private idleMs = 20000,
-  ) {}
+  ) { }
   fetch: typeof fetch = async (input, init) => {
     if (this.closed) throw new DOMException('Cancelled', 'AbortError');
     const request = input instanceof Request ? input : undefined;
@@ -236,7 +301,7 @@ export class RangeMediaCache {
     let file = this.files.get(url);
     if (file) {
       controller.abort();
-      await response.body.cancel().catch(() => {});
+      await response.body.cancel().catch(() => { });
     } else {
       const body = response.body;
       file = (async () => {
@@ -246,6 +311,14 @@ export class RangeMediaCache {
           disk,
           controller,
           this.idleMs,
+          () => {
+            if (this.files.get(url) === file) this.files.delete(url);
+            // Release the failed origin body and disk file before a retry makes
+            // a new source; do not keep returning the poisoned cached response.
+            const cleanup = stored.close().catch(() => { });
+            this.cleaning.add(cleanup);
+            void cleanup.finally(() => this.cleaning.delete(cleanup));
+          },
         );
         if (this.closed) {
           await stored.close();
@@ -256,7 +329,7 @@ export class RangeMediaCache {
       this.files.set(url, file);
       file.catch(() => {
         controller.abort();
-        void body.cancel().catch(() => {});
+        void body.cancel().catch(() => { });
         if (this.files.get(url) === file) this.files.delete(url);
       });
       // Worker inputs use one URL at a time. Keep at most two disk-backed resources
@@ -264,7 +337,7 @@ export class RangeMediaCache {
       while (this.files.size > 2) {
         const [oldUrl, old] = this.files.entries().next().value!;
         this.files.delete(oldUrl);
-        void old.then((f) => f.close()).catch(() => {});
+        void old.then((f) => f.close()).catch(() => { });
       }
     }
     return (await file).response(from, to, signal);
@@ -274,5 +347,6 @@ export class RangeMediaCache {
     const files = [...this.files.values()];
     this.files.clear();
     await Promise.allSettled(files.map(async (f) => (await f).close()));
+    await Promise.allSettled(this.cleaning);
   }
 }

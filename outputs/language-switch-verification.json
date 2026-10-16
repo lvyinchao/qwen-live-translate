@@ -1,6 +1,6 @@
 {
-  "at": "2026-10-16T00:33:22.619Z",
-  "scope": "Real extension/background/offscreen/player in isolated Chrome; cached language fixtures reuse a real translated WAV. No new provider call or language quality claim.",
+  "at": "2026-10-16T08:36:59.349Z",
+  "scope": "Real extension/background/offscreen/player in isolated Chrome; cached language fixtures use generated synthetic tones. No provider calls, recordings or language quality claim.",
   "checks": [
     "Enabled language selector switches active cached Chinese→English at actual current video time, preserving 1.5× playback, both volume settings and hidden subtitles",
     "Delayed old-language state and segments are rejected, even with a misleading newer epoch; actual closed-shadow player stays on the selected language",

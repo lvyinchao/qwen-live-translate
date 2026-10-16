@@ -1,4 +1,6 @@
+import { checkMediaSource } from './check-media-source.mjs';
 import fs from 'node:fs/promises';
+const mediaSource = await checkMediaSource();
 const licenses = {
   'mediabunny-MPL-2.0.txt': 'node_modules/mediabunny/LICENSE',
   'googlevideo-MIT.txt': 'node_modules/googlevideo/LICENSE',
@@ -17,6 +19,6 @@ for (const file of ['bufbuild-Apache-2.0.txt', 'wxt-MIT.txt'])
 await fs.copyFile('LICENSE', 'public/LICENSE');
 await fs.copyFile('PRIVACY.md', 'public/PRIVACY.md');
 await fs.copyFile(
-  'vendor/mediabunny-1.61.4-source.tgz',
-  'public/licenses/mediabunny-1.61.4-source.tgz',
+  mediaSource.archive,
+  `public/licenses/${mediaSource.filename}`,
 );

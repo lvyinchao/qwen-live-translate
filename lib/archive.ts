@@ -59,16 +59,38 @@ export function subtitleTime(seconds: number): string {
 }
 const stamp = (value: number) =>
   String(Math.round(value * 1000)).padStart(10, '0');
-const audioName = (segment: TranslationSegment) =>
-  `audio/${stamp(segment.start)}-${stamp(segment.end)}.wav`;
-const segmentKey = (s: TranslationSegment) => `${s.start}:${s.end}`;
+const audioName = (segment: TranslationSegment, index: number) =>
+  `audio/${stamp(segment.start)}-${stamp(segment.end)}-${index}.wav`;
+/** A retried sentence can move by a few samples; simultaneous speakers must survive. */
+export function sameArchiveUtterance(
+  a: Pick<TranslationSegment, 'start' | 'end' | 'speaker' | 'sourceText' | 'text'>,
+  b: Pick<TranslationSegment, 'start' | 'end' | 'speaker' | 'sourceText' | 'text'>,
+) {
+  if (a.speaker !== b.speaker) return false;
+  if (a.start === b.start && a.end === b.end) return true;
+  const normalize = (text: string) => text.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  const textA = normalize(a.sourceText || a.text),
+    textB = normalize(b.sourceText || b.text);
+  return (
+    textA.length > 0 &&
+    textA === textB &&
+    Math.abs(a.start - b.start) <= 0.050001 &&
+    Math.abs(a.end - b.end) <= 0.050001 &&
+    Math.min(a.end, b.end) - Math.max(a.start, b.start) >=
+    Math.max(a.end - a.start, b.end - b.start) * 0.8
+  );
+}
 export function mergeArchiveSegments(
   old: TranslationSegment[],
   incoming: TranslationSegment[],
 ) {
-  return [
-    ...new Map([...old, ...incoming].map((s) => [segmentKey(s), s])).values(),
-  ].sort((a, b) => a.start - b.start || a.end - b.end);
+  const merged: TranslationSegment[] = [];
+  for (const segment of [...old, ...incoming]) {
+    const duplicate = merged.findIndex((s) => sameArchiveUtterance(s, segment));
+    if (duplicate >= 0) merged[duplicate] = segment;
+    else merged.push(segment);
+  }
+  return merged.sort((a, b) => a.start - b.start || a.end - b.end);
 }
 export function archiveEntries(
   batch: ArchiveBatch,
@@ -96,14 +118,14 @@ export function archiveEntries(
     audioFormat: 'WAV / mono / 24 kHz / signed 16-bit PCM',
     audioTiming:
       'Unmodified speech clips. Use sourceStart/sourceEnd for the video timeline; clips may be longer than the source utterance.',
-    segments: segments.map((s) => ({
+    segments: segments.map((s, index) => ({
       sourceStart: s.start,
       sourceEnd: s.end,
       sourceText: s.sourceText,
       translatedText: s.text,
       speaker: s.speaker,
       audioDuration: s.audioDuration,
-      audioFile: audioName(s),
+      audioFile: audioName(s, index),
     })),
   };
   const srt = segments
@@ -124,7 +146,7 @@ export function archiveEntries(
     text('transcript.txt', script),
     text('subtitles.srt', srt),
     text('transcript.json', JSON.stringify(metadata, null, 2) + '\n'),
-    ...segments.map((s) => ({ name: audioName(s), bytes: decode64(s.audio) })),
+    ...segments.map((s, index) => ({ name: audioName(s, index), bytes: decode64(s.audio) })),
   ];
 }
 

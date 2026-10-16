@@ -1,8 +1,10 @@
+import { isolatedTestEnv } from './test-environment.mjs';
 import os from 'node:os';
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 const cfg = JSON.parse(
   await fs.readFile(
     process.env.BAILIAN_CONFIG ??
@@ -15,9 +17,11 @@ const workspace = host.split('.')[0],
   region = host.split('.')[1];
 const extension = await fs.mkdtemp(path.resolve('work/extension-snapshot-'));
 await fs.cp(path.resolve('.output/chrome-mv3'), extension, { recursive: true });
+const profile = await fs.mkdtemp(path.resolve('work/playback-browser-'));
 const c = await chromium.launchPersistentContext(
-  await fs.mkdtemp(path.resolve('work/playback-browser-')),
+  profile,
   {
+    env: isolatedTestEnv(),
     channel: 'chromium',
     headless: !!process.env.HEADLESS,
     timeout: 25000,
@@ -31,10 +35,27 @@ const c = await chromium.launchPersistentContext(
   },
 );
 let call, panel, p;
+async function builtDigest(directory) {
+  const hash = crypto.createHash('sha256');
+  const walk = async (relative = '') => {
+    for (const name of (await fs.readdir(path.join(directory, relative))).sort()) {
+      const file = path.join(relative, name);
+      if ((await fs.stat(path.join(directory, file))).isDirectory()) await walk(file);
+      else { hash.update(file.replaceAll(path.sep, '/')); hash.update(await fs.readFile(path.join(directory, file))); }
+    }
+  };
+  await walk();
+  return hash.digest('hex');
+}
 const report = {
   at: new Date().toISOString(),
+  modelRegion: region,
+  provenance: {runner: 'scripts/gate-playback.mjs', source: 'bilibili-native-real-provider', generatedAudio: false,
+    model: 'qwen3.8-livetranslate-flash-realtime', clientRequiresVoiceConfirmation: true},
   normalPolicy: !!process.env.NORMAL_POLICY,
   headless: !!process.env.HEADLESS,
+  version: JSON.parse(await fs.readFile(path.join(extension, 'manifest.json'), 'utf8')).version,
+  buildSha256: await builtDigest(extension),
   url: process.env.VIDEO_URL ?? 'https://www.bilibili.com/video/BV13rsaeaEgE/',
   actions: [],
   snapshots: [],
@@ -46,7 +67,7 @@ try {
   });
   panel = await c.newPage();
   await panel.goto(`chrome-extension://${id}/sidepanel.html`);
-  call = (type, params = {}) =>
+  const request = (type, params = {}) =>
     panel.evaluate(
       async ({ type, params }) => {
         const r = await chrome.runtime.sendMessage({
@@ -59,6 +80,16 @@ try {
       },
       { type, params },
     );
+  call = async (type, params = {}) => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await request(type, params); }
+      catch (error) {
+        if (!['session:get', 'session:diagnostics', 'storage:summary'].includes(type) || attempt >= 3 ||
+            !/message (?:channel|port).*closed|Receiving end does not exist|Service worker.*terminated|asynchronous response.*channel closed/i.test(error.message)) throw error;
+        await new Promise((resolve) => setTimeout(resolve, [100, 300, 800][attempt]));
+      }
+    }
+  };
   await call('settings:save', {
     settings: {
       apiKey: cfg.api_key,
@@ -141,6 +172,22 @@ try {
   if (s.phase !== 'playing') throw new Error('startup timeout');
   report.firstReadyMs = Date.now() - t;
   console.log('ready', report.firstReadyMs);
+  if (process.env.CHECK_TITLES) {
+    const localizedTitles = {};
+    for (const [language, title] of [
+      ['zh', '听译 · 原音色视频翻译'],
+      ['en', 'TimbraDub · Original-Voice Video Translation'],
+    ]) {
+      await call('ui:set', {language});
+      await panel.waitForFunction((title) => document.title === title, title);
+      localizedTitles[language] = await panel.evaluate(async () => ({
+        pageTitle: document.title, brand: document.querySelector('.brand strong')?.textContent,
+        originalVoiceLabel: document.querySelector('.brand span:last-child')?.textContent,
+        toolbarTitle: await chrome.action.getTitle({}),
+      }));
+    }
+    report.actions.push({localizedTitles});
+  }
   if (process.env.RESTART_WORKER) {
     const debug = await c.newCDPSession(panel);
     let version;
@@ -183,6 +230,7 @@ try {
   }
   await p.waitForTimeout(12000);
   const initial = await call('session:get');
+  if (initial.phase === 'error') throw new Error(initial.error ?? 'Playback entered an error state');
   report.snapshots.push({
     kind: 'initial',
     position: initial.position,
@@ -213,6 +261,20 @@ try {
   report.actions.push({ speed: playbackSpeed });
   if (playbackSpeed !== 1.5)
     throw new Error('Playback speed did not synchronize');
+  if (Number(process.env.EXTENDED_RATE_SECONDS) > 0) {
+    const started = Date.now(), sourceStart = (await call('session:get')).position;
+    while (Date.now() - started < Number(process.env.EXTENDED_RATE_SECONDS) * 1000) {
+      await p.waitForTimeout(5000);
+      const state = await call('session:get');
+      if (!state || state.phase === 'error') throw new Error(state?.error ?? 'session disappeared');
+      if (state.phase === 'ended') throw new Error('Video ended during the extended speed check');
+      report.snapshots.push({kind: 'extended-speed', at: Date.now(), position: state.position,
+        phase: state.phase, rate: state.rate, skipped: state.skipped});
+    }
+    const final = await call('session:get');
+    report.extendedSpeed = {rate: final.rate, wallSeconds: (Date.now() - started) / 1000, sourceSeconds: final.position - sourceStart};
+    if (final.rate !== 1.5 || final.position - sourceStart < 30) throw new Error('Extended 1.5x playback made insufficient source progress');
+  }
   await call('session:mix', {
     originalVolume: 0.1,
     dubVolume: 0.8,
@@ -308,6 +370,14 @@ try {
       const state = await call('session:get');
       if (!state) throw new Error('session disappeared');
       if (state.phase === 'error') throw new Error(state.error);
+      if (state.phase === 'paused') {
+        const close = p.locator('.bili-mini-close-icon,.bili-mini-close').first();
+        if (await close.isVisible().catch(() => false)) {
+          await close.click();
+          await p.locator('video').first().evaluate((v) => v.play());
+          report.actions.push({ dismissedOptionalLogin: true, at: Date.now() });
+        }
+      }
       if (state.phase === 'ended')
         throw new Error('Video ended before 20 minute acceptance');
       report.snapshots.push({
@@ -336,10 +406,11 @@ try {
           browserRssMiB: rss / 1024,
           extensionHeap: d.value?.heap,
           cacheBytes: d.value?.cacheBytes,
+          storage: await call('storage:summary'),
         });
         await fs.writeFile(
-          'work/playback-progress.json',
-          JSON.stringify(report, null, 2),
+          process.env.PLAYBACK_PROGRESS ?? 'work/playback-progress.json',
+          JSON.stringify({...report, diagnostics: d}, null, 2),
         );
         console.log('progress', JSON.stringify(report.snapshots.at(-1)));
       }
@@ -376,6 +447,8 @@ try {
   report.diagnostics = await call('session:diagnostics');
   await p.screenshot({ path: 'outputs/真实视频译音.png' });
   await call('session:stop');
+  report.diagnostics = await call('session:diagnostics');
+  report.diagnosticsCapturedAfterStop = true;
   report.restored = await p
     .locator('video')
     .first()
@@ -390,6 +463,7 @@ try {
     Math.abs(report.restored?.volume - 0.35) > 0.001
   )
     throw new Error('Original sound was not restored');
+  report.storageAfterStop = await call('storage:summary');
   report.ok = true;
 } catch (e) {
   report.ok = false;
@@ -399,6 +473,8 @@ try {
       report.failureState = s
         ? {
             phase: s.phase,
+            error: s.error,
+            diagnostic: s.diagnostic,
             position: s.position,
             inputThrough: s.inputThrough,
             readyThrough: s.readyThrough,
@@ -450,4 +526,6 @@ try {
     JSON.stringify(report, null, 2),
   );
   await c.close();
+  await fs.rm(profile, { recursive: true, force: true });
+  await fs.rm(extension, { recursive: true, force: true });
 }

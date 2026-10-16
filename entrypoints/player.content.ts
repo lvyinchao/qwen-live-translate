@@ -1,10 +1,15 @@
 import { decode64 } from '../lib/audio';
+import { sameArchiveUtterance } from '../lib/archive';
 import { activeSegment, planDub, clockDiscontinuity } from '../lib/timeline';
 import { mediaIdentity } from '../lib/adapters';
 import { pageVideos, inspectVideos, youtubePlayer } from '../lib/discovery';
 import type { PlaybackSession, TranslationSegment } from '../lib/types';
 import { normalizeUILanguage, t } from '../lib/i18n';
+import { isOlderStateVersion } from '../lib/session';
 import type { UILanguage } from '../lib/types';
+
+type TerminalReason = 'natural' | 'timeline-cut' | 'overlap-cut' | 'seek-stop' |
+  'language-switch' | 'stop' | 'error' | 'video-ended' | 'player-lost';
 
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
@@ -14,6 +19,7 @@ export default defineContentScript({
     let player: Player | null = null;
     let locale: UILanguage = 'en';
     let localeVersion = 0;
+    const mediaRescans = new Set<() => void>();
     void chrome.runtime
       .sendMessage({ target: 'background', type: 'ui:get' })
       .then((result) => {
@@ -44,7 +50,8 @@ export default defineContentScript({
             type: 'media:tencent-info',
             media,
           })
-          .catch(() => {});
+          .then(() => { for (const complete of [...mediaRescans]) complete(); })
+          .catch(() => { for (const complete of [...mediaRescans]) complete(); });
       },
       { signal: ctx.signal },
     );
@@ -54,6 +61,8 @@ export default defineContentScript({
       session: PlaybackSession;
       segments: TranslationSegment[] = [];
       audio = new Audio();
+      preloaded?: { segment: TranslationSegment; audio: HTMLAudioElement; blob: string };
+      audioListeners = new Map<HTMLAudioElement, AbortController>();
       host = document.createElement('div');
       caption = document.createElement('div');
       original: { muted: boolean; volume: number };
@@ -69,59 +78,30 @@ export default defineContentScript({
       loaded = false;
       anchor = { media: 0, audio: 0 };
       lastClock?: { position: number; at: number };
+      pendingSeek = false;
       epochStartPosition = 0;
+      sourceAtAttach = '';
       started = new Set<string>();
       skipped = new Set<string>();
+      terminated = new Set<string>();
+      endedMetrics = new Set<string>();
+      currentPreloadHit = false;
+      previousTickAt?: number;
+      tickGapMs = 0;
+      maxTickGapMs = 0;
+      pendingTerminals: Record<string, unknown>[] = [];
       timer: ReturnType<typeof setInterval>;
+      tickTimer: ReturnType<typeof setInterval>;
       frame?: number;
       constructor(video: HTMLVideoElement, session: PlaybackSession) {
         this.video = video;
         this.session = session;
         this.epochStartPosition = session.position;
+        this.sourceAtAttach = video.currentSrc || video.src;
         this.original = { muted: video.muted, volume: video.volume };
         this.pauseVideo();
         video.muted = true;
-        this.audio.preservesPitch = true;
-        this.audio.preload = 'auto';
-        this.audio.addEventListener(
-          'loadedmetadata',
-          () => {
-            this.loaded = true;
-            this.tick();
-          },
-          { signal: this.abort.signal },
-        );
-        this.audio.addEventListener(
-          'playing',
-          () => {
-            const s = this.current;
-            if (!s || this.started.has(s.id)) return;
-            this.started.add(s.id);
-            this.send('player:metric', {
-              kind: 'start',
-              segmentId: s.id,
-              mediaTime: video.currentTime,
-              error: video.currentTime - s.start,
-              partial: s.start < this.epochStartPosition - 0.3,
-              rate: this.audio.playbackRate,
-            });
-          },
-          { signal: this.abort.signal },
-        );
-        this.audio.addEventListener(
-          'ended',
-          () => {
-            const s = this.current;
-            if (s)
-              this.send('player:metric', {
-                kind: 'end',
-                segmentId: s.id,
-                mediaTime: video.currentTime,
-                error: video.currentTime - s.end,
-              });
-          },
-          { signal: this.abort.signal },
-        );
+        this.configureAudio(this.audio);
         this.host.dataset.qvdOverlay = '';
         this.host.style.cssText =
           'position:absolute;inset:0;pointer-events:none;z-index:2147483646;';
@@ -152,7 +132,8 @@ export default defineContentScript({
           this.tick();
         });
         listen('seeking', () => {
-          this.clearAudio();
+          this.pendingSeek = true;
+          this.clearAudio(true, 'seek-stop');
           this.segments = [];
           this.session.phase = 'buffering';
           this.lastClock = {
@@ -187,7 +168,7 @@ export default defineContentScript({
           this.clock();
         });
         listen('ended', () => {
-          this.clearAudio();
+          this.clearAudio(true, 'video-ended');
           this.clock();
         });
         document.addEventListener(
@@ -201,10 +182,17 @@ export default defineContentScript({
             if (this.audioBlocked) {
               this.audioBlocked = false;
               this.userPaused = false;
-              void this.audio
+              const audio = this.audio;
+              this.audioStage('play-call');
+              void audio
                 .play()
-                .then(() => this.resumeVideo())
+                .then(() => {
+                  if (this.abort.signal.aborted || audio !== this.audio) return;
+                  this.audioStage('play-resolved');
+                  return this.resumeVideo();
+                })
                 .catch(() => {
+                  if (this.abort.signal.aborted || audio !== this.audio) return;
                   this.audioBlocked = true;
                   this.userPaused = true;
                   this.pauseVideo();
@@ -213,17 +201,20 @@ export default defineContentScript({
           },
           { signal: this.abort.signal },
         );
+        this.tickTimer = setInterval(() => this.tick(), 50);
         this.timer = setInterval(() => {
           if (
             !video.isConnected ||
+            (!['youtube', 'bilibili'].includes(session.candidate.site) &&
+              (video.currentSrc || video.src) !== this.sourceAtAttach) ||
             mediaIdentity(location.href) !==
               (session.candidate.frameMediaId ?? session.candidate.mediaId) ||
             document.querySelector('#movie_player.ad-showing') ||
             (session.candidate.site === 'youtube' &&
               youtubePlayer(inspectVideos(true))[0]?.id !== video.dataset.qvdId)
           ) {
-            this.send('player:lost');
-            this.destroy();
+            this.destroy('player-lost');
+            this.send('player:lost', { terminals: this.takeTerminals() });
             if (player === this) player = null;
             return;
           }
@@ -236,6 +227,144 @@ export default defineContentScript({
           this.frame = video.requestVideoFrameCallback?.(frame);
         };
         this.frame = video.requestVideoFrameCallback?.(frame);
+      }
+      configureAudio(audio: HTMLAudioElement) {
+        const controller = new AbortController();
+        this.audioListeners.set(audio, controller);
+        audio.volume = this.session.dubVolume;
+        audio.preservesPitch = true;
+        audio.preload = 'auto';
+        audio.addEventListener(
+          'loadedmetadata',
+          () => {
+            const segment = audio === this.audio ? this.current :
+              this.preloaded?.audio === audio ? this.preloaded.segment : undefined;
+            if (segment) this.audioStage('metadata', audio, segment);
+            if (audio !== this.audio || audio.currentSrc !== this.blob) return;
+            this.loaded = true;
+            this.tick();
+          },
+          { signal: controller.signal },
+        );
+        audio.addEventListener(
+          'playing',
+          () => {
+            if (audio !== this.audio || audio.currentSrc !== this.blob) return;
+            const s = this.current;
+            if (!s || this.started.has(s.id)) return;
+            this.started.add(s.id);
+            this.audioStage('playing');
+            this.send('player:metric', {
+              ...this.audioSnapshot(),
+              kind: 'start',
+              segmentId: s.id,
+              mediaTime: this.video.currentTime,
+              error: this.video.currentTime - s.start,
+              partial: s.start < this.epochStartPosition - 0.3,
+              rate: audio.playbackRate,
+            });
+          },
+          { signal: controller.signal },
+        );
+        audio.addEventListener(
+          'ended',
+          () => {
+            if (audio !== this.audio || audio.currentSrc !== this.blob) return;
+            const s = this.current;
+            if (s && !this.endedMetrics.has(s.id)) {
+              this.endedMetrics.add(s.id);
+              this.send('player:metric', {
+                ...this.audioSnapshot(),
+                kind: 'end',
+                segmentId: s.id,
+                mediaTime: this.video.currentTime,
+                error: this.video.currentTime - s.end,
+              });
+              this.finishCurrent('natural');
+            }
+          },
+          { signal: controller.signal },
+        );
+      }
+      audioSnapshot(audio = this.audio, segment = this.current) {
+        return {
+          frontendAt: performance.now(),
+          videoTime: this.video.currentTime,
+          audioTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+          audioDuration: segment?.audioDuration,
+          sourceStart: segment?.start,
+          sourceEnd: segment?.end,
+          readyState: audio.readyState,
+          preloadHit: audio === this.audio ? this.currentPreloadHit : this.preloaded?.audio === audio,
+          readyThrough: this.session.readyThrough,
+          stateVersion: this.session.stateVersion ?? 0,
+          tickGapMs: this.tickGapMs,
+          maxTickGapMs: this.maxTickGapMs,
+          videoRate: this.video.playbackRate,
+          audioRate: audio.playbackRate,
+          videoPaused: this.video.paused,
+          audioPaused: audio.paused,
+          phase: this.session.phase,
+        };
+      }
+      audioStage(stage: string, audio = this.audio, segment = this.current) {
+        if (!segment) return;
+        this.send('player:metric', { kind: 'audio-stage', stage, segmentId: segment.id,
+          ...this.audioSnapshot(audio, segment) });
+      }
+      finishCurrent(reason: TerminalReason) {
+        const segment = this.current;
+        if (!segment || !this.started.has(segment.id) || this.terminated.has(segment.id)) return;
+        this.terminated.add(segment.id);
+        const remaining = Math.max(0, segment.audioDuration - this.audio.currentTime);
+        const actualReason = this.audio.ended || remaining === 0 ? 'natural' : reason;
+        const event = { kind: 'terminal', reason: actualReason, segmentId: segment.id,
+          ...this.audioSnapshot(), sourceTime: this.video.currentTime,
+          remaining, error: this.video.currentTime - segment.end };
+        const message = { type: 'player:metric', sessionId: this.session.id,
+          epoch: this.session.epoch, languageVersion: this.session.languageVersion ?? 0, ...event };
+        this.pendingTerminals.push(message);
+        this.send('player:metric', event);
+        if (remaining > 0 && actualReason !== 'natural' &&
+            ['timeline-cut', 'overlap-cut'].includes(actualReason) && !this.skipped.has(segment.id)) {
+          this.skipped.add(segment.id);
+          this.send('player:skip', { segmentId: segment.id, remaining, reason: actualReason });
+        }
+      }
+      takeTerminals() {
+        return this.pendingTerminals.splice(0);
+      }
+      releaseAudio(audio: HTMLAudioElement) {
+        this.audioListeners.get(audio)?.abort();
+        this.audioListeners.delete(audio);
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        audio.remove();
+      }
+      clearPreload() {
+        if (!this.preloaded) return;
+        this.releaseAudio(this.preloaded.audio);
+        URL.revokeObjectURL(this.preloaded.blob);
+        this.preloaded = undefined;
+      }
+      preloadUpcoming() {
+        if (this.abort.signal.aborted) return;
+        const position = this.video.currentTime;
+        const candidate = [
+          activeSegment(this.segments, position),
+          ...this.segments.filter((segment) => segment.start > position).sort((a, b) => a.start - b.start),
+        ].find((segment) => segment && segment.id !== this.current?.id);
+        if (!candidate || candidate.id === this.preloaded?.segment.id) return;
+        this.clearPreload();
+        const audio = new Audio();
+        const blob = URL.createObjectURL(new Blob([decode64(candidate.audio)], { type: 'audio/wav' }));
+        this.configureAudio(audio);
+        this.preloaded = { segment: candidate, audio, blob };
+        this.audio.parentNode?.appendChild(audio);
+        audio.src = blob;
+        audio.load();
+        this.audioStage('preload', audio, candidate);
       }
       send(type: string, data: Record<string, unknown> = {}) {
         void chrome.runtime
@@ -261,7 +390,8 @@ export default defineContentScript({
             this.video.playbackRate,
           )
         ) {
-          this.clearAudio();
+          this.pendingSeek = true;
+          this.clearAudio(true, 'seek-stop');
           this.segments = [];
           this.session.phase = 'buffering';
           this.lastClock = { position, at: now };
@@ -299,21 +429,27 @@ export default defineContentScript({
           }
         }
       }
-      state(next: PlaybackSession) {
+      state(next: PlaybackSession): boolean {
         const version = next.languageVersion ?? 0;
         const currentVersion = this.session.languageVersion ?? 0;
         if (
           next.id !== this.session.id ||
           version < currentVersion ||
-          (version === currentVersion && next.epoch < this.session.epoch)
+          (version === currentVersion && next.language !== this.session.language) ||
+          (version === currentVersion && next.epoch < this.session.epoch) ||
+          isOlderStateVersion(this.session, next) ||
+          (this.pendingSeek && version === currentVersion && next.epoch <= this.session.epoch)
         )
-          return;
+          return false;
         if (next.epoch !== this.session.epoch || version !== currentVersion) {
+          this.pendingSeek = false;
           this.epochStartPosition = next.position;
-          this.clearAudio();
+          this.clearAudio(true, version !== currentVersion ? 'language-switch' : 'seek-stop');
           this.segments = [];
           this.skipped.clear();
           this.started.clear();
+          this.terminated.clear();
+          this.endedMetrics.clear();
         }
         this.session = next;
         this.mix(next.originalVolume, next.dubVolume, next.subtitles);
@@ -326,27 +462,27 @@ export default defineContentScript({
           this.audio.pause();
         } else if (next.phase === 'playing') void this.resumeVideo();
         this.tick();
+        return true;
       }
-      add(segment: TranslationSegment, epoch: number, languageVersion = 0) {
+      add(segment: TranslationSegment, epoch: number, languageVersion = 0): boolean {
         if (
           epoch !== this.session.epoch ||
           languageVersion !== (this.session.languageVersion ?? 0) ||
-          segment.language !== this.session.language
+          segment.language !== this.session.language ||
+          segment.mediaId !== this.session.candidate.mediaId
         )
-          return;
+          return false;
         this.segments = this.segments.filter(
           (s) =>
             s.id !== segment.id &&
-            !(
-              Math.abs(s.start - segment.start) < 0.05 &&
-              Math.abs(s.end - segment.end) < 0.05
-            ),
+            !sameArchiveUtterance(s, segment),
         );
         this.segments.push(segment);
         this.segments = this.segments.filter(
           (s) => s.end > this.video.currentTime - 300,
         );
         this.tick();
+        return true;
       }
       mix(original: number, dub: number, subtitles: boolean) {
         this.session.originalVolume = original;
@@ -355,6 +491,7 @@ export default defineContentScript({
         this.video.muted = original === 0;
         this.video.volume = original;
         this.audio.volume = dub;
+        if (this.preloaded) this.preloaded.audio.volume = dub;
         this.caption.hidden = !subtitles;
       }
       placeOverlay() {
@@ -375,18 +512,36 @@ export default defineContentScript({
           parent.append(this.host);
       }
 
-      clearAudio() {
+      clearAudio(clearPreload = false, reason: TerminalReason = 'timeline-cut') {
+        this.finishCurrent(reason);
+        if (clearPreload) this.clearPreload();
         this.audio.pause();
         this.audio.removeAttribute('src');
         if (this.blob) URL.revokeObjectURL(this.blob);
         this.blob = undefined;
         this.current = undefined;
         this.loaded = false;
+        this.playPending = false;
+        this.currentPreloadHit = false;
       }
       tick() {
         if (this.abort.signal.aborted) return;
+        const now = performance.now();
+        this.tickGapMs = this.previousTickAt === undefined ? 0 : Math.max(0, now - this.previousTickAt);
+        this.previousTickAt = now;
+        this.maxTickGapMs = Math.max(this.maxTickGapMs, this.tickGapMs);
         const position = this.video.currentTime;
+        this.preloadUpcoming();
         const segment = activeSegment(this.segments, position);
+        // Enforce the last acknowledged boundary locally; a delayed round trip
+        // must not let the picture run through an untranslated interval.
+        if (!this.buffering() && !this.video.paused &&
+            position >= this.session.readyThrough - 0.02 &&
+            position < this.session.candidate.duration - 0.02) {
+          this.session.phase = 'buffering';
+          this.pauseVideo();
+          this.clock();
+        }
         if (this.buffering()) {
           this.audio.pause();
           this.caption.textContent =
@@ -401,18 +556,7 @@ export default defineContentScript({
           return;
         }
         if (this.current && this.current.id !== segment?.id) {
-          if (
-            position >= this.current.end - 0.03 &&
-            this.audio.currentTime < this.current.audioDuration - 0.1 &&
-            !this.skipped.has(this.current.id)
-          ) {
-            this.skipped.add(this.current.id);
-            this.send('player:skip', {
-              segmentId: this.current.id,
-              remaining: this.current.audioDuration - this.audio.currentTime,
-            });
-          }
-          this.clearAudio();
+          this.clearAudio(false, position < this.current.end ? 'overlap-cut' : 'timeline-cut');
         }
         if (!segment) {
           this.caption.replaceChildren();
@@ -422,10 +566,20 @@ export default defineContentScript({
           this.clearAudio();
           this.current = segment;
           this.anchor = { media: segment.start, audio: 0 };
-          this.blob = URL.createObjectURL(
-            new Blob([decode64(segment.audio)], { type: 'audio/wav' }),
-          );
-          this.audio.src = this.blob;
+          this.currentPreloadHit = this.preloaded?.segment.id === segment.id;
+          if (this.preloaded?.segment.id === segment.id) {
+            this.releaseAudio(this.audio);
+            this.audio = this.preloaded.audio;
+            this.audio.volume = this.session.dubVolume;
+            this.blob = this.preloaded.blob;
+            this.preloaded = undefined;
+            this.loaded = this.audio.readyState >= HTMLMediaElement.HAVE_METADATA;
+          } else {
+            this.blob = URL.createObjectURL(new Blob([decode64(segment.audio)], { type: 'audio/wav' }));
+            this.audio.src = this.blob;
+          }
+          this.audioStage('activate');
+          this.preloadUpcoming();
           const source = document.createElement('div'),
             translated = document.createElement('div');
           source.className = 'line source';
@@ -446,22 +600,37 @@ export default defineContentScript({
           this.anchor.audio +
           ((position - this.anchor.media) / this.video.playbackRate) *
             plan.rate;
-        if (position >= segment.end || offset >= segment.audioDuration) {
+        if (position >= segment.end) {
+          this.finishCurrent('timeline-cut');
           this.audio.pause();
           return;
         }
+        if (this.audio.ended || this.audio.currentTime >= segment.audioDuration) {
+          this.finishCurrent('natural');
+          return;
+        }
+        if (this.terminated.has(segment.id)) return;
         this.audio.playbackRate = plan.rate;
-        if (Math.abs(this.audio.currentTime - offset) > 0.12)
+        // The source clock predicts completion, but the media element can lag by
+        // tens of milliseconds. Let its real tail finish before the source turn
+        // ends; seeking/pausing at the predicted end silently cuts that tail.
+        if (offset < segment.audioDuration && Math.abs(this.audio.currentTime - offset) > 0.12)
           this.audio.currentTime = Math.max(
             0,
             Math.min(offset, segment.audioDuration),
           );
         if (this.audio.paused && !this.playPending && !this.audioBlocked) {
           this.playPending = true;
-          void this.audio
+          const audio = this.audio;
+          this.audioStage('play-call');
+          void audio
             .play()
+            .then(() => {
+              if (this.abort.signal.aborted || audio !== this.audio || this.current?.id !== segment.id) return;
+              this.audioStage('play-resolved');
+            })
             .catch(() => {
-              if (!this.current || this.current.id !== segment.id) return;
+              if (this.abort.signal.aborted || audio !== this.audio || !this.current || this.current.id !== segment.id) return;
               this.audioBlocked = true;
               this.userPaused = true;
               this.pauseVideo();
@@ -472,17 +641,19 @@ export default defineContentScript({
               this.clock();
             })
             .finally(() => {
-              this.playPending = false;
+              if (audio === this.audio) this.playPending = false;
             });
         }
       }
-      destroy() {
+      destroy(reason: TerminalReason = 'stop') {
         if (this.abort.signal.aborted) return;
         this.abort.abort();
         clearInterval(this.timer);
+        clearInterval(this.tickTimer);
         if (this.frame !== undefined)
           this.video.cancelVideoFrameCallback?.(this.frame);
-        this.clearAudio();
+        this.clearAudio(true, reason);
+        this.releaseAudio(this.audio);
         this.host.remove();
         this.video.muted = this.original.muted;
         this.video.volume = this.original.volume;
@@ -490,6 +661,22 @@ export default defineContentScript({
     }
     chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (sender.id !== chrome.runtime.id) return;
+      if (message.type === 'player:rescan-media') {
+        // Other frames must not win tabs.sendMessage's first-response race.
+        if (location.hostname !== 'v.qq.com') return;
+        let done = false;
+        const complete = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          mediaRescans.delete(complete);
+          respond({ ok: true });
+        };
+        const timer = setTimeout(complete, 300);
+        mediaRescans.add(complete);
+        window.postMessage({ type: 'qvd:request-media' }, location.origin);
+        return true;
+      }
       if (message.type === 'ui:changed') {
         localeVersion++;
         locale = normalizeUILanguage(message.language);
@@ -525,7 +712,7 @@ export default defineContentScript({
           (v) => selected === s.candidate.id && v.dataset.qvdId === selected,
         );
         if (video) player = new Player(video, s);
-        respond({ ok: Boolean(video) });
+        respond({ ok: Boolean(video), position: video?.currentTime, rate: video?.playbackRate, userPaused: player?.userPaused });
         return;
       }
       if (message.type === 'player:language') {
@@ -548,30 +735,44 @@ export default defineContentScript({
           readyThrough: position,
           inputThrough: position,
         });
-        respond({ ok: true, position, rate, userPaused });
+        respond({ ok: true, position, rate, userPaused, terminals: player.takeTerminals() });
         return;
       }
       if (message.type === 'player:stop') {
+        if (message.sessionId && player?.session.id !== message.sessionId) {
+          respond({ ok: false });
+          return;
+        }
         player?.destroy();
+        const terminals = player?.takeTerminals() ?? [];
         player = null;
-        respond({ ok: true });
+        respond({ ok: true, terminals });
         return;
       }
       if (message.type === 'player:state') {
-        player?.state(message.session);
-        if (message.session.phase === 'error') {
-          player?.destroy();
+        const accepted = player?.state(message.session) ?? false;
+        if (accepted && message.session.phase === 'error') {
+          player?.destroy('error');
+          const terminals = player?.takeTerminals() ?? [];
           player = null;
+          respond({ ok: true, terminals });
+          return;
         }
-        respond({ ok: true });
+        respond({ ok: accepted, terminals: accepted ? player?.takeTerminals() : [] });
         return;
       }
       if (message.type === 'player:segment') {
-        player?.add(message.segment, message.epoch, message.languageVersion);
-        respond({ ok: true });
+        const accepted = player?.add(message.segment, message.epoch, message.languageVersion) ?? false;
+        respond({ ok: accepted, terminals: accepted ? player?.takeTerminals() : [] });
         return;
       }
       if (message.type === 'player:mix') {
+        if ((message.sessionId && player?.session.id !== message.sessionId) ||
+            (message.languageVersion !== undefined &&
+              (player?.session.languageVersion ?? 0) !== message.languageVersion)) {
+          respond({ ok: false });
+          return;
+        }
         player?.mix(
           message.originalVolume,
           message.dubVolume,

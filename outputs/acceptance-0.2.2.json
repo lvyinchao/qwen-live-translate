@@ -1,0 +1,1298 @@
+{
+  "at": "2026-10-16T08:38:12.514Z",
+  "scope": "Summaries of explicitly supplied report files; inspect each provenance and pass field. Headless Chromium software measurements, with no acoustic loopback or hardware A/V measurement and no numerical speaker-similarity score.",
+  "methodology": {
+    "onset": "Absolute source-video currentTime minus model source-turn start at audio playing. Excludes partial seek entries and utterances with skipped tails.",
+    "end": "All observed natural audio ended events, including partial seek entries if present; a different population from eligible onsets. Source-video currentTime minus model source-turn end; shortened speech intentionally leaves a gap. Truncated tails are skips, not natural completed ends.",
+    "completion": "Every unique started utterance is classified from a terminal event when available. Legacy reports lack small-cut and stop classifications; missing terminals are shown explicitly, not counted as completion. Onset eligibility excludes recorded timeline/overlap cuts; legacy eligibility is incomplete for tails of 100 ms or less.",
+    "buffering": "Five-second sampling during continuous playback and any extended-speed interval, excluding startup and intentional pause/speed setup; approximate dwell ratio.",
+    "cost": "Per-session maximum cumulative usage at response.done, then summed. Official configured-region list prices; incomplete/aborted responses may not report usage, so values are lower bounds, not an account bill. No usage or unknown region is null. Watch-hour extrapolation is available only for a measured continuous run and includes startup/prefetch/retries recorded in that report. No claim of full provider-billing coverage.",
+    "pricing": "https://help.aliyun.com/zh/model-studio/model-pricing",
+    "memory": "RSS includes all processes in the isolated test browser and its video page. Observed offscreen V8 heap is approximate. Cache data sizes exclude database/filesystem metadata."
+  },
+  "records": [
+    {
+      "file": "acceptance-022-release-long-en-zh.json",
+      "at": "2026-10-16T07:47:23.784Z",
+      "version": "0.2.2",
+      "buildSha256": "8823267ec4059126957ab3e709ba6ffb56f5bf87e540c4ef509d1c04fb8482f3",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 88408128,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1Fc411Q7bN/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 22
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": null,
+        "droppedDebugEvents": null,
+        "capturedAfterStop": false
+      },
+      "firstReadyMs": 35900,
+      "continuousSourceSeconds": 1201.049131,
+      "continuousWallSeconds": 1284.078,
+      "extendedSpeed": null,
+      "actions": [
+        {
+          "workerRestart": true,
+          "workerStates": [
+            "running",
+            "stopping",
+            "stopped",
+            "starting",
+            "starting",
+            "starting",
+            "running"
+          ],
+          "sameSession": true
+        },
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 416,
+        "eligible": 333,
+        "valid": 333,
+        "invalid": 0,
+        "absoluteP95Ms": 43.525000000000006,
+        "outlierCountOver300Ms": 1,
+        "outliersOver300Ms": [
+          {
+            "epoch": 1,
+            "languageVersion": 0,
+            "segmentId": "item_AZOdqy4XVNAqXDxBqxRy2",
+            "errorMs": 869.5459999999997,
+            "mediaTime": 121.169546
+          }
+        ]
+      },
+      "ends": {
+        "completed": 5,
+        "valid": 5,
+        "invalid": 0,
+        "signedP50Ms": 27.122000000076696,
+        "absoluteP95Ms": 35.42400000003454
+      },
+      "completionCoverage": {
+        "format": "legacy-incomplete",
+        "uniqueStarts": 416,
+        "classified": 88,
+        "unclassified": 328,
+        "reasons": {
+          "natural-event": 5,
+          "legacy-cut-over-100ms": 83
+        },
+        "smallTimelineCuts": 0,
+        "largeTimelineCuts": 0,
+        "limitation": "Legacy skip events recorded only tails above 100 ms. Other starts may include unrecorded small cuts, seeks, stops or active audio at capture."
+      },
+      "skips": {
+        "utterances": 83,
+        "playedOrSkipped": 416,
+        "ratio": 0.19951923076923078,
+        "remainingAudioSeconds": 49.888774000000026,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 3,
+        "sampledWallMs": 1278343,
+        "sampledBufferMs": 81053,
+        "approximateWallRatio": 0.06340473566171208
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 12537,
+          "outputAudio": 16272,
+          "outputText": 5803
+        },
+        "sessionsWithReportedUsage": 22,
+        "knownUsageRecords": 655,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 3.6853,
+        "listPriceLowerBoundPerSourceVideoHourCny": 11.046242537100674,
+        "listPriceLowerBoundPerWallWatchHourCny": 10.331989178227492,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 22,
+        "browserRssPeakMiB": 1698.65625,
+        "offscreenObservedHeapPeakBytes": 49554110,
+        "playbackCachePeakDataBytes": 88408128
+      }
+    },
+    {
+      "file": "acceptance-022-release-ja-zh.json",
+      "at": "2026-10-16T07:47:23.301Z",
+      "version": "0.2.2",
+      "buildSha256": "8823267ec4059126957ab3e709ba6ffb56f5bf87e540c4ef509d1c04fb8482f3",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 3956146,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1gE411B7vy/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 7
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": null,
+        "droppedDebugEvents": null,
+        "capturedAfterStop": false
+      },
+      "firstReadyMs": 35725,
+      "extendedSpeed": null,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 50321
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 27456
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 9703
+        },
+        {
+          "rapidSeekFinal": 20,
+          "phase": "buffering",
+          "epoch": 7
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 13,
+        "eligible": 10,
+        "valid": 10,
+        "invalid": 0,
+        "absoluteP95Ms": 295.9280000000035,
+        "outlierCountOver300Ms": 0,
+        "outliersOver300Ms": []
+      },
+      "ends": {
+        "completed": 2,
+        "valid": 2,
+        "invalid": 0,
+        "signedP50Ms": -149.05800000000013,
+        "absoluteP95Ms": 149.05800000000013
+      },
+      "completionCoverage": {
+        "format": "legacy-incomplete",
+        "uniqueStarts": 13,
+        "classified": 5,
+        "unclassified": 8,
+        "reasons": {
+          "natural-event": 2,
+          "legacy-cut-over-100ms": 3
+        },
+        "smallTimelineCuts": 0,
+        "largeTimelineCuts": 0,
+        "limitation": "Legacy skip events recorded only tails above 100 ms. Other starts may include unrecorded small cuts, seeks, stops or active audio at capture."
+      },
+      "skips": {
+        "utterances": 3,
+        "playedOrSkipped": 13,
+        "ratio": 0.23076923076923078,
+        "remainingAudioSeconds": 1.6003630000000002,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 0,
+        "sampledWallMs": 0,
+        "sampledBufferMs": 0,
+        "approximateWallRatio": null
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1036,
+          "outputAudio": 1133,
+          "outputText": 417
+        },
+        "sessionsWithReportedUsage": 5,
+        "knownUsageRecords": 58,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.26442,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    },
+    {
+      "file": "acceptance-022-release-zh-en.json",
+      "at": "2026-10-16T07:47:23.685Z",
+      "version": "0.2.2",
+      "buildSha256": "8823267ec4059126957ab3e709ba6ffb56f5bf87e540c4ef509d1c04fb8482f3",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 5788284,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1Gs4y1P7L1/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 6
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": null,
+        "droppedDebugEvents": null,
+        "capturedAfterStop": false
+      },
+      "firstReadyMs": 34664,
+      "extendedSpeed": null,
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 48047
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 24467
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 8518
+        },
+        {
+          "rapidSeekFinal": 20,
+          "phase": "buffering",
+          "epoch": 7
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 17,
+        "eligible": 9,
+        "valid": 9,
+        "invalid": 0,
+        "absoluteP95Ms": 170.99599999999882,
+        "outlierCountOver300Ms": 0,
+        "outliersOver300Ms": []
+      },
+      "ends": {
+        "completed": 2,
+        "valid": 2,
+        "invalid": 0,
+        "signedP50Ms": -396.3070000000073,
+        "absoluteP95Ms": 396.3070000000073
+      },
+      "completionCoverage": {
+        "format": "legacy-incomplete",
+        "uniqueStarts": 17,
+        "classified": 9,
+        "unclassified": 8,
+        "reasons": {
+          "natural-event": 2,
+          "legacy-cut-over-100ms": 7
+        },
+        "smallTimelineCuts": 0,
+        "largeTimelineCuts": 0,
+        "limitation": "Legacy skip events recorded only tails above 100 ms. Other starts may include unrecorded small cuts, seeks, stops or active audio at capture."
+      },
+      "skips": {
+        "utterances": 7,
+        "playedOrSkipped": 17,
+        "ratio": 0.4117647058823529,
+        "remainingAudioSeconds": 8.288422999999998,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 0,
+        "sampledWallMs": 0,
+        "sampledBufferMs": 0,
+        "approximateWallRatio": null
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1029,
+          "outputAudio": 1861,
+          "outputText": 726
+        },
+        "sessionsWithReportedUsage": 5,
+        "knownUsageRecords": 56,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.41152,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    },
+    {
+      "file": "acceptance-022-release-extended-ja-zh.json",
+      "at": "2026-10-16T07:52:59.578Z",
+      "version": "0.2.2",
+      "buildSha256": "8823267ec4059126957ab3e709ba6ffb56f5bf87e540c4ef509d1c04fb8482f3",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 7141580,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1gE411B7vy/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 8
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": null,
+        "droppedDebugEvents": null,
+        "capturedAfterStop": false
+      },
+      "firstReadyMs": 34701,
+      "extendedSpeed": {
+        "rate": 1.5,
+        "wallSeconds": 90.313,
+        "sourceSeconds": 62.246776
+      },
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 48199
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 655
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 5,
+          "waitMs": 9761
+        },
+        {
+          "rapidSeekFinal": 20,
+          "phase": "playing",
+          "epoch": 8
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 34,
+        "eligible": 23,
+        "valid": 23,
+        "invalid": 0,
+        "absoluteP95Ms": 41.86700000000343,
+        "outlierCountOver300Ms": 0,
+        "outliersOver300Ms": []
+      },
+      "ends": {
+        "completed": 4,
+        "valid": 4,
+        "invalid": 0,
+        "signedP50Ms": -34.79700000000108,
+        "absoluteP95Ms": 398.78699999999867
+      },
+      "completionCoverage": {
+        "format": "legacy-incomplete",
+        "uniqueStarts": 34,
+        "classified": 13,
+        "unclassified": 21,
+        "reasons": {
+          "natural-event": 3,
+          "legacy-cut-over-100ms": 10
+        },
+        "smallTimelineCuts": 0,
+        "largeTimelineCuts": 0,
+        "limitation": "Legacy skip events recorded only tails above 100 ms. Other starts may include unrecorded small cuts, seeks, stops or active audio at capture."
+      },
+      "skips": {
+        "utterances": 10,
+        "playedOrSkipped": 34,
+        "ratio": 0.29411764705882354,
+        "remainingAudioSeconds": 7.993618000000001,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 1,
+        "sampledWallMs": 85267,
+        "sampledBufferMs": 45144,
+        "approximateWallRatio": 0.5294428090586042
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1603,
+          "outputAudio": 1608,
+          "outputText": 603
+        },
+        "sessionsWithReportedUsage": 7,
+        "knownUsageRecords": 84,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.3817,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    },
+    {
+      "file": "acceptance-022-release-extended-zh-en.json",
+      "at": "2026-10-16T07:53:00.959Z",
+      "version": "0.2.2",
+      "buildSha256": "8823267ec4059126957ab3e709ba6ffb56f5bf87e540c4ef509d1c04fb8482f3",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 10998642,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1Gs4y1P7L1/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 7
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": null,
+        "droppedDebugEvents": null,
+        "capturedAfterStop": false
+      },
+      "firstReadyMs": 35936,
+      "extendedSpeed": {
+        "rate": 1.5,
+        "wallSeconds": 90.46,
+        "sourceSeconds": 60.318203
+      },
+      "actions": [
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 47832
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 560
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 9711
+        },
+        {
+          "rapidSeekFinal": 20,
+          "phase": "buffering",
+          "epoch": 8
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 39,
+        "eligible": 13,
+        "valid": 13,
+        "invalid": 0,
+        "absoluteP95Ms": 88.05899999998701,
+        "outlierCountOver300Ms": 0,
+        "outliersOver300Ms": []
+      },
+      "ends": {
+        "completed": 1,
+        "valid": 1,
+        "invalid": 0,
+        "signedP50Ms": -69.68600000000436,
+        "absoluteP95Ms": 69.68600000000436
+      },
+      "completionCoverage": {
+        "format": "legacy-incomplete",
+        "uniqueStarts": 39,
+        "classified": 26,
+        "unclassified": 13,
+        "reasons": {
+          "natural-event": 1,
+          "legacy-cut-over-100ms": 25
+        },
+        "smallTimelineCuts": 0,
+        "largeTimelineCuts": 0,
+        "limitation": "Legacy skip events recorded only tails above 100 ms. Other starts may include unrecorded small cuts, seeks, stops or active audio at capture."
+      },
+      "skips": {
+        "utterances": 25,
+        "playedOrSkipped": 39,
+        "ratio": 0.6410256410256411,
+        "remainingAudioSeconds": 40.63028899999999,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 1,
+        "sampledWallMs": 85434,
+        "sampledBufferMs": 50142,
+        "approximateWallRatio": 0.5869091930613105
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1512,
+          "outputAudio": 2803,
+          "outputText": 1081
+        },
+        "sessionsWithReportedUsage": 5,
+        "knownUsageRecords": 85,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.61706,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    },
+    {
+      "file": "acceptance-022-delivery-en-zh.json",
+      "at": "2026-10-16T08:07:38.506Z",
+      "version": "0.2.2",
+      "buildSha256": "876c219bd2c2cdbdd1221a974b8eb733f9cb2b5c4d5fa697958c729a433a35ae",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 5509688,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1Fc411Q7bN/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 6
+      },
+      "synchronizationPassed": false,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": null,
+        "droppedDebugEvents": null,
+        "capturedAfterStop": false
+      },
+      "firstReadyMs": 34252,
+      "extendedSpeed": null,
+      "actions": [
+        {
+          "workerRestart": true,
+          "workerStates": [
+            "running",
+            "stopping",
+            "stopped",
+            "starting",
+            "starting",
+            "starting",
+            "running"
+          ],
+          "sameSession": true
+        },
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 49937
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 23974
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 8648
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 23,
+        "eligible": 12,
+        "valid": 12,
+        "invalid": 0,
+        "absoluteP95Ms": 471.9319999999989,
+        "outlierCountOver300Ms": 1,
+        "outliersOver300Ms": [
+          {
+            "epoch": 1,
+            "languageVersion": 0,
+            "segmentId": "item_IZqx5zLUr9C1VUDAkdf3h",
+            "errorMs": 471.9319999999989,
+            "mediaTime": 28.119932
+          }
+        ]
+      },
+      "ends": {
+        "completed": 1,
+        "valid": 1,
+        "invalid": 0,
+        "signedP50Ms": -31.281000000000002,
+        "absoluteP95Ms": 31.281000000000002
+      },
+      "completionCoverage": {
+        "format": "legacy-incomplete",
+        "uniqueStarts": 23,
+        "classified": 11,
+        "unclassified": 12,
+        "reasons": {
+          "natural-event": 1,
+          "legacy-cut-over-100ms": 10
+        },
+        "smallTimelineCuts": 0,
+        "largeTimelineCuts": 0,
+        "limitation": "Legacy skip events recorded only tails above 100 ms. Other starts may include unrecorded small cuts, seeks, stops or active audio at capture."
+      },
+      "skips": {
+        "utterances": 10,
+        "playedOrSkipped": 23,
+        "ratio": 0.43478260869565216,
+        "remainingAudioSeconds": 4.426299,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 0,
+        "sampledWallMs": 0,
+        "sampledBufferMs": 0,
+        "approximateWallRatio": null
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1281,
+          "outputAudio": 1542,
+          "outputText": 605
+        },
+        "sessionsWithReportedUsage": 5,
+        "knownUsageRecords": 73,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.35846,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    },
+    {
+      "file": "acceptance-022-tailfix-extended-ja-zh.json",
+      "at": "2026-10-16T08:24:11.926Z",
+      "version": "0.2.2",
+      "buildSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 7156898,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1gE411B7vy/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 8
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": 0,
+        "droppedDebugEvents": 0,
+        "capturedAfterStop": true
+      },
+      "firstReadyMs": 35113,
+      "extendedSpeed": {
+        "rate": 1.5,
+        "wallSeconds": 90.877,
+        "sourceSeconds": 67.097436
+      },
+      "actions": [
+        {
+          "localizedTitles": {
+            "zh": {
+              "pageTitle": "听译 · 原音色视频翻译",
+              "brand": "听译",
+              "originalVoiceLabel": "原声音色",
+              "toolbarTitle": "打开听译 · 原音色视频翻译"
+            },
+            "en": {
+              "pageTitle": "TimbraDub · Original-Voice Video Translation",
+              "brand": "TimbraDub",
+              "originalVoiceLabel": "ORIGINAL VOICE",
+              "toolbarTitle": "Open TimbraDub · Original-Voice Video Translation"
+            }
+          }
+        },
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 48810
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 670
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 10676
+        },
+        {
+          "rapidSeekFinal": 20.001587,
+          "phase": "playing",
+          "epoch": 7
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 37,
+        "eligible": 14,
+        "valid": 14,
+        "invalid": 0,
+        "absoluteP95Ms": 153.849000000001,
+        "outlierCountOver300Ms": 0,
+        "outliersOver300Ms": []
+      },
+      "ends": {
+        "completed": 10,
+        "valid": 10,
+        "invalid": 0,
+        "signedP50Ms": -361.772000000002,
+        "absoluteP95Ms": 704.3039999999934
+      },
+      "completionCoverage": {
+        "format": "terminal-events-v1",
+        "uniqueStarts": 37,
+        "classified": 37,
+        "unclassified": 0,
+        "reasons": {
+          "natural": 10,
+          "timeline-cut": 23,
+          "seek-stop": 3,
+          "stop": 1
+        },
+        "smallTimelineCuts": 11,
+        "largeTimelineCuts": 12,
+        "limitation": "A missing terminal remains unclassified; it is never inferred to be a natural completion."
+      },
+      "skips": {
+        "utterances": 23,
+        "playedOrSkipped": 37,
+        "ratio": 0.6216216216216216,
+        "remainingAudioSeconds": 10.425628,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 1,
+        "sampledWallMs": 85673,
+        "sampledBufferMs": 45447,
+        "approximateWallRatio": 0.5304705099622985
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1673,
+          "outputAudio": 1713,
+          "outputText": 639
+        },
+        "sessionsWithReportedUsage": 6,
+        "knownUsageRecords": 85,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.4049,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    },
+    {
+      "file": "acceptance-022-tailfix-extended-zh-en.json",
+      "at": "2026-10-16T08:31:31.972Z",
+      "version": "0.2.2",
+      "buildSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+      "storageAfterStop": {
+        "playback": {
+          "bytes": 10911568,
+          "limitBytes": 134217728
+        },
+        "media": {
+          "bytes": 0,
+          "files": 0
+        },
+        "archives": {
+          "bytes": 0,
+          "files": 0,
+          "parts": 0,
+          "jobs": 0,
+          "orphanBytes": 0
+        }
+      },
+      "url": "https://www.bilibili.com/video/BV1Gs4y1P7L1/",
+      "functionalPassed": true,
+      "provenance": {
+        "liveEvidence": true,
+        "explicit": {
+          "runner": "scripts/gate-playback.mjs",
+          "source": "bilibili-native-real-provider",
+          "generatedAudio": false,
+          "model": "qwen3.8-livetranslate-flash-realtime",
+          "clientRequiresVoiceConfirmation": true
+        },
+        "providerVoiceConfirmationEvents": 7
+      },
+      "synchronizationPassed": true,
+      "diagnosticRetention": {
+        "droppedCriticalEvents": 0,
+        "droppedDebugEvents": 0,
+        "capturedAfterStop": true
+      },
+      "firstReadyMs": 34231,
+      "extendedSpeed": {
+        "rate": 1.5,
+        "wallSeconds": 91.994,
+        "sourceSeconds": 66.14316199999999
+      },
+      "actions": [
+        {
+          "localizedTitles": {
+            "zh": {
+              "pageTitle": "听译 · 原音色视频翻译",
+              "brand": "听译",
+              "originalVoiceLabel": "原声音色",
+              "toolbarTitle": "打开听译 · 原音色视频翻译"
+            },
+            "en": {
+              "pageTitle": "TimbraDub · Original-Voice Video Translation",
+              "brand": "TimbraDub",
+              "originalVoiceLabel": "ORIGINAL VOICE",
+              "toolbarTitle": "Open TimbraDub · Original-Voice Video Translation"
+            }
+          }
+        },
+        {
+          "pause": "paused"
+        },
+        {
+          "speed": 1.5
+        },
+        {
+          "mix": {
+            "muted": false,
+            "volume": 0.1
+          }
+        },
+        {
+          "seek": 120,
+          "phase": "playing",
+          "epoch": 2,
+          "waitMs": 47343
+        },
+        {
+          "seek": 5,
+          "phase": "playing",
+          "epoch": 3,
+          "waitMs": 5127
+        },
+        {
+          "seek": 125,
+          "phase": "playing",
+          "epoch": 4,
+          "waitMs": 10230
+        },
+        {
+          "rapidSeekFinal": 20,
+          "phase": "playing",
+          "epoch": 7
+        },
+        {
+          "fullscreen": true
+        }
+      ],
+      "restored": {
+        "muted": true,
+        "volume": 0.35
+      },
+      "temporaryRulesAfterStop": 0,
+      "onset": {
+        "starts": 41,
+        "eligible": 7,
+        "valid": 7,
+        "invalid": 0,
+        "absoluteP95Ms": 137.2209999999967,
+        "outlierCountOver300Ms": 0,
+        "outliersOver300Ms": []
+      },
+      "ends": {
+        "completed": 4,
+        "valid": 4,
+        "invalid": 0,
+        "signedP50Ms": -159.2729999999989,
+        "absoluteP95Ms": 438.4020000000106
+      },
+      "completionCoverage": {
+        "format": "terminal-events-v1",
+        "uniqueStarts": 41,
+        "classified": 41,
+        "unclassified": 0,
+        "reasons": {
+          "natural": 4,
+          "timeline-cut": 33,
+          "seek-stop": 4
+        },
+        "smallTimelineCuts": 8,
+        "largeTimelineCuts": 25,
+        "limitation": "A missing terminal remains unclassified; it is never inferred to be a natural completion."
+      },
+      "skips": {
+        "utterances": 33,
+        "playedOrSkipped": 41,
+        "ratio": 0.8048780487804879,
+        "remainingAudioSeconds": 40.792259,
+        "remainingScope": "Recorded cuts only; missing completion classifications cannot be reconstructed."
+      },
+      "buffering": {
+        "count": 1,
+        "sampledWallMs": 86825,
+        "sampledBufferMs": 50434,
+        "approximateWallRatio": 0.5808695652173913
+      },
+      "cost": {
+        "region": "cn-beijing",
+        "tokens": {
+          "inputAudio": 1533,
+          "outputAudio": 2739,
+          "outputText": 1104
+        },
+        "sessionsWithReportedUsage": 5,
+        "knownUsageRecords": 86,
+        "aggregation": "Per-provider-session maxima inferred from observed monotonic usage snapshots; account billing semantics independently unverified",
+        "completedUsageListPriceLowerBoundCny": 0.60996,
+        "listPriceLowerBoundPerSourceVideoHourCny": null,
+        "listPriceLowerBoundPerWallWatchHourCny": null,
+        "accountBillVerified": false
+      },
+      "memory": {
+        "samples": 0,
+        "browserRssPeakMiB": null,
+        "offscreenObservedHeapPeakBytes": null,
+        "playbackCachePeakDataBytes": null
+      }
+    }
+  ]
+}

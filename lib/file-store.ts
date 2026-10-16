@@ -7,6 +7,8 @@ export interface FileStore {
   get(path: string): Promise<Blob>;
   create(path: string): Promise<FileSink>;
   remove(path: string): Promise<void>;
+  /** Enumerates only this archive store, never the user's Downloads folder. */
+  list?(): Promise<{ path: string; size: number }[]>;
 }
 export class PrivateFiles implements FileStore {
   private async parent(path: string, create: boolean) {
@@ -35,11 +37,46 @@ export class PrivateFiles implements FileStore {
     const { directory, name } = await this.parent(path, false);
     await directory.removeEntry(name);
   }
+  async list() {
+    const files: { path: string; size: number }[] = [];
+    let root: FileSystemDirectoryHandle;
+    try {
+      root = await (await navigator.storage.getDirectory()).getDirectoryHandle(
+        'qwen-video-dub',
+      );
+    } catch (error) {
+      if ((error as DOMException).name === 'NotFoundError') return files;
+      throw error;
+    }
+    const walk = async (directory: FileSystemDirectoryHandle, prefix: string) => {
+      const entries = directory as FileSystemDirectoryHandle & {
+        entries(): AsyncIterable<[string, FileSystemHandle]>;
+      };
+      for await (const [name, handle] of entries.entries()) {
+        const path = prefix + name;
+        if (handle.kind === 'directory')
+          await walk(handle as FileSystemDirectoryHandle, path + '/');
+        else {
+          try {
+            files.push({
+              path,
+              size: (await (handle as FileSystemFileHandle).getFile()).size,
+            });
+          } catch (error) {
+            // A completed merge may remove its temporary File while enumerating.
+            if ((error as DOMException).name !== 'NotFoundError') throw error;
+          }
+        }
+      }
+    };
+    await walk(root, '');
+    return files;
+  }
 }
 export async function writeBlob(sink: FileSink, blob: Blob) {
   const reader = blob.stream().getReader();
   try {
-    for (;;) {
+    for (; ;) {
       const { value, done } = await reader.read();
       if (done) break;
       await sink.write(new Uint8Array(value));
@@ -54,7 +91,7 @@ export async function putBlob(store: FileStore, path: string, blob: Blob) {
     await writeBlob(sink, blob);
     await sink.close();
   } catch (error) {
-    await sink.abort().catch(() => {});
+    await sink.abort().catch(() => { });
     throw error;
   }
 }

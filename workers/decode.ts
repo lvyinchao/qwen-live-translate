@@ -8,61 +8,93 @@ import {
 import { renderMono } from '../lib/audio';
 import { openSabrWindow } from '../lib/sabr';
 import { messageError } from '../lib/types';
-import { RangeMediaCache } from '../lib/range-media';
+import { MEDIA_RANGE_ERRORS, RangeMediaCache } from '../lib/range-media';
 
 const mediaCache = new RangeMediaCache();
 
 const inputs = new Map<string, Input>();
-self.onmessage = async (event) => {
-  const { id, type, source, start, end, expectedDuration } = event.data;
-  if (type === 'cancel') {
-    inputs.get(id)?.dispose();
-    inputs.delete(id);
+const controllers = new Map<string, AbortController>();
+const tasks = new Set<Promise<void>>();
+let shuttingDown = false;
+self.onmessage = (event) => {
+  const { id, type } = event.data;
+  if (type === 'shutdown') {
+    shuttingDown = true;
+    for (const controller of controllers.values()) controller.abort();
+    for (const input of inputs.values()) input.dispose();
+    void (async () => {
+      await mediaCache.close();
+      await Promise.allSettled(tasks);
+      self.postMessage({ type: 'shutdown', id, ok: true });
+    })().catch((error) => {
+      self.postMessage({ type: 'shutdown', id, ok: false, error: messageError(error) });
+    });
     return;
   }
+  if (type === 'cancel') {
+    controllers.get(id)?.abort();
+    inputs.get(id)?.dispose();
+    return;
+  }
+  if (shuttingDown) {
+    self.postMessage({ id, ok: false, error: '音轨读取任务已关闭' });
+    return;
+  }
+  const task = decode(event.data);
+  tasks.add(task);
+  void task.then(() => tasks.delete(task), () => tasks.delete(task));
+};
+async function decode({ id, source, start, end, expectedDuration }: any) {
   let input: Input | undefined;
   let sabr: ReturnType<typeof openSabrWindow> | undefined;
+  const controller = new AbortController();
+  controllers.set(id, controller);
   try {
     if (source.sabrRequest)
-      sabr = openSabrWindow(source, start, end, AbortSignal.timeout(45000));
+      sabr = openSabrWindow(source, start, end, AbortSignal.any([
+        controller.signal, AbortSignal.timeout(45000),
+      ]));
     input = new Input({
       formats: ALL_FORMATS,
       formatOptions: { hls: { offsetTimestampsByDateTime: false } },
       source: sabr
         ? new ReadableStreamSource(sabr.stream, {
-            maxCacheSize: 8 * 1024 * 1024,
-            handleUnhandledError: () => {},
-          })
+          maxCacheSize: 8 * 1024 * 1024,
+          handleUnhandledError: () => { },
+        })
         : new UrlSource(source.url, {
-            maxCacheSize: 8 * 1024 * 1024,
-            parallelism: 2,
-            requestInit: { credentials: 'include' },
-            getRetryDelay: (attempt, error) =>
-              attempt < 2 ? 2 ** attempt : null,
-            fetchFn:
-              source.kind === 'hls'
-                ? (url, init) =>
-                    source.hlsManifest &&
-                    new URL(url instanceof Request ? url.url : String(url))
-                      .href === new URL(source.url).href
-                      ? Promise.resolve(
-                          new Response(source.hlsManifest, {
-                            headers: {
-                              'Content-Type': 'application/vnd.apple.mpegurl',
-                            },
-                          }),
-                        )
-                      : fetch(url, {
-                          ...init,
-                          signal: init?.signal
-                            ? AbortSignal.any([
-                                init.signal,
-                                AbortSignal.timeout(20000),
-                              ])
-                            : AbortSignal.timeout(20000),
-                        })
-                : mediaCache.fetch,
-          }),
+          maxCacheSize: 8 * 1024 * 1024,
+          parallelism: 2,
+          requestInit: { credentials: 'include' },
+          getRetryDelay: (attempt, error) =>
+            attempt < 2 && ![
+              MEDIA_RANGE_ERRORS.quota, MEDIA_RANGE_ERRORS.limit,
+              MEDIA_RANGE_ERRORS.storage,
+            ].includes(messageError(error)) ? 2 ** attempt : null,
+          fetchFn:
+            source.kind === 'hls'
+              ? (url, init) =>
+                source.hlsManifest &&
+                  new URL(url instanceof Request ? url.url : String(url))
+                    .href === new URL(source.url).href
+                  ? Promise.resolve(
+                    new Response(source.hlsManifest, {
+                      headers: {
+                        'Content-Type': 'application/vnd.apple.mpegurl',
+                      },
+                    }),
+                  )
+                  : fetch(url, {
+                    ...init,
+                    signal: init?.signal
+                      ? AbortSignal.any([
+                        init.signal, controller.signal,
+                        AbortSignal.timeout(20000),
+                      ])
+                      : AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]),
+                  })
+              : mediaCache.fetch,
+        }),
     });
     inputs.set(id, input);
     const track = await input.getPrimaryAudioTrack();
@@ -142,7 +174,8 @@ self.onmessage = async (event) => {
     });
   } finally {
     input?.dispose();
-    await sabr?.close();
+    await sabr?.close().catch(() => { });
     inputs.delete(id);
+    controllers.delete(id);
   }
-};
+}

@@ -1,3 +1,5 @@
+import { isolatedTestEnv } from './test-environment.mjs';
+import { syntheticWav } from '../tests/fixtures/audio.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,6 +14,7 @@ await fs.cp(path.resolve('.output/chrome-mv3'), extension, { recursive: true });
 const context = await chromium.launchPersistentContext(
   path.join(directory, 'profile'),
   {
+    env: isolatedTestEnv(),
     channel: 'chromium',
     headless: true,
     ignoreDefaultArgs: ['--disable-extensions'],
@@ -21,11 +24,19 @@ const context = await chromium.launchPersistentContext(
 const report = {
   at: new Date().toISOString(),
   scope:
-    'Real Chrome OPFS migration, quiet chunk staging and one merged download using an existing real translated WAV; no new model call',
+    'Real Chrome OPFS migration, quiet chunk staging and one merged download using a generated synthetic WAV; no model calls or third-party recordings',
   checks: [],
   files: [],
 };
 try {
+  // Fixture routes below override this default deny rule. Never contact real sites/models.
+  await context.route(/^https?:/, (route) => route.abort('blockedbyclient'));
+  await context.routeWebSocket(/^wss?:/, (socket) =>
+    socket.close({
+      code: 1000,
+      reason: 'Offline test: no external WebSockets',
+    }),
+  );
   context.setDefaultTimeout(12000);
   const root = await context.browser().newBrowserCDPSession();
   await root.send('Browser.setDownloadBehavior', { behavior: 'deny' });
@@ -34,7 +45,7 @@ try {
   });
   const setup = await context.newPage();
   await setup.goto(`chrome-extension://${id}/THIRD_PARTY_NOTICES.md`);
-  const wav = await fs.readFile('outputs/原音色译音示例.wav');
+  const wav = syntheticWav();
   const segment = {
     id: 'voice1',
     mediaId: 'local-archive-fixture',
@@ -158,7 +169,7 @@ try {
   report.checks.push(
     'Offscreen recreation restores quiet staged chunks without automatically retrying or starting downloads',
   );
-  // Fill the existing playback cache so the real engine reaches translation end
+  // Fill the existing playback cache so the real engine restores completed work at translation end
   // without any model/network call, triggering its automatic final merge.
   await panel.evaluate(
     async (segments) => {
@@ -236,7 +247,8 @@ try {
     },
     language: 'zh',
     phase: 'preparing',
-    position: 23,
+    // Archive-only fixture: the task is at its end, so no nonexistent player needs audio delivery.
+    position: 90,
     rate: 1,
     readyThrough: 23,
     inputThrough: 23,
@@ -370,7 +382,7 @@ try {
     separateAudioAndVideoTimelines: true,
   });
   report.checks.push(
-    'Actual engine translation-end path creates exactly one merged ZIP; WAV PCM equals both original-voice clips in source order, with separate audio/video SRT and JSON timelines',
+    'Actual engine translation-end path creates exactly one merged ZIP; WAV PCM equals both generated synthetic-tone clips in source order, with separate audio/video SRT and JSON timelines',
   );
   await panel.evaluate(() =>
     chrome.runtime.sendMessage({ target: 'offscreen', type: 'engine:stop' }),
