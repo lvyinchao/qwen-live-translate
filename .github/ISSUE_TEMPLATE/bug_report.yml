@@ -1,0 +1,33 @@
+name: Bug report / 问题反馈
+description: Report a reproducible player, translation, storage or UI problem.
+title: '[Bug] '
+body:
+  - type: markdown
+    attributes:
+      value: 'Please read the compatibility record first. Never include API keys, cookies, signed media URLs or private account data. / 请勿提交密钥、Cookie 或私有地址。'
+  - type: input
+    id: version
+    attributes:
+      label: Extension, Chrome and OS versions / 版本
+      placeholder: 'Video Dub 0.2.0; Chrome 155; macOS'
+    validations:
+      required: true
+  - type: input
+    id: video
+    attributes:
+      label: Public video URL and source position / 公开视频链接与时间点
+  - type: input
+    id: language
+    attributes:
+      label: Source and target language / 原语言和目标语言
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps, expected behavior and actual result / 复现步骤和实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized diagnostics / 脱敏信息
+      description: State whether the video is live, protected, behind login or missing a readable audio source. Screenshots must hide credentials.

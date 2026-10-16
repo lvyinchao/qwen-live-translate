@@ -22,7 +22,17 @@ export default defineConfig({
     // Narrow HTTP host grants failed for extension-initiated WebSockets in the
     // real browser gate. Rules themselves remain exact-origin / exact-endpoint.
     host_permissions: ['<all_urls>'],
-    action: { default_title: 'Open Qwen Video Dub' },
+    icons: {
+      16: 'icons/16.png',
+      32: 'icons/32.png',
+      48: 'icons/48.png',
+      128: 'icons/128.png',
+    },
+    homepage_url: 'https://github.com/lvyinchao/qwen-live-translate',
+    action: {
+      default_title: 'Open Qwen Video Dub',
+      default_icon: { 16: 'icons/16.png', 32: 'icons/32.png' },
+    },
     side_panel: { default_path: 'sidepanel.html' },
     content_security_policy: {
       extension_pages:

@@ -11,18 +11,12 @@ await fs.mkdir('public/licenses', { recursive: true });
 for (const [name, source] of Object.entries(licenses))
   await fs.copyFile(source, 'public/licenses/' + name);
 await fs.copyFile('THIRD_PARTY_NOTICES.md', 'public/THIRD_PARTY_NOTICES.md');
-// Buf's package contains generated protobuf runtime code under Apache-2.0.
-for (const [name, url] of Object.entries({
-  'bufbuild-Apache-2.0.txt':
-    'https://raw.githubusercontent.com/bufbuild/protobuf-es/v2.16.0/LICENSE',
-  'wxt-MIT.txt': 'https://raw.githubusercontent.com/wxt-dev/wxt/main/LICENSE',
-})) {
-  try {
-    await fs.access('public/licenses/' + name);
-    continue;
-  } catch {}
-  const response = await fetch(url);
-  if (!response.ok)
-    throw new Error('Unable to obtain dependency license: ' + name);
-  await fs.writeFile('public/licenses/' + name, await response.text());
-}
+// Auxiliary notices are committed: a build never fetches mutable license text.
+for (const file of ['bufbuild-Apache-2.0.txt', 'wxt-MIT.txt'])
+  await fs.access('public/licenses/' + file);
+await fs.copyFile('LICENSE', 'public/LICENSE');
+await fs.copyFile('PRIVACY.md', 'public/PRIVACY.md');
+await fs.copyFile(
+  'vendor/mediabunny-1.61.4-source.tgz',
+  'public/licenses/mediabunny-1.61.4-source.tgz',
+);

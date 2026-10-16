@@ -1,7 +1,7 @@
 {
   "name": "qwen-video-dub",
   "private": true,
-  "version": "0.1.9",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -11,7 +11,12 @@
     "test": "vitest run",
     "postinstall": "wxt prepare",
     "prepare:assets": "node scripts/prepare-assets.mjs",
-    "prebuild": "node scripts/prepare-assets.mjs"
+    "prebuild": "node scripts/prepare-brand.mjs && node scripts/prepare-assets.mjs",
+    "prepare:brand": "node scripts/prepare-brand.mjs",
+    "package": "node scripts/package.mjs",
+    "verify:release": "node scripts/verify-release.mjs",
+    "test:browser": "node scripts/browser-ui.mjs && node scripts/gate-discovery.mjs && node scripts/gate-youtube-player.mjs",
+    "prepare:store": "node scripts/prepare-store-assets.mjs"
   },
   "dependencies": {
     "googlevideo": "file:vendor/googlevideo-4.1.1-qvd.96d1418.tgz",
@@ -21,6 +26,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
     "@types/chrome": "^0.1.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -32,5 +38,18 @@
     "vitest": "^3.2.0",
     "ws": "^8.22.0",
     "wxt": "^0.20.0"
+  },
+  "description": "Open-source Chrome extension for synchronized original-voice video translation with Qwen LiveTranslate.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lvyinchao/qwen-live-translate.git"
+  },
+  "homepage": "https://github.com/lvyinchao/qwen-live-translate",
+  "bugs": {
+    "url": "https://github.com/lvyinchao/qwen-live-translate/issues"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

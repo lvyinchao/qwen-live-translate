@@ -1,96 +1,104 @@
-# 听译 · Qwen Video Dub
+<p align="center"><img src="public/brand/logo.svg" width="88" height="88" alt="Video Dub logo" /></p>
+<h1 align="center">Video Dub · 听译</h1>
+<p align="center">Watch in another language. Stay on the same timeline.</p>
+<p align="center">
+  <a href="https://github.com/lvyinchao/qwen-live-translate/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/lvyinchao/qwen-live-translate/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-164a3f" /></a>
+  <img alt="Chrome 116+" src="https://img.shields.io/badge/Chrome-116%2B-164a3f" />
+  <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-164a3f" />
+</p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-Chrome 自用扩展（原音色译音）：在原网页播放器上，播放跟随视频时间轴的 Qwen 译音和双语字幕。无需自建后端，使用自己的百炼账户。
+![Video Dub: another language, the same timeline](docs/assets/banner.svg)
 
-> 当前为功能预览版：Bilibili 已通过中英双向的原网页播放检查；YouTube 可读取部分片段，但长视频后续音轨遇到播放验证限制，尚未通过连续译音验收。完整状态见 `真实验收记录.md`。
+An independent, open-source Chrome extension that plays Qwen-translated speech alongside the **original webpage's video player**. Bring your own Alibaba Cloud Model Studio API key. No self-hosted server is required.
 
-## 安装
+[Download the extension](https://github.com/lvyinchao/qwen-live-translate/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/qwen-live-translate/issues/new/choose)
 
-1. 解压 `听译-Chrome-0.1.9.zip`，保留完整文件夹。
-2. 打开 Chrome 的 `chrome://extensions`，打开右上角“开发者模式”。
-3. 点击“加载已解压的扩展程序”，选择包含 `manifest.json` 的文件夹。
-4. 将“听译”固定在工具栏，刷新已打开的视频页面。
-5. 点击扩展图标，在侧边栏设置里填写 API Key、Workspace ID 和对应地域，保存后验证连接。
+> **Preview software.** Bilibili has short, real translated-playback checks. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store availability will be linked here once approved; GitHub downloads are available separately.
 
-安装时会提示访问网站。Chrome 对请求头修改同时检查目的地址和发起方；真实验证表明，窄域名声明不足以给扩展自身的 WebSocket 握手添加鉴权头，因此使用 `<all_urls>` 主机权限。运行时内容脚本可检测普通 HTTP/HTTPS 网页及 iframe 中的播放器；媒体探测覆盖公开 HTTPS CDN 的文件、HLS、DASH 和分片；鉴权规则仅作用于扩展自身访问指定的百炼模型地址，不会给视频网站附加模型密钥。
+## What it does
 
-## 使用
+- **Dubs in the existing player.** Speech segments follow the source video's time, including pause, seek, fullscreen and 0.5–2× video speed.
+- **Prepares audio ahead.** Starts with about 30 seconds, then keeps preparing future audio. Missing translation pauses the video rather than playing untranslated scenes.
+- **Uses original-voice mode.** Requests Qwen's realtime voice cloning. Similarity is model-dependent and is not guaranteed.
+- **Switches languages during playback.** Choose another of the 29 supported speech-output languages. Reuse its cache or buffer from the current position; old-language results are isolated.
+- **Keeps you in control.** Separate original/dub volume, bilingual subtitles, English/Chinese UI (English by default).
+- **Saves only when enabled.** Automatic file saving defaults **off**. When enabled, completed utterances are staged locally, then merged into one ZIP with WAV audio, bilingual scripts and timed subtitles.
 
-界面支持 English / 简体中文，首次打开默认为英文；通过侧边栏右上角的语言选择器即时切换，选择会自动保存在本机。界面语言与“翻译成”的视频目标语言独立，视频目标语言仍默认中文。移除 API 凭据不会重置语言偏好。
+## Install
 
-打开普通点播视频，先播放几秒，让扩展识别音轨。在侧边栏选择视频和目标语言，点击“开始翻译”。扩展会暂停原视频，先准备约 30 秒的译音，再自动继续播放；此后边播放边准备后续内容。实际等待取决于网络和模型，不能用官方同传延迟当作首次准备时间。
+Requires desktop Chrome 116+ and a compatible Model Studio account. Provider usage is billed to your account.
 
-- 翻译中可随时更改“翻译成”，从当前画面位置切换译音和字幕；已缓存的新语言直接恢复，没有缓存则暂停准备后再继续。暂停时切换会保持暂停，音量、倍速和字幕开关不变。连续选择多个语言，以最后一次为准。
-- 原视频默认静音。可分别调整原声和译音音量；降低原声也会降低原片中的音乐。
-- 暂停、恢复、跳转和 0.5～2 倍速跟随原播放器。
-- 数据尚未就绪时暂停缓冲。长译音最多以 2 倍速度播放，仍赶不上时跳过过期部分，保持画面连续，字幕保留完整译文。
-- “停止翻译”恢复开始前的原声音量和静音设置。
-- 设置页可清除最多 128 MiB 的译音缓存及本机凭据。
+1. Download `qwen-video-dub-<version>-chrome.zip` from [Releases](https://github.com/lvyinchao/qwen-live-translate/releases/latest) and extract it.
+2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted `extension` folder containing `manifest.json`.
+3. Pin **Qwen Video Dub**, then refresh any already-open video pages.
+4. Open its side panel → settings. Enter your API key, Workspace ID and matching region. Save and test the connection.
+5. Play a few seconds of a supported video so its audio source can be detected. Choose the video and target language, then **Start translation**.
 
-模型为 `qwen3.8-livetranslate-flash-realtime`。只发送音轨，不发送整段视频或画面。默认启用 Qwen 的实时音色复刻，随原说话人生成译音。模型复刻完成前可能使用默认音色过渡，不能承诺音色完全一致。扩展会校验服务端是否确认启用音色复刻；未确认则停止并提示。原音色缓存与系统音色缓存隔离。配置依据：[百炼客户端事件文档](https://help.aliyun.com/en/model-studio/live-translator-client-events)。
+The extension pauses to prepare speech before resuming. New, uncached language selections also require preparation; this can take tens of seconds. Short utterances retain timeline gaps; long ones can speed up to 2× and truncate expired tails. This is sentence-level synchronization, not lip sync.
 
-API Key 不放入网页、Chrome 同步存储、源码或发行包。译音和字幕会缓存在这台浏览器的 IndexedDB 中，费用由百炼账户结算。
+## Compatibility
 
-## 视频网站与音轨读取
+| Source                    | Current evidence                                                                      | Limits                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Bilibili VOD              | Real Chinese/English playback, controls, seeks, and Chinese→Japanese target switching | CDN, account, codec and page changes can affect availability                               |
+| YouTube VOD               | Main-player selection, resolution deduplication, some audio windows                   | Long playback has unresolved SABR verification failures                                    |
+| Tencent Video             | One specified episode: clear HLS, middle-of-video decoding and English dubbing        | Not a claim of all episodes, qualities or protected content                                |
+| Youku, iQIYI, other sites | Generic player and media-request discovery                                            | Translation requires an unencrypted, ahead-readable audio source; no universal DASH parser |
 
-0.1.4 开始，除 YouTube / Bilibili 专用适配器外，加入优酷、爱奇艺、腾讯视频等网站的通用检测：扫描当前页、iframe 和开放 Shadow DOM 的视频，并观察实际媒体请求。可匹配的完整媒体文件和未加密 HLS 点播可交给解码器提前读取；未找到播放器时仍列出已发现的媒体请求并标记暂不可翻译；多个资源无法确定归属时明确提示，不把其他播放器或广告音轨直接配给当前视频。通用检测不等于这些网站所有影片均已通过翻译验收。
+Live streams, DRM decryption, captured-tab compatibility mode, full video downloads, Firefox and mobile browsers are outside the current scope. Full 20-minute acceptance and broad P95 synchronization targets remain unfinished.
 
-0.1.6 已移除兼容播放器及标签页录制权限，使用原网页播放器。侧边栏打开期间，每 3 秒检查当前页面，并响应媒体请求和页面切换，找到可用音轨后自动更新列表；检测过程不调用翻译模型。安装更新后，已打开的视频页面需要刷新一次，让新版媒体观察脚本生效。
+## Privacy and permissions
 
-0.1.7 修复 YouTube 清晰度切换时的重复检测：一个观看页面仅选择当前主播放器，排除隐藏旧播放器、预览画面及嵌入的重复播放器；切换分辨率只更新同一视频条目的尺寸。克隆元素不再沿用原播放器 ID。真实 YouTube 720p→1080p→720p 切换测试保持一个相同标识的控制目标；播放器元素被替换时停止旧控制，避免操作错误对象。
+Translation audio is sent directly from the extension to the configured Model Studio endpoint **only after you start translation**. Original text and translated text/audio are received from that provider. API credentials stay in restricted extension-local storage and are not exposed to webpage messages, Chrome sync or project telemetry. There is no project-operated backend, analytics or advertising.
 
-当前 3.8 实时模型要求音频输入，可选画面帧不能代替声音。含音频的 MP4、WebM 或 HLS 资源可在扩展内解封装、提取音频并保留源时间戳，无需先取得独立音频文件；纯视频分片仍需对应音频数据。当前接口不直接上传 MP4 文件给模型。参见[客户端输入事件](https://help.aliyun.com/zh/model-studio/live-translator-client-events)。
+A bounded IndexedDB playback cache is separate from optional archive files. Some range-less media sources also need temporary, browser-private disk storage. Turning automatic saving off disables new archives and automatic downloads; it does not disable the cache or delete existing files.
 
-腾讯视频增加原生 HLS 观察：读取播放器已解析的明文点播列表，并关联到实际 video 元素，避免混入广告或其他播放器的资源；旧版明文播放信息仍可解析。不解密受保护内容。指定的《兰香如故》第 5 集已在约 19:40 处暂停、提前读取后续 30 秒、生成英文译音并恢复原网页播放，两次首次准备实测约 34～42 秒；不代表所有清晰度、登录状态或影片均已通过验收。
+Broad host access supports current-page media discovery, cross-origin audio and extension-origin WebSocket authentication. Runtime authentication rules are scoped to the extension and exact Model Studio endpoint and removed after use. See [Privacy](PRIVACY.md), [permission explanations](docs/ARCHITECTURE.md#permissions) and [Security](SECURITY.md).
 
-针对“需要 1180 秒、却只取得约 5 秒”的报错，主视频有分片时不再把旁边孤立的 MP4 自动当成完整音轨；翻译前也会检查文件音轨是否明显短于视频。正常 MP4/HLS 的该中段窗口已通过读取测试；不能用给短文件强加时间偏移的方式掩盖资源错误。
+## Develop
 
-DASH 清单、独立分片和带 MediaKeys 的受保护播放器会显示发现状态及具体限制。当前没有通用 DASH 清单解析，也没有 DRM 解密路径。只有取得可提前读取的音轨后才可翻译；特殊播放器和闭合 Shadow DOM 仍可能需要站点适配。
-
-对于忽略 HTTP Range、始终返回整份文件的服务器，0.1.4 把已读原始媒体字节暂存至扩展的临时本地文件，供解码器回读，内存缓存保持 8 MiB。后续窗口复用该响应；工作线程退出后，下次创建临时媒体文件时回收遗留文件。单份兼容音轨上限 2 GiB，同时最多保留两份，空间不足、数据不完整和超时均会报错。此类服务器可能要求顺序读完整份音轨才能开始，准备时间取决于文件大小与网络。这些临时文件与永久译音分段分开，不弹下载窗口。
-
-关闭“双语字幕”会立即隐藏播放器上的译文；后续片段、全屏和播放器状态更新遵循该开关。
-
-## 保存到本地
-
-侧边栏底部“本地保存”区域提供“自动保存翻译文件”开关，**默认关闭**，旧版本升级且尚无此偏好的用户同样默认关闭。开关即时生效并记住选择，不需要填写模型凭据才能切换。
-
-关闭时不把新译音暂存为归档文件，不自动合并或发起下载；原网页翻译播放和用于跳转的播放缓存照常工作。此前已保存的片段和下载文件会保留，仍可手动“合并并保存”。关闭也会拦下尚未发起下载的自动合并；已交给 Chrome 的下载可能继续完成。
-
-开启后，译音先静默分段保存在扩展的本机专用文件目录（OPFS）。分段不会发起下载，也不打开保存位置选择器；跳转和重开侧边栏同样不会启动下载。此前 0.1.2 的待保存队列会迁移到本机分段目录，已下载的旧文件保留。
-
-开启自动保存时，翻译完成、停止或失败退出会按视频、目标语言与音色把已完成的语句合并，只下载一个最终 ZIP 到 Chrome 设置的下载目录下 `Qwen Video Dub/` 文件夹。也可在侧边栏点击“合并并保存”。相同内容不重复下载；合并中断后保留片段，用户点击重试时才重新下载。重开扩展不会反复重试已取消的保存。
-
-每个合并包包含可连续播放的 `combined.wav`、与该音频时间对应的 `combined.srt`、使用原视频时间的 `source-subtitles.srt`，以及双语 `transcript.txt` / `transcript.json`。WAV 按源视频顺序拼接完整的 24 kHz 原音色语句，不变速、不截尾，不拼接 WAV 文件头。句间空白和未翻译的源视频区间不放入合并音频，JSON 同时记录源视频时间和合并音频时间；未完成整段视频不会标为已完成。
-
-片段保存在本机专用目录中，合并 WAV 和 ZIP 也按流写盘，不把整段长视频音频一次性装入 JavaScript 内存。播放缓存的 128 MiB 上限不再限制归档片段；归档使用浏览器允许的本地磁盘空间，空间不足会明确报错。清除播放缓存或 API 凭据不会删除已暂存片段和已下载文件。卸载扩展或清除此扩展全部站点数据会移除其内部片段，已下载的文件仍由你管理。
-
-保存过程使用[浏览器专用本机文件系统](https://web.dev/articles/origin-private-file-system)，不更改 Chrome 全局下载设置，不关闭浏览器的安全检查，不上传到额外服务，也不包含密钥、签名媒体地址或请求头。如果 Chrome 开启了“下载前询问每个文件的保存位置”，最终合并包仍会询问一次；分段阶段不询问。系统或浏览器对最终文件的必要安全提示仍由 Chrome 控制。
-
-## 范围
-
-首版面向桌面 Chrome 116 及以上版本、普通点播、可预取的独立音轨。直播、DRM、音乐人声分离、独立声音复刻管理、原视频下载导出和移动端未包含。网页和 CDN 可能变化；无法获取可预取音轨时明确报错，不会自动降级成明显滞后的“边听边译”。
-
-同步指语句与媒体时间轴关联，不承诺逐字口型同步。真实验收状态请以随包的验收记录为准，构建通过不等于站点或长视频测试通过。
-
-## 开发与验证
-
-需要 Node.js 22 或更高版本；ZIP 交付与归档测试使用系统的 `zip` / `unzip`（macOS 自带）。
+Node.js **22.12+**, npm, and Git are required. Packaging uses `zip`/`unzip`. Browser fixture gates require Playwright's Chromium; media fixture gates also require FFmpeg.
 
 ```sh
+git clone https://github.com/lvyinchao/qwen-live-translate.git
+cd qwen-live-translate
 npm ci
 npm run check
 npm test
 npm run build
-npm run zip
-# 交付预览包（先生成真实验收记录）
-node scripts/package.mjs
 ```
 
-构建目录为 `.output/chrome-mv3`。可加载该目录调试；仓库中的 `work/` 为研究与隔离测试材料，不进入发行包。
+Load `.output/chrome-mv3` for development. `npm run dev` starts WXT. No API key is needed to build or run unit tests.
 
-浏览器验收脚本使用 Playwright 的独立配置目录及 Chrome for Testing，不修改常用 Chrome 的配置。脚本通过浏览器根 CDP 会话加载扩展；生产扩展不使用 `debugger` 权限或调试协议。`gate-browser.mjs` 当前从本机百炼 CLI 配置读取测试凭据，仅适用于本机验收，不会把该配置复制进发行包。
+```sh
+npx playwright install chromium
+HEADLESS=1 npm run test:browser
+npm run package
+npm run verify:release
+```
 
-## 依赖与许可
+The package command produces a GitHub installation ZIP, a manifest-at-root Chrome Web Store ZIP, a source ZIP, and SHA-256 checksums in `outputs/`. Release verification checks archive layout, licenses, icons and unexpected credential files. Model gates are **manual and may incur provider costs**; they are excluded from CI. Read [Contributing](CONTRIBUTING.md) before running them.
 
-本扩展为独立实现，没有复制 FetchV 的代码。使用 WXT、React、Lucide、Mediabunny 和固定版本的 googlevideo。YouTube SABR 音轨读取基于 googlevideo；Bilibili 使用播放器实际请求的独立音轨。Mediabunny 1.61.4 使用 MPL-2.0，保留其许可及来源说明；见发行包 `THIRD_PARTY_NOTICES.md`。安装包不从第三方网站动态加载执行脚本。
+## Project map
+
+| Location                        | Purpose                                                               |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `entrypoints/sidepanel`         | Bilingual React controls and settings                                 |
+| `entrypoints/player.content.ts` | Existing-player control, captions and translated speech               |
+| `entrypoints/background.ts`     | Discovery, permissions, task coordination and temporary auth rules    |
+| `entrypoints/offscreen`         | Prefetch, model sessions, scheduling, cache and optional archives     |
+| `workers/decode.ts`, `lib/`     | Media decoding, timeline logic, protocol, storage and site adapters   |
+| `tests/`, `scripts/`            | Unit tests, isolated browser gates and explicitly invoked live checks |
+| `docs/`, `.github/`             | Architecture, validation, store materials and contributor workflows   |
+
+## Contribute and support
+
+Bug fixes, reproducible compatibility reports, accessibility improvements and tests are welcome. Start with [Contributing](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md), [Support](SUPPORT.md) and the [roadmap](docs/ROADMAP.md). Report security problems privately through [GitHub Security Advisories](https://github.com/lvyinchao/qwen-live-translate/security/advisories/new), not public issues.
+
+## License and attribution
+
+Original project code, documentation and the new vector brand assets are available under the [MIT License](LICENSE). Third-party software retains its own license, including Mediabunny (MPL-2.0), googlevideo/React/WXT (MIT), Lucide (ISC) and protobuf-es (Apache-2.0). The distribution includes dependency notices and the exact unchanged Mediabunny source package; see [Third-party notices](THIRD_PARTY_NOTICES.md).
+
+Third-party video screenshots, source speech and translated examples in historical validation materials are evaluation evidence, not MIT-licensed media or a grant of voice/likeness rights. They are excluded from new downloadable release bundles. The extension was independently implemented and contains no FetchV implementation code. This project is not affiliated with Alibaba Cloud, Qwen, Google or the video platforms.

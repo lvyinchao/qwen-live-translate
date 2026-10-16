@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report / 私密安全反馈
+    url: https://github.com/lvyinchao/qwen-live-translate/security/advisories/new
+    about: Do not post credentials or vulnerabilities in public issues.
+  - name: Compatibility and validation / 支持范围与验收
+    url: https://github.com/lvyinchao/qwen-live-translate/blob/main/docs/VALIDATION.md
+    about: Check the current site limitations before opening a duplicate report.

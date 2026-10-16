@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-15T14:15:07.815Z",
+  "at": "2026-10-16T03:52:46.835Z",
   "scope": "Real Chrome extension with controlled Youku/iQIYI/Tencent-shaped pages; actual DOM/frame/network discovery; no site playback or model acceptance",
   "checks": [
     "Youku/iQIYI/Tencent host detection, direct MP4, observed audio request and HLS source detection",

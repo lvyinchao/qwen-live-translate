@@ -309,7 +309,7 @@ function App() {
       <header className="header">
         <div className="brand">
           <span className="brand-icon">
-            <AudioLines size={23} />
+            <img src="/brand/logo.svg" width="40" height="40" alt="" />
           </span>
           <div>
             <strong>{t('听译')}</strong>

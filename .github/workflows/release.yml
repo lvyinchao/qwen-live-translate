@@ -1,0 +1,36 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: node --input-type=module -e "import fs from 'node:fs'; if ('v'+JSON.parse(fs.readFileSync('package.json')).version !== process.env.RELEASE_TAG) throw Error('Tag/package version mismatch');"
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npm run package
+      - run: npm run verify:release
+      - name: Publish versioned installation packages
+        run: |
+          printf '%s\n' 'Open-source preview. See README for site compatibility and remaining validation limits.' '' 'Download the Chrome ZIP and load its extracted extension folder through chrome://extensions. The webstore ZIP is the separate manifest-at-root submission package. Source and SHA-256 checksums are included. Chrome Store availability is tracked independently in docs/store/STATUS.md.' > /tmp/release-notes.md
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" outputs/qwen-video-dub-*.zip outputs/SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" outputs/qwen-video-dub-*.zip outputs/SHA256SUMS.txt --verify-tag --title "$RELEASE_TAG · Open-source preview" --notes-file /tmp/release-notes.md --latest
+          fi

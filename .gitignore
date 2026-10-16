@@ -10,3 +10,8 @@ outputs/SHA256SUMS.txt
 outputs/FetchV-*.md
 .DS_Store
 *.log
+
+# Local web-store publishing state and accounts
+.store-local/
+*.crx
+*.key

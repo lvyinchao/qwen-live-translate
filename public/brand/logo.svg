@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Video Dub</title>
+  <desc id="desc">Three sound bars form a play symbol inside a speech bubble.</desc>
+  <rect width="128" height="128" rx="31" fill="#164a3f"/>
+  <path d="M41 25h46c13 0 22 9 22 22v21c0 13-9 22-22 22H61l-21 15V90c-13 0-21-9-21-22V47c0-13 9-22 22-22Z" fill="#c7f9d9"/>
+  <g fill="#164a3f">
+    <rect x="42" y="40" width="10" height="35" rx="5"/>
+    <rect x="59" y="46" width="10" height="23" rx="5"/>
+    <rect x="76" y="52" width="10" height="11" rx="5"/>
+  </g>
+</svg>

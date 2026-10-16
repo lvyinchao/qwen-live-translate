@@ -1,0 +1,15 @@
+name: Feature request / 功能建议
+description: Describe a concrete watching workflow or improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem do you want to solve? / 希望解决什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed behavior and alternatives / 期望行为与替代方案
+    validations:
+      required: true

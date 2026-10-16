@@ -1,0 +1,54 @@
+{
+  "at": "2026-10-15T14:14:36.740Z",
+  "scope": "Real Chrome extension, controlled YouTube DOM plus optional live watch page. No model calls.",
+  "checks": [
+    "Hidden 4K element, larger preview and duplicate embedded player collapse to one top-level main video",
+    "A resolution change updates dimensions while preserving the selected element identity",
+    "Cloning an element cannot steal the active player ID, even when inserted earlier in the DOM",
+    "Control attaches to the main video only and restores it on stop; hidden and preview players remain untouched",
+    "Live YouTube watch page returns one stable control target across quality requests; actual applied qualities are recorded separately"
+  ],
+  "live": [
+    {
+      "requestedQuality": "hd720",
+      "candidates": [
+        {
+          "id": "7d74f688-b7e6-4c77-809f-193ac66be429",
+          "frameId": 0,
+          "width": 1280,
+          "height": 720,
+          "sourceStatus": "ready"
+        }
+      ],
+      "actualQuality": "hd720"
+    },
+    {
+      "requestedQuality": "hd1080",
+      "candidates": [
+        {
+          "id": "7d74f688-b7e6-4c77-809f-193ac66be429",
+          "frameId": 0,
+          "width": 1920,
+          "height": 1080,
+          "sourceStatus": "ready"
+        }
+      ],
+      "actualQuality": "hd1080"
+    },
+    {
+      "requestedQuality": "hd720",
+      "candidates": [
+        {
+          "id": "7d74f688-b7e6-4c77-809f-193ac66be429",
+          "frameId": 0,
+          "width": 1280,
+          "height": 720,
+          "sourceStatus": "ready"
+        }
+      ],
+      "actualQuality": "hd720"
+    }
+  ],
+  "passed": true,
+  "recordNote": "Historical live resolution-change evidence retained from the 0.1.x preview. See youtube-player-verification.json for the latest isolated fixture run."
+}
