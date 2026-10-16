@@ -153,6 +153,7 @@ const english = {
     'The original voice. A new language.',
   当前页面的视频: 'Videos on this page',
   网页视频: 'Web video',
+  '央视音轨尚未就绪，请等待主视频开始后重试': 'The CCTV audio track is not ready. Wait for the main video to start, then try again.',
   音轨已识别: 'Audio track found',
   等待识别音轨: 'Waiting for audio track',
   让视频先出现: 'Find a video first',

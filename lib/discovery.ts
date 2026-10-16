@@ -167,6 +167,7 @@ export function inspectVideos(mainOnly = false) {
       displayWidth: box.width,
       displayHeight: box.height,
       bilibiliMain: Boolean(v.closest('.bpx-player-video-wrap,.bilibili-player-video-wrap')),
+      cctvMain: v.id === '_video_player_html5_api' && Boolean(v.closest('#_video')),
       youtubeMain:
         Boolean(v.closest('#movie_player')) &&
         v.classList.contains('html5-main-video'),

@@ -1,5 +1,6 @@
 import { SessionTransitions } from '../lib/async-lifecycle';
 import { parseTencentMedia } from '../lib/tencent-media';
+import { fetchCctvMedia, type CctvMedia } from '../lib/cctv-media';
 import {
   inspectVideos,
   mediaKind,
@@ -46,6 +47,10 @@ import { registerMediaObserver, type SourceRecord, type DiscoveryRecord } from '
 export default defineBackground(() => {
   const sources = new Map<number, SourceRecord>();
   const detected = new Map<number, DiscoveryRecord>();
+  const cctvSources = new Map<number, {
+    identity: string; guid: string; expiresAt: number;
+    value: Promise<CctvMedia | undefined>;
+  }>();
   const observation = new ObservationScope();
   const panels = new Map<chrome.runtime.Port, { tabId?: number; windowId?: number }>();
   const captureStats = { responses: 0, accepted: 0, lastError: '' };
@@ -199,6 +204,7 @@ export default defineBackground(() => {
     observation.release(tabId);
     sources.delete(tabId);
     detected.delete(tabId);
+    cctvSources.delete(tabId);
     void chrome.storage.session.remove([`source:${tabId}`, `detected:${tabId}`]);
   }
   async function pruneObservations() {
@@ -220,7 +226,8 @@ export default defineBackground(() => {
   async function discover(tabId: number): Promise<MediaCandidate[]> {
     observation.watch(tabId);
     await pruneObservations();
-    const [frames, metadata, tab] = await Promise.all([
+    const revision = observation.revision(tabId);
+    const [initialFrames, metadata, tab] = await Promise.all([
       chrome.scripting.executeScript({
         target: { tabId, allFrames: true },
         world: 'ISOLATED',
@@ -233,8 +240,35 @@ export default defineBackground(() => {
       }),
       chrome.tabs.get(tabId),
     ]);
+    let frames = initialFrames;
     const meta = metadata[0]?.result;
     if (!meta) return [];
+    let cctvMedia: CctvMedia | undefined;
+    if (meta.cctvGuid && tab.url) {
+      const stored = cctvSources.get(tabId);
+      if (!stored || stored.identity !== meta.identity || stored.guid !== meta.cctvGuid || stored.expiresAt <= Date.now()) {
+        const next = {
+          identity: meta.identity, guid: meta.cctvGuid, expiresAt: Date.now() + 5 * 60000,
+          value: fetchCctvMedia(tab.url, meta.cctvGuid),
+        };
+        cctvSources.set(tabId, next);
+        // Briefly back off failed lookups, while allowing the panel's next scan
+        // to recover from transient API/network errors instead of caching them.
+        void next.value.then((value) => { if (!value) next.expiresAt = Date.now() + 2000; });
+      }
+      cctvMedia = await cctvSources.get(tabId)!.value;
+      const [currentTab, currentMetadata, currentFrames] = await Promise.all([
+        chrome.tabs.get(tabId),
+        chrome.scripting.executeScript({target: {tabId}, world: 'MAIN', func: inspectPlayerMain}),
+        chrome.scripting.executeScript({target: {tabId, allFrames: true}, world: 'ISOLATED', func: inspectVideos}),
+      ]);
+      const currentUrl = currentTab.pendingUrl ?? currentTab.url;
+      if (!observation.allows(tabId, observedTaskTab()) ||
+          observation.revision(tabId) !== revision ||
+          !currentUrl || mediaIdentity(currentUrl) !== meta.identity ||
+          currentMetadata[0]?.result?.cctvGuid !== meta.cctvGuid) return [];
+      frames = currentFrames;
+    }
     if (meta.site === 'tencent') {
       // The page may have loaded before the panel granted an observation lease.
       // Ask the isolated bridge to replay the already-parsed MAIN-world metadata.
@@ -291,16 +325,33 @@ export default defineBackground(() => {
         ? visible.filter((v) => v.duration > 0)
         : visible;
       const frameItems = items.filter((r) => r.frameId === frame.frameId);
+      const cctvPlayer = frame.frameId === 0 && cctvMedia &&
+        players.filter((v) => v.cctvMain).length === 1
+        ? players.find((v) => v.cctvMain && !v.protected &&
+          Math.abs(v.duration - cctvMedia!.duration) <= 2) : undefined;
       return players.map(async (v) => {
+        const associated = cctvPlayer?.id === v.id && cctvMedia ? [{
+          url: cctvMedia.url, mime: 'application/vnd.apple.mpegurl', kind: 'hls' as const,
+          frameId: frame.frameId, at: Date.now(), headers: {}, playerId: v.id,
+        }, ...frameItems] : frameItems;
         const resolved = native
           ? { source, reason: source ? undefined : meta.sourceReason }
-          : chooseGenericSource(v, frameItems, meta.identity, players.length);
+          : meta.cctvGuid && v.cctvMain && !cctvPlayer
+            ? { reason: '央视音轨尚未就绪，请等待主视频开始后重试' }
+          : chooseGenericSource(v, associated, meta.identity, players.length);
         const reason = v.protected
           ? '检测到受保护视频，暂不支持提前翻译'
           : resolved.reason;
         let selectedSource = v.protected ? undefined : resolved.source;
-        const identity = !native && selectedSource
-          ? await mediaResourceIdentity(meta.identity, v.frameUrl, selectedSource)
+        // The fixed CCTV API binds public CDN mirrors to one verified GUID.
+        // A refreshed/rotated CDN must not invalidate the same video's cache.
+        const identitySource = selectedSource && cctvPlayer?.id === v.id && cctvMedia &&
+          selectedSource.url === cctvMedia.url
+          ? { ...selectedSource, url: `https://vdn.apps.cntv.cn/api/getHttpVideoInfo.do?pid=${cctvMedia.guid}`,
+            trackId: `cctv:${cctvMedia.guid}:original` }
+          : selectedSource;
+        const identity = !native && identitySource
+          ? await mediaResourceIdentity(meta.identity, v.frameUrl, identitySource)
           : meta.identity;
         if (selectedSource) selectedSource = {...selectedSource, identity};
         return {
@@ -424,10 +475,17 @@ export default defineBackground(() => {
     observation.release(id);
     sources.delete(id);
     detected.delete(id);
+    cctvSources.delete(id);
     void chrome.storage.session.remove([`source:${id}`, `detected:${id}`]);
     if (session?.candidate.tabId === id) void stop();
   });
   chrome.tabs.onUpdated.addListener((id, change) => {
+    if (change.status === 'loading') {
+      // A same-URL reload is a new document too: its old pending metadata may
+      // not repopulate discovery merely because the GUID remains unchanged.
+      observation.invalidate(id);
+      cctvSources.delete(id);
+    }
     if (change.url) {
       observation.invalidate(id);
       if (detected.get(id)?.identity !== mediaIdentity(change.url)) {

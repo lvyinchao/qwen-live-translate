@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 — Unreleased
+
+- Add targeted discovery for public CCTV desktop VOD pages. Query CCTV's fixed official metadata endpoint with the current programme GUID; prefer its audio-only HLS, with a validated public HLS fallback. Associate it only with the unique native main player, without media protection and within two seconds of the programme duration.
+- Recheck the page, GUID and observation revision after metadata lookup, and rescan the player DOM before association. Keep the same content identity when the verified programme's CDN mirror changes.
+- Reuse successful metadata results in memory for five minutes; retry failed lookups after two seconds and clear them when observation is released. Send no cookies or model credentials to this endpoint, retain only the validated URL/title/duration and never persist the raw API response, IP or `client_sid`. No new permission is requested.
+- A development 0.2.4 build decoded non-silent mono 16 kHz audio from the reported CCTV video's beginning, 1180.15–1210.15 seconds and ending, while the native video stayed paused at zero. The final build repeated all three reads successfully. This checks ahead-readable audio, not translated playback or a new model/synchronization long run. See [validation](docs/VALIDATION.md).
+- The final build passed types, the build, 196 unit tests in 31 files and all 12 expanded CCTV browser-fixture categories, including same-URL reload, a changed player during an API lookup, CDN rotation and direct-source identity. Complete ten-gate CI and release-package checks remain pending for this candidate. Existing 0.2.2/0.2.3 evidence remains version-specific.
+
 ## 0.2.3 — 2026-10-16
 
 - Fix concurrent Offscreen Document startup: a second caller must wait for the shared creation promise even when Chrome already lists the new document. This prevents an early message from returning no response while creation is still in progress.

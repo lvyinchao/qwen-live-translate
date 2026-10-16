@@ -1,7 +1,7 @@
 {
   "name": "timbradub",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -15,7 +15,7 @@
     "prepare:brand": "node scripts/prepare-brand.mjs",
     "package": "node scripts/package.mjs",
     "verify:release": "node scripts/verify-release.mjs",
-    "test:browser": "node scripts/browser-ui.mjs && node scripts/gate-discovery.mjs && node scripts/gate-youtube-player.mjs && node scripts/gate-playback-state.mjs && node scripts/gate-playback-audio.mjs && node scripts/gate-panel-storage.mjs && node scripts/gate-language-switch.mjs && node scripts/gate-range-source.mjs && node scripts/gate-local-files.mjs",
+    "test:browser": "node scripts/browser-ui.mjs && node scripts/gate-discovery.mjs && node scripts/gate-youtube-player.mjs && node scripts/gate-playback-state.mjs && node scripts/gate-playback-audio.mjs && node scripts/gate-panel-storage.mjs && node scripts/gate-language-switch.mjs && node scripts/gate-range-source.mjs && node scripts/gate-local-files.mjs && node scripts/gate-cctv-discovery.mjs",
     "prepare:store": "node scripts/prepare-store-assets.mjs",
     "verify:media-source": "node scripts/check-media-source.mjs",
     "audit:deps": "npm audit --audit-level=low --registry=https://registry.npmjs.org",

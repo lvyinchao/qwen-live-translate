@@ -2,6 +2,24 @@
 
 This document distinguishes observed behavior from product goals. Detailed, dated evidence is in [the historical validation record](../outputs/真实验收记录.md), the [0.2.2 review and repair record](REVIEW-2026-10-16.md) and individual JSON reports in `outputs/`. Results from different versions or build hashes must not be combined into one acceptance claim.
 
+## 0.2.4 CCTV public VOD discovery candidate
+
+The reported [CCTV programme](https://tv.cctv.cn/2026/10/10/VIDEI34ipCK8rpMApfhxRnYs261010.shtml), “[篮球公园]20261009 老将王思雨的坚守”, reproduced a video-present/audio-missing failure in 0.2.3 after the panel was opened late. Its native video duration was 2678.68 seconds; no ahead-readable source was discovered. The 0.2.4 change queries only CCTV's fixed public metadata endpoint with the current programme GUID, prefers its validated audio-only HLS and falls back to a validated public HLS when needed. It requires a unique native main player, no detected media protection and a duration difference of at most two seconds. After the API returns, discovery rescans the DOM and rechecks the page, GUID and observation revision. A verified programme retains its content identity across CDN changes.
+
+An anonymous real-page check with a development 0.2.4 build used the extension's unmodified decoder to produce non-silent mono 16 kHz PCM in all three requested windows. The native video stayed **paused at currentTime 0** before and after every read:
+
+| Requested source window | Decoded coverage | Returned PCM samples |
+| --- | --- | --- |
+| 0–30 s | 0–30.058667 s | 480,000 |
+| 1180.15–1210.15 s | 1180.096–1210.218667 s | 480,000 |
+| 2660–2678.68 s | 2659.946667–2678.698667 s | 298,880 |
+
+The decoder preserves the source timestamps and trims PCM to the requested window; codec-frame coverage can extend beyond that window. This is evidence of paused ahead-decoding for this one public programme, not a new model call, translated playback, voice-quality or synchronization/20-minute result. It does not establish all CCTV pages, content, accounts, live streams or DRM support. The final build repeated all three reads successfully; see the [actual CCTV report](../outputs/cctv-live-verification.json). Its runtime SHA-256 is `429f29c34ba61a739a7fdd43af0924ef7856002120849690e0cc47ba4c34a55a`. The repeatable manual check is `node scripts/gate-cctv-live.mjs`; it contacts this CCTV programme but blocks provider WebSockets and does not call the translation model.
+
+The final build passed **196 unit tests in 31 files**, types and the production build. The [CCTV fixture report](../outputs/cctv-discovery-verification.json) passed 12 categories, covering public discovery, sibling-player isolation, cache reuse, duration mismatch, ambiguous main players, protected/invalid metadata, obsolete GUID responses, CDN rotation, direct-source identity, player changes during a held lookup and a same-URL/GUID document reload. The latter failed before the loading-event revision fix; its failure remains in local diagnostic work. The complete ten-gate browser CI and release/source-ZIP reproduction have not yet been marked complete for 0.2.4. Generated fixtures do not supply real CCTV playback or provider-translation evidence.
+
+The official lookup sends no cookies or model key. Successful results are valid in memory for five minutes, failed lookups can retry after two seconds, and releasing observation clears the lookup; raw responses, including IP or `client_sid`, are not retained. This is an API-specific exception to observed media context's 60-second validity and requests no new permission. See [Privacy](../PRIVACY.md). Bilibili remains the public walkthrough, and all 0.2.2/0.2.3 results below retain their original scope and runtime identities.
+
 ## 0.2.3 startup and independent-caption update
 
 A later [main CI run 38878153272](https://github.com/lvyinchao/timbradub/actions/runs/38878153272) exposed a real startup race. In an isolated browser with Offscreen Document creation delayed by 1.5 seconds, the first `files:status` request starts creation; a concurrent caller can already see one document in `getContexts` while its creation promise is unfinished. Returning on that context check allows a message to arrive too early and return `undefined`.
@@ -111,6 +129,7 @@ Each final case must report startup wait, all/eligible/valid onset counts and P9
 | Qwen protocol/authentication | Actual Model Studio requests and translated speech in isolated Chrome                              | Provider uptime, all accounts/regions or an end-to-end latency guarantee                                                         |
 | Bilibili native playback     | Chinese/English translation, pause/resume, seeks, container fullscreen, 1.5×; live target change to Japanese | Every Bilibili video, CDN, quality or 20-minute reliability                                                                      |
 | Tencent native HLS           | One specified clear episode, paused ahead-decoding near 1180 seconds and actual English speech     | All episodes, login states, qualities or DRM content                                                                             |
+| CCTV public VOD candidate    | One reported programme, paused 16 kHz audio reads at the beginning, middle and ending               | No new model call, translated playback, all-content, live-stream or DRM claim                   |
 | YouTube primary player       | Live 720p→1080p→720p discovery returns one stable main target                                      | Sustained translation beyond unresolved SABR playback verification failures                                                      |
 | Language cancellation        | Real extension fixture gate: four rapid changes, concurrent seek, old events and stop              | Language quality: generated synthetic-tone WAVs are deliberately reused and are not represented as genuine multi-language speech |
 | Local archives               | Real OPFS/IndexedDB, quiet staging, final ZIP CRC and exact PCM merge checks                       | Rights to redistribute a source voice or third-party media                                                                       |
@@ -126,6 +145,6 @@ Unit and isolated browser checks run without model credentials. See [Contributin
 
 ## Distribution checks from v0.2.2
 
-`npm run test:browser` includes every offline fixture gate: UI, discovery, player selection, playback pause/wait state, audible playback, panel storage controls, language switching/cancellation, Range fallback and local files. Original tone fixtures are generated in code and are included in the source ZIP; no historical voice recording or provider account is needed.
+`npm run test:browser` includes every offline fixture gate: UI, discovery, player selection, playback pause/wait state, audible playback, panel storage controls, language switching/cancellation, Range fallback and local files, plus CCTV metadata association from 0.2.4. Original tone fixtures are generated in code and are included in the source ZIP; no historical voice recording or provider account is needed.
 
 `npm run test:release` downloads the actual installation/source ZIPs and checksums through Chrome, verifies SHA-256, extracts the installation ZIP and loads its root directory, then runs `npm ci`, type/unit checks, build and all offline browser gates in a clean source extraction. It generates `outputs/release-smoke-verification.json` afterward, attached separately to CI/release artifacts rather than embedded in its own source ZIP. Main/PR CI and tag release call the same validation workflow; publication uses its exact artifact and will not overwrite an existing release. These are software/distribution checks, not substitute evidence for live translation quality, voice similarity, the full 20-minute run or P95 synchronization.

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-16T10:31:28.250472+00:00",
+  "version": "0.2.4",
+  "runtimeSha256": "429f29c34ba61a739a7fdd43af0924ef7856002120849690e0cc47ba4c34a55a",
+  "scope": "CCTV public VOD audio acquisition repair; no new provider/translated-playback/20-minute claim.",
+  "baseline": {
+    "version": "0.2.3",
+    "nativeDuration": 2678.68,
+    "latePanelAheadSource": false,
+    "userChrome": "Reproduced fragments-only and disabled start at the reported CCTV URL"
+  },
+  "fix": [
+    "Resolve only the current verified CCTV programme through the fixed public API",
+    "Prefer its clear audio-only HLS; bind to the unique unprotected main player within 2 seconds of the API duration",
+    "Revalidate page, GUID, document generation and player DOM after API lookup",
+    "Clear lookups on observation release, tab close and same-URL document reload",
+    "Reuse successful metadata for five minutes; retain programme identity across verified CDN rotation, while direct unverified media retain URL-based identity"
+  ],
+  "checks": {
+    "typesPassed": true,
+    "buildPassed": true,
+    "unitTests": 196,
+    "unitFiles": 31,
+    "cctvBrowserChecks": 12,
+    "cctvBrowserPassed": true,
+    "realPausedAheadWindowsPassed": true
+  },
+  "liveReceipt": "cctv-live-verification.json",
+  "fixtureReceipt": "cctv-discovery-verification.json",
+  "distributionStatus": "Complete browser CI, release packages and local Chrome update pending; Store v0.2.3 remains pending review."
+}

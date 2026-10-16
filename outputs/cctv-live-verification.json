@@ -1,0 +1,83 @@
+{
+  "at": "2026-10-16T10:29:56.215Z",
+  "runtimeSha256": "429f29c34ba61a739a7fdd43af0924ef7856002120849690e0cc47ba4c34a55a",
+  "page": "https://tv.cctv.cn/2026/10/10/VIDEI34ipCK8rpMApfhxRnYs261010.shtml",
+  "scope": "Real anonymous CCTV VOD page and unmodified extension decoder; delayed panel opening, paused-player ahead reads. No model call, translated-playback or language-quality claim.",
+  "checks": [
+    "A late scan resolves a full HLS source for the paused 44-minute native player",
+    "Beginning, 19-minute middle and ending windows decode to non-silent mono 16 kHz PCM while the native player stays paused"
+  ],
+  "windows": [
+    {
+      "start": 0,
+      "end": 30,
+      "ok": true,
+      "decodedStart": 0,
+      "decodedEnd": 30.058666666666667,
+      "samples": 480000,
+      "rms": 0.044969356411737375,
+      "before": {
+        "time": 0,
+        "paused": true
+      },
+      "after": {
+        "time": 0,
+        "paused": true
+      }
+    },
+    {
+      "start": 1180.15,
+      "end": 1210.15,
+      "ok": true,
+      "decodedStart": 1180.0960208333333,
+      "decodedEnd": 1210.2186875,
+      "samples": 480000,
+      "rms": 0.0429773039115562,
+      "before": {
+        "time": 0,
+        "paused": true
+      },
+      "after": {
+        "time": 0,
+        "paused": true
+      }
+    },
+    {
+      "start": 2660,
+      "end": 2678.68,
+      "ok": true,
+      "decodedStart": 2659.9466875,
+      "decodedEnd": 2678.7413541666665,
+      "samples": 298880,
+      "rms": 0.04992905780641641,
+      "before": {
+        "time": 0,
+        "paused": true
+      },
+      "after": {
+        "time": 0,
+        "paused": true
+      }
+    }
+  ],
+  "version": "0.2.4",
+  "native": {
+    "duration": 2678.6800000000003,
+    "time": 0,
+    "paused": true,
+    "protected": false
+  },
+  "candidates": [
+    {
+      "id": "35d00a58-e974-4c3a-bfaa-9f8cc5c629d3",
+      "title": "[篮球公园]20261009 老将王思雨的坚守",
+      "duration": 2678.6800000000003,
+      "sourceStatus": "ready",
+      "sourceHost": "newcntv.qcloudcdn.com",
+      "sourceKind": "hls",
+      "detectedMedia": []
+    }
+  ],
+  "prefetchable": true,
+  "passed": true
+}

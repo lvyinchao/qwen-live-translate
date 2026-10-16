@@ -20,6 +20,7 @@ const video = (extra: Partial<Video>): Video => ({
   displayHeight: 360,
   youtubeMain: true,
   bilibiliMain: false,
+  cctvMain: false,
   ...extra,
 });
 it('keeps only the active main player, not a hidden higher resolution or an oversized preview', () => {

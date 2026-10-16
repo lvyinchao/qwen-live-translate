@@ -66,6 +66,8 @@ export interface PlayerMetadata {
   /** Direct URLs verified to belong to the selected/unambiguous audio group. */
   audioSources?: AudioSource[];
   sourceReason?: string;
+  /** Current public CCTV VOD identifier, read only on a matching watch page. */
+  cctvGuid?: string;
 }
 
 /** Resolve direct reads against current native metadata, never guess from bitrate/language. */
@@ -226,5 +228,10 @@ export async function inspectPlayerMain(): Promise<PlayerMetadata> {
           : 'generic',
     title,
     ad: false,
+    cctvGuid:
+      /^tv\.cctv\.(?:cn|com)$/.test(u.hostname) &&
+      /^\/\d{4}\/\d{2}\/\d{2}\/VIDE[a-zA-Z0-9]+\.shtml$/.test(u.pathname) &&
+      typeof win.guid === 'string' && /^[a-fA-F0-9]{32}$/.test(win.guid)
+        ? win.guid.toLowerCase() : undefined,
   };
 }

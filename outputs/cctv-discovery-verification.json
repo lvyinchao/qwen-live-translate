@@ -1,0 +1,123 @@
+{
+  "at": "2026-10-16T10:29:55.772Z",
+  "runtimeSha256": "429f29c34ba61a739a7fdd43af0924ef7856002120849690e0cc47ba4c34a55a",
+  "version": "0.2.4",
+  "scope": "Built Chrome extension with a controlled CCTV watch-page DOM and fixed-API responses. Generated local WAV metadata only; no CCTV network playback, user account or model calls.",
+  "checks": [
+    "A page loaded before the sidepanel, without observed playlist traffic, obtains the fixed-API audio HLS for its unique native main player only; a larger side video cannot take that source",
+    "Repeated scans reuse the successful current-GUID API lookup instead of issuing duplicate requests",
+    "After the five-minute lookup cache expires, a rotated public CDN URL is refreshed while the same programme keeps its media/cache identity; the side player remains unassociated",
+    "A main player using either of two distinct direct files retains the actual direct URL and distinct media identities, rather than borrowing the page GUID identity; restoring the native source recovers the API HLS",
+    "A cached API result is withheld when main-player duration differs by more than two seconds and becomes usable again only after the matching player returns",
+    "Two native-main markers are treated as ambiguous instead of assigning one playlist to either player",
+    "Protected API metadata produces no playable HLS and does not reuse the preceding public GUID cache",
+    "A response whose HLS belongs to a different GUID is rejected instead of being associated with the current player",
+    "An invalid page GUID triggers no API request and cannot resurrect an old cached playlist",
+    "When the same GUID lookup is pending, replacing its eight-second media with three-second media prevents the delayed HLS from being assigned; a later matching player can recover from the cached API result",
+    "Reloading the same URL and GUID creates a new observation/document owner: a held scan from the previous page is discarded while the new page scan succeeds",
+    "Changing the GUID within the same page invalidates previous association; a delayed old lookup cannot replace the latest result or its cache"
+  ],
+  "cases": [
+    {
+      "name": "public-main",
+      "players": 2,
+      "sourceKind": "hls",
+      "url": "https://hls.cntv.cn/asp/hls/audio/11111111111111111111111111111111/index.m3u8"
+    },
+    {
+      "name": "expired-cache-cdn-rotation",
+      "previousUrl": "https://hls.cntv.cn/asp/hls/audio/11111111111111111111111111111111/index.m3u8",
+      "url": "https://hls-alt.cntv.cn/asp/hls/audio/11111111111111111111111111111111/index.m3u8",
+      "previousMediaId": "media:v2:e646276622000c627abb08977c4100673ffbab17467203bdf746311a43b400e3",
+      "mediaId": "media:v2:e646276622000c627abb08977c4100673ffbab17467203bdf746311a43b400e3",
+      "requests": 2
+    },
+    {
+      "name": "direct-file-identity",
+      "files": [
+        {
+          "url": "https://hls.cntv.cn/direct-one.wav",
+          "mediaId": "media:v2:34ff6a81d840b944a233b6dea99ec95a4d59491e38d1ed8c5f96413b5173ef45"
+        },
+        {
+          "url": "https://hls.cntv.cn/direct-two.wav",
+          "mediaId": "media:v2:8c96cb749921266fdaec673b3512f5ac6d9cb54f7eb305eb9fdfd4c5e037b41f"
+        }
+      ]
+    },
+    {
+      "name": "same-url-guid-reload",
+      "guid": "77777777777777777777777777777777",
+      "oldPlayerId": "5d94e20d-fdab-422d-8187-8c5b0ff30ea0",
+      "newPlayerId": "a4506249-8163-4a8c-9159-b54c449eaf60",
+      "oldScan": [],
+      "newScanPlayers": 2
+    }
+  ],
+  "requests": [
+    {
+      "guid": "11111111111111111111111111111111",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "11111111111111111111111111111111",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "22222222222222222222222222222222",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "33333333333333333333333333333333",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "66666666666666666666666666666666",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "77777777777777777777777777777777",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "77777777777777777777777777777777",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "44444444444444444444444444444444",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    },
+    {
+      "guid": "55555555555555555555555555555555",
+      "method": "GET",
+      "parameters": [
+        "pid"
+      ]
+    }
+  ],
+  "passed": true
+}
