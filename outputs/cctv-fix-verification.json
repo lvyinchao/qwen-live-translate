@@ -23,9 +23,19 @@
     "unitFiles": 31,
     "cctvBrowserChecks": 12,
     "cctvBrowserPassed": true,
-    "realPausedAheadWindowsPassed": true
+    "realPausedAheadWindowsPassed": true,
+    "offlineBrowserGates": 10,
+    "ciPassed": true,
+    "codeqlPassed": true,
+    "releasePassed": true,
+    "ciCleanSourcePassed": true,
+    "publicArchiveChecksumsPassed": true,
+    "localChromeUpdated": true
   },
   "liveReceipt": "cctv-live-verification.json",
   "fixtureReceipt": "cctv-discovery-verification.json",
-  "distributionStatus": "Complete browser CI, release packages and local Chrome update pending; Store v0.2.3 remains pending review."
+  "distributionStatus": "Released on GitHub after complete CI and source-ZIP verification; local Chrome updated and the reported page now identifies audio. No Store submission change in this fix.",
+  "distributionReceipt": "cctv-distribution-0.2.4.json",
+  "releaseUrl": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.4",
+  "releaseCommit": "810d771f465481a9a9798e437d9f09e64c76c760"
 }

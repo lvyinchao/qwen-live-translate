@@ -1,8 +1,8 @@
 {
-  "at": "2026-10-16T09:36:50.083Z",
-  "version": "0.2.3",
+  "at": "2026-10-16T10:34:26.767Z",
+  "version": "0.2.4",
   "scope": "Actual ZIP downloads, root-folder installation and clean source-archive checks; synthetic fixtures only, no provider calls",
-  "source": "public-release",
+  "source": "local-http-download",
   "checks": [
     "Chrome actually downloaded the Chrome ZIP, source ZIP and checksums; both downloaded archives match SHA-256",
     "The extracted root folder loads in actual Chrome; the English panel opens with no credentials and saving off",
@@ -11,50 +11,45 @@
   ],
   "downloads": [
     {
-      "name": "timbradub-0.2.3-chrome.zip",
-      "sha256": "09825102af0bad54b46cee250d8465c9a04dfd17ad5e6d97d0edc3378a027345"
+      "name": "timbradub-0.2.4-chrome.zip",
+      "sha256": "65b41fdbe0013521b0dd5607854e35ad72db551b13e1634cdb3ee438e0f647de"
     },
     {
-      "name": "timbradub-0.2.3-source.zip",
-      "sha256": "8431341be00e04767c6246886df1a6b26b81b86982dccf2e525e8896f33b7c17"
+      "name": "timbradub-0.2.4-source.zip",
+      "sha256": "793e41797e0fb932bb32d958ca2a26eb2fea9dbfe1c5d74dd3bb9496ad7d328a"
     }
   ],
   "commands": [
     {
       "command": "npm ci --registry=https://registry.npmjs.org",
       "exitCode": 0,
-      "elapsedMs": 13325
+      "elapsedMs": 4083
     },
     {
       "command": "npm run verify:media-source",
       "exitCode": 0,
-      "elapsedMs": 551
+      "elapsedMs": 279
     },
     {
       "command": "npm run check",
       "exitCode": 0,
-      "elapsedMs": 6707
+      "elapsedMs": 4360
     },
     {
       "command": "npm test",
       "exitCode": 0,
-      "elapsedMs": 12639
+      "elapsedMs": 4770
     },
     {
       "command": "npm run build",
       "exitCode": 0,
-      "elapsedMs": 11411
+      "elapsedMs": 1873
     },
     {
       "command": "npm run test:browser",
       "exitCode": 0,
-      "elapsedMs": 108357
+      "elapsedMs": 78985
     }
   ],
-  "passed": true,
-  "releaseUrl": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.3",
-  "downloadBaseUrl": "https://github.com/lvyinchao/timbradub/releases/download/v0.2.3",
-  "releaseCommit": "d06ce4b1bfbb1bc6f48eab0d63b406170baa2ba5",
-  "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38881041375",
-  "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28"
+  "passed": true
 }

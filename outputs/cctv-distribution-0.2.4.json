@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-16T10:37:57.948339+00:00",
+  "version": "0.2.4",
+  "releaseCommit": "810d771f465481a9a9798e437d9f09e64c76c760",
+  "runtimeSha256": "429f29c34ba61a739a7fdd43af0924ef7856002120849690e0cc47ba4c34a55a",
+  "releaseUrl": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.4",
+  "downloadBaseUrl": "https://github.com/lvyinchao/timbradub/releases/download/v0.2.4",
+  "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38887840025",
+  "codeqlRun": "https://github.com/lvyinchao/timbradub/actions/runs/38887840031",
+  "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38887840129",
+  "publicDownloads": {
+    "method": "Downloaded actual GitHub release assets with GitHub CLI",
+    "sha256": {
+      "timbradub-0.2.4-chrome.zip": "65b41fdbe0013521b0dd5607854e35ad72db551b13e1634cdb3ee438e0f647de",
+      "timbradub-0.2.4-webstore.zip": "26dd9b9a69cdbbfe65f64bf44b131e8790a501379500f10dbcaed45e2c4950f9",
+      "timbradub-0.2.4-source.zip": "793e41797e0fb932bb32d958ca2a26eb2fea9dbfe1c5d74dd3bb9496ad7d328a"
+    },
+    "allMatchPublishedChecksums": true,
+    "archiveLayoutAndManifestPassed": true,
+    "runtimeMatchesRealCctvTestAndLocalChrome": true
+  },
+  "cleanSourceVerification": {
+    "passedInCi": true,
+    "allOfflineBrowserGates": 10,
+    "independentPublicSourceRebuild": false,
+    "scope": "The public archives match the exact validated CI artifact hashes; the clean-source rebuild ran in CI, not a second independent public-download rebuild."
+  },
+  "localChrome": {
+    "extensionId": "pekbbjpciefeheaacfpnhlkbbbmhdhoo",
+    "version": "0.2.4",
+    "enabled": true,
+    "sameReportedCctvPageAudioIdentified": true,
+    "startTranslationEnabled": true,
+    "nativeVideoPausedNearSeconds": 850,
+    "autoSaveFiles": false,
+    "existingSavedResults": 7,
+    "existingStagedChunks": 99,
+    "existingPendingMergeJobs": 4
+  },
+  "storeScope": "No Store submission/review change was performed in this CCTV fix. The prior 0.2.3 Store record remains a separate distribution channel.",
+  "passed": true
+}
