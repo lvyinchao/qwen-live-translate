@@ -91,6 +91,26 @@ export default defineBackground(() => {
     }
   };
   const initialized = initialize();
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes.settings) return;
+    const previous =
+      (changes.settings.oldValue as Partial<Settings> | undefined)
+        ?.autoSaveFiles === true;
+    const next =
+      (changes.settings.newValue as Partial<Settings> | undefined)
+        ?.autoSaveFiles === true;
+    if (previous === next) return;
+    void (async () => {
+      const contexts = await chrome.runtime.getContexts({
+        contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
+      });
+      if (contexts.length)
+        await chrome.runtime.sendMessage({
+          target: 'offscreen',
+          type: 'files:configure',
+        });
+    })().catch(() => {});
+  });
   async function ensureOffscreen() {
     const existing = await chrome.runtime.getContexts({
       contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
@@ -119,6 +139,7 @@ export default defineBackground(() => {
       ...DEFAULT_SETTINGS,
       ...saved,
       uiLanguage: normalizeUILanguage(saved?.uiLanguage),
+      autoSaveFiles: saved?.autoSaveFiles === true,
     };
   };
   async function publishLocale(language: UILanguage) {
@@ -516,6 +537,22 @@ export default defineBackground(() => {
       await initialized;
       const privileged = trusted(sender);
       switch (message.type) {
+        case 'files:set-enabled': {
+          if (!privileged) throw new Error('不允许网页修改配置');
+          const next = {
+            ...(await loadSettings()),
+            autoSaveFiles: message.enabled === true,
+          };
+          await chrome.storage.local.set({ settings: next });
+          await ensureOffscreen();
+          const configured = await chrome.runtime.sendMessage({
+            target: 'offscreen',
+            type: 'files:configure',
+          });
+          if (!configured?.ok)
+            throw new Error(configured?.error ?? '本地保存暂不可用');
+          return publicSettings(await loadSettings());
+        }
         case 'files:status':
         case 'files:merge':
         case 'files:retry': {
@@ -626,6 +663,10 @@ export default defineBackground(() => {
             ...current,
             ...input,
             apiKey: input.apiKey?.trim() || current.apiKey,
+            autoSaveFiles:
+              input.autoSaveFiles === undefined
+                ? current.autoSaveFiles
+                : input.autoSaveFiles === true,
           };
           endpoint(next);
           if (!/^[a-z]{2,3}$/.test(next.language))
@@ -645,6 +686,7 @@ export default defineBackground(() => {
             ...DEFAULT_SETTINGS,
             language: current.language,
             uiLanguage: current.uiLanguage,
+            autoSaveFiles: current.autoSaveFiles,
           };
           await chrome.storage.local.set({ settings: next });
           return publicSettings(next);

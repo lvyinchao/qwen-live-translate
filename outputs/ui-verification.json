@@ -1,10 +1,11 @@
 {
-  "at": "2026-10-15T14:01:19.780Z",
+  "at": "2026-10-16T00:21:15.933Z",
   "scope": "Isolated UI fixtures only; no model call or real-video acceptance",
   "errors": [],
   "checks": [
     "English default even in a zh-CN browser; target language remains Chinese",
     "Chinese preference survives panel reload",
+    "Save toggle preserves unsaved credential fields and does not submit them",
     "English and Chinese validation, settings labels and notices; key input cleared after saving",
     "Language preference propagates between panels without changing credentials or target language",
     "All session phases, buffer progress, speed, skips, errors and subtitle control localized; transcript unchanged",

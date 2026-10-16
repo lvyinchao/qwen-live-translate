@@ -111,6 +111,7 @@ it('retains failed downloads across restart and deduplicates successful retries'
     });
   const disk = new MemoryFiles();
   const files = new LocalFiles(failed, () => {}, name, disk);
+  files.setAutoSave(true);
   await files.capture(context, 60, 90, [segment], true);
   expect(failed).not.toHaveBeenCalled();
   await files.finish(context);
@@ -118,6 +119,7 @@ it('retains failed downloads across restart and deduplicates successful retries'
   expect((await files.status()).pending).toBe(1);
   const download = vi.fn(async () => 42);
   const restarted = new LocalFiles(download, () => {}, name, disk);
+  restarted.setAutoSave(true);
   await restarted.flush();
   expect(download).not.toHaveBeenCalled();
   await restarted.retry();
@@ -136,6 +138,86 @@ it('retains failed downloads across restart and deduplicates successful retries'
   );
   expect(download).toHaveBeenCalledTimes(1);
 });
+it('defaults to no file writes, stops new captures when disabled, and preserves old chunks for explicit merging', async () => {
+  const download = vi.fn(async () => 101);
+  const disk = new MemoryFiles();
+  const files = new LocalFiles(download, () => {}, crypto.randomUUID(), disk);
+  await files.capture(context, 60, 90, [segment]);
+  await files.finish(context);
+  expect((await files.status()).staged).toBe(0);
+  expect(disk.files.size).toBe(0);
+  expect(download).not.toHaveBeenCalled();
+  files.setAutoSave(true);
+  await files.capture(context, 60, 90, [segment]);
+  files.setAutoSave(false);
+  await files.capture(context, 60, 90, [{ ...segment, start: 70, end: 71 }]);
+  await files.finish(context);
+  expect((await files.status()).staged).toBe(1);
+  expect(disk.files.size).toBe(1);
+  expect(download).not.toHaveBeenCalled();
+  await files.finish(context, false);
+  await wait(
+    async () =>
+      (await files.status()).saved === 1 && !(await files.status()).saving,
+  );
+  expect(download).toHaveBeenCalledTimes(1);
+  expect((await files.status()).staged).toBe(1);
+});
+it('does not revive queued capture or automatic merge work after an off/on toggle', async () => {
+  const download = vi.fn(async () => 102);
+  const files = new LocalFiles(
+    download,
+    () => {},
+    crypto.randomUUID(),
+    new MemoryFiles(),
+  );
+  files.setAutoSave(true);
+  const pending = files.capture(context, 60, 90, [segment]);
+  files.setAutoSave(false);
+  files.setAutoSave(true);
+  await pending;
+  expect((await files.status()).staged).toBe(0);
+  await files.capture(context, 60, 90, [segment]);
+  const finishing = files.finish(context);
+  files.setAutoSave(false);
+  files.setAutoSave(true);
+  await finishing;
+  expect(download).not.toHaveBeenCalled();
+  expect((await files.status()).pending).toBe(1);
+});
+it('cancels an automatic merge before download dispatch when saving is disabled during preparation', async () => {
+  const disk = new MemoryFiles();
+  const read = disk.get.bind(disk);
+  let release: (() => void) | undefined;
+  let held = false;
+  disk.get = async (path) => {
+    if (!held && /\/merged-.*\.wav$/.test(path)) {
+      held = true;
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    }
+    return read(path);
+  };
+  const download = vi.fn(async () => 103);
+  const files = new LocalFiles(download, () => {}, crypto.randomUUID(), disk);
+  files.setAutoSave(true);
+  await files.capture(context, 60, 90, [segment]);
+  await files.finish(context);
+  await wait(async () => !!release);
+  files.setAutoSave(false);
+  release!();
+  await wait(async () => !(await files.status()).saving);
+  expect(download).not.toHaveBeenCalled();
+  expect((await files.status()).error).toBeUndefined();
+  expect((await files.status()).staged).toBe(1);
+  await files.finish(context, false);
+  await wait(
+    async () =>
+      (await files.status()).saved === 1 && !(await files.status()).saving,
+  );
+  expect(download).toHaveBeenCalledTimes(1);
+});
 it('flushes completed utterances from unfinished windows and keeps updates arriving during a download', async () => {
   let release!: () => void;
   const download = vi.fn(async (_url: string, _filename: string) => {
@@ -151,6 +233,7 @@ it('flushes completed utterances from unfinished windows and keeps updates arriv
     crypto.randomUUID(),
     new MemoryFiles(),
   );
+  files.setAutoSave(true);
   await files.capture(context, 60, 90, [segment]);
   expect(download).not.toHaveBeenCalled();
   await files.flush();

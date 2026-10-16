@@ -108,6 +108,22 @@ try {
   await panel.locator('.locale-select').selectOption('en');
   await waitLocale('en');
   // Switching locale preserves unsaved credential fields.
+  const saveSwitch = panel.getByRole('switch', {
+    name: 'Save translation files automatically',
+    exact: true,
+  });
+  await saveSwitch.check();
+  await panel.locator('input[role="switch"]:enabled').waitFor();
+  await saveSwitch.uncheck();
+  await panel.locator('input[role="switch"]:enabled').waitFor();
+  assert.equal(
+    await panel.getByLabel('Workspace ID').inputValue(),
+    'invalid workspace',
+  );
+  assert.equal((await call('settings:get')).hasKey, false);
+  result.checks.push(
+    'Save toggle preserves unsaved credential fields and does not submit them',
+  );
   assert.equal(
     await panel.getByLabel('API Key').inputValue(),
     'test-not-a-real-key',
@@ -255,7 +271,7 @@ try {
   await context.route('https://www.youtube.com/**', (route) =>
     route.fulfill({
       contentType: 'text/html',
-      body: '<!doctype html><title>UI fixture</title><div><video data-qvd-id="ui-fixture" width="640" height="360"></video></div>',
+      body: '<!doctype html><title>UI fixture</title><div id="movie_player"><video class="html5-main-video" data-qvd-id="ui-fixture" width="640" height="360"></video></div>',
     }),
   );
   const video = await context.newPage();

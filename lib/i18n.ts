@@ -3,6 +3,10 @@ import type { UILanguage } from './types';
 // Keep the original internal errors stable: retry classification and diagnostics
 // use them. Localize at the presentation boundary, never model text or subtitles.
 const english = {
+  自动保存翻译文件: 'Save translation files automatically',
+  '关闭时仅使用播放缓存，不自动保存脚本、译音文件或发起下载。已有文件会保留。':
+    'When off, only the playback cache is used. Transcripts and audio files are not saved automatically, and no automatic downloads start. Existing files are kept.',
+  自动保存已关闭: 'Automatic saving is off',
   '持续检测音轨中，找到可用资源后自动更新。':
     'Watching for audio. Available sources appear automatically.',
   媒体资源: 'Media stream',

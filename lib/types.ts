@@ -101,6 +101,7 @@ export interface Settings {
   region: 'cn-beijing' | 'ap-southeast-1';
   language: string;
   uiLanguage: UILanguage;
+  autoSaveFiles: boolean;
 }
 export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
@@ -108,6 +109,7 @@ export const DEFAULT_SETTINGS: Settings = {
   region: 'cn-beijing',
   language: 'zh',
   uiLanguage: 'en',
+  autoSaveFiles: false,
 };
 export const MODEL = 'qwen3.8-livetranslate-flash-realtime';
 export const VOICE = 'original-auto-v1';

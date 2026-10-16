@@ -182,6 +182,9 @@ function App() {
             (changes.settings!.newValue as Partial<Settings> | undefined)
               ?.uiLanguage,
           ),
+          autoSaveFiles:
+            (changes.settings!.newValue as Partial<Settings> | undefined)
+              ?.autoSaveFiles === true,
         }));
     };
     chrome.storage.onChanged.addListener(onSettings);
@@ -765,9 +768,41 @@ function App() {
         )}
         <section className="local-files" aria-label={t('本地保存')}>
           <strong>{t('本地保存')}</strong>
+          <label className="toggle-row file-save-toggle">
+            <span>{t('自动保存翻译文件')}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-label={t('自动保存翻译文件')}
+              checked={settings.autoSaveFiles}
+              disabled={!!busy || !loaded}
+              onChange={(event) => {
+                const enabled = event.target.checked;
+                const previous = settings.autoSaveFiles;
+                setSettings((old) => ({ ...old, autoSaveFiles: enabled }));
+                void act('files-toggle', async () => {
+                  try {
+                    const next = await call<PublicSettings>(
+                      'files:set-enabled',
+                      { enabled },
+                    );
+                    setSettings((old) => ({
+                      ...old,
+                      autoSaveFiles: next.autoSaveFiles,
+                    }));
+                  } catch (error) {
+                    setSettings((old) => ({ ...old, autoSaveFiles: previous }));
+                    throw error;
+                  }
+                });
+              }}
+            />
+          </label>
           <p>
             {t(
-              '片段自动暂存在本机，翻译结束或停止时合并为一个音频包；分段不发起下载。',
+              settings.autoSaveFiles
+                ? '片段自动暂存在本机，翻译结束或停止时合并为一个音频包；分段不发起下载。'
+                : '关闭时仅使用播放缓存，不自动保存脚本、译音文件或发起下载。已有文件会保留。',
             )}
           </p>
           <span role="status">
@@ -775,7 +810,9 @@ function App() {
               ? t('正在合并并保存…')
               : files.saved
                 ? t('已保存 {count} 个结果', { count: files.saved })
-                : t('译音先分段保存，完成后自动合并')}
+                : settings.autoSaveFiles
+                  ? t('译音先分段保存，完成后自动合并')
+                  : t('自动保存已关闭')}
           </span>
           {!!files.staged && (
             <small>{t('已暂存 {count} 段译音', { count: files.staged })}</small>

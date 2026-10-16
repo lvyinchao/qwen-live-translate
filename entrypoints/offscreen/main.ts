@@ -38,7 +38,17 @@ const files = new LocalFiles(
       .catch(() => {});
   },
 );
-void files.flush().catch((error) => files.failed(error));
+let filePreferenceVersion = 0;
+async function configureFiles() {
+  // Offscreen documents expose chrome.runtime, not chrome.storage. Settings
+  // remain background-owned; ignore older replies when toggles race startup.
+  const version = ++filePreferenceVersion;
+  const saved = await bg<Pick<Settings, 'autoSaveFiles'>>('settings:get');
+  if (version === filePreferenceVersion)
+    files.setAutoSave(saved?.autoSaveFiles === true);
+}
+const filesReady = configureFiles();
+void filesReady.then(() => files.flush()).catch((error) => files.failed(error));
 class Engine {
   session: PlaybackSession | null = null;
   settings: Settings | null = null;
@@ -527,6 +537,12 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
   )
     return;
   void (async () => {
+    await filesReady;
+    if (message.type === 'files:configure') {
+      await configureFiles();
+      await files.flush();
+      return true;
+    }
     if (message.type === 'engine:start') {
       await engine.start(
         message.session as PlaybackSession,
@@ -556,6 +572,7 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
     if (message.type === 'files:merge') {
       await files.finish(
         engine.session ? archiveContext(engine.session) : undefined,
+        false,
       );
       return files.status();
     }

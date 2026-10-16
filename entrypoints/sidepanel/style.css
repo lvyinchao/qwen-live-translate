@@ -73,6 +73,12 @@ button svg {
   color: #ae4429;
   overflow-wrap: anywhere;
 }
+.local-files .file-save-toggle {
+  margin: 10px 0 0;
+  padding: 8px 0;
+  border: 0;
+  color: #346c52;
+}
 .file-actions {
   display: flex;
   flex-wrap: wrap;

@@ -27,6 +27,8 @@ type Job = {
   savedRevision: number;
   count: number;
   updatedAt: number;
+  automatic?: boolean;
+  preferenceVersion?: number;
 };
 type Saved = { key: string; downloadId: number; filename: string; at: number };
 const jobKey = (context: ArchiveContext) =>
@@ -42,6 +44,19 @@ export class LocalFiles {
   private writes: Promise<unknown> = Promise.resolve();
   private draining?: Promise<void>;
   private error?: string;
+  private autoSave = false;
+  private preferenceVersion = 0;
+  setAutoSave(enabled: boolean) {
+    if (this.autoSave !== enabled) this.preferenceVersion++;
+    this.autoSave = enabled;
+  }
+  private canDownload(job: Job) {
+    return (
+      job.requestedRevision > job.savedRevision &&
+      (job.automatic === false ||
+        (this.autoSave && job.preferenceVersion === this.preferenceVersion))
+    );
+  }
   constructor(
     private download: (url: string, filename: string) => Promise<number>,
     private notify: (status: LocalFileStatus) => void = () => {},
@@ -230,8 +245,14 @@ export class LocalFiles {
     segments: TranslationSegment[],
     _ready = false,
   ) {
+    if (!this.autoSave) return;
+    const version = this.preferenceVersion;
     await this.initialize();
-    await this.serialize(() => this.saveParts(context, segments));
+    await this.serialize(() =>
+      this.autoSave && version === this.preferenceVersion
+        ? this.saveParts(context, segments)
+        : Promise.resolve(),
+    );
     await this.publish();
   }
   // Quiet checkpoint: seeks, startup and completed input windows only persist
@@ -241,9 +262,13 @@ export class LocalFiles {
     await this.writes;
     await this.publish();
   }
-  async finish(context?: ArchiveContext) {
+  async finish(context?: ArchiveContext, automatic = true) {
+    if (automatic && !this.autoSave) return;
+    const version = this.preferenceVersion;
     await this.initialize();
     await this.serialize(async () => {
+      if (automatic && (!this.autoSave || version !== this.preferenceVersion))
+        return;
       const jobs = context
         ? [await this.get<Job>('jobs', jobKey(context))]
         : await this.all<Job>('jobs');
@@ -253,6 +278,8 @@ export class LocalFiles {
             tx.objectStore('jobs').put({
               ...job,
               requestedRevision: job.revision,
+              automatic,
+              preferenceVersion: version,
             });
       });
     });
@@ -261,7 +288,7 @@ export class LocalFiles {
   }
   async retry() {
     this.error = undefined;
-    await this.finish();
+    await this.finish(undefined, false);
   }
   async failed(error: unknown) {
     this.error = messageError(error);
@@ -282,9 +309,7 @@ export class LocalFiles {
         await this.publish();
         if (
           !this.error &&
-          (await this.all<Job>('jobs')).some(
-            (j) => j.requestedRevision > j.savedRevision,
-          )
+          (await this.all<Job>('jobs')).some((j) => this.canDownload(j))
         )
           void this.drain();
       });
@@ -293,8 +318,8 @@ export class LocalFiles {
   private async run() {
     while (!this.error) {
       await this.writes;
-      const job = (await this.all<Job>('jobs')).find(
-        (j) => j.requestedRevision > j.savedRevision,
+      const job = (await this.all<Job>('jobs')).find((j) =>
+        this.canDownload(j),
       );
       if (!job) return;
       // Snapshot metadata under the same queue as capture. WAV filenames are
@@ -340,6 +365,9 @@ export class LocalFiles {
           ]);
           const url = URL.createObjectURL(await this.disk.get(zipPath));
           try {
+            // An automatic merge may have been preparing when the user switched
+            // saving off. Already-started downloads can finish; no new one starts.
+            if (!this.canDownload(snapshot.job)) return;
             id = await this.download(url, filename);
           } finally {
             URL.revokeObjectURL(url);

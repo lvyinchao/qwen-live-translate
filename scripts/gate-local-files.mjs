@@ -110,6 +110,16 @@ try {
       { type, params },
     );
   let status = await call('files:status');
+  assert.equal((await call('settings:get')).autoSaveFiles, false);
+  assert.equal(
+    await panel
+      .getByRole('switch', {
+        name: 'Save translation files automatically',
+        exact: true,
+      })
+      .isChecked(),
+    false,
+  );
   assert.equal(status.staged, 2);
   assert.equal(status.pending, 1);
   assert.equal(status.error, undefined);
@@ -181,6 +191,23 @@ try {
       };
       tx.objectStore('windows').put({ ...row, segments });
       tx.objectStore('metadata').put(row);
+      const disabledId = 'save-disabled-fixture';
+      const disabledRow = {
+        ...row,
+        key: JSON.stringify([
+          disabledId + '|audio:default',
+          'zh',
+          s.voice,
+          23,
+          90,
+        ]),
+        mediaId: disabledId + '|audio:default',
+      };
+      tx.objectStore('windows').put({
+        ...disabledRow,
+        segments: segments.map((s) => ({ ...s, mediaId: disabledId })),
+      });
+      tx.objectStore('metadata').put(disabledRow);
       await new Promise((r, j) => {
         tx.oncomplete = r;
         tx.onerror = () => j(tx.error);
@@ -223,21 +250,79 @@ try {
     behavior: 'allow',
     downloadPath: downloads,
   });
-  await panel.evaluate(async (session) => {
-    const r = await chrome.runtime.sendMessage({
-      target: 'offscreen',
-      type: 'engine:start',
-      session,
-      settings: {
-        apiKey: '',
-        workspace: '',
-        region: 'cn-beijing',
-        language: 'zh',
-        uiLanguage: 'en',
-      },
-    });
-    if (!r?.ok) throw new Error(r?.error ?? 'No response');
-  }, session);
+  const startSession = (session) =>
+    panel.evaluate(async (session) => {
+      const r = await chrome.runtime.sendMessage({
+        target: 'offscreen',
+        type: 'engine:start',
+        session,
+        settings: {
+          apiKey: '',
+          workspace: '',
+          region: 'cn-beijing',
+          language: 'zh',
+          uiLanguage: 'en',
+        },
+      });
+      if (!r?.ok) throw new Error(r?.error ?? 'No response');
+    }, session);
+  await startSession({
+    ...session,
+    id: 'disabled-fixture',
+    candidate: { ...session.candidate, mediaId: 'save-disabled-fixture' },
+    position: 90,
+  });
+  await panel.evaluate(() =>
+    chrome.runtime.sendMessage({ target: 'offscreen', type: 'engine:stop' }),
+  );
+  assert.equal((await call('files:status')).staged, 2);
+  assert.equal(
+    (await panel.evaluate(() => chrome.downloads.search({}))).length,
+    0,
+  );
+  report.checks.push(
+    'Automatic saving defaults off; the real engine loads a different cached video and stops without staging new WAVs or starting downloads, while old chunks remain',
+  );
+  await panel
+    .getByRole('switch', {
+      name: 'Save translation files automatically',
+      exact: true,
+    })
+    .check();
+  await panel.reload();
+  await panel.locator('input[role="switch"]:enabled').waitFor();
+  assert.equal(
+    await panel
+      .getByRole('switch', {
+        name: 'Save translation files automatically',
+        exact: true,
+      })
+      .isChecked(),
+    true,
+  );
+  await panel.locator('.locale-select:enabled').selectOption('zh');
+  await panel
+    .getByRole('switch', { name: '自动保存翻译文件', exact: true })
+    .uncheck();
+  await panel.reload();
+  await panel.locator('input[role="switch"]:enabled').waitFor();
+  assert.equal(
+    await panel
+      .getByRole('switch', { name: '自动保存翻译文件', exact: true })
+      .isChecked(),
+    false,
+  );
+  await panel
+    .getByRole('switch', { name: '自动保存翻译文件', exact: true })
+    .check();
+  await panel.locator('.locale-select:enabled').selectOption('en');
+  assert.equal((await call('settings:get')).autoSaveFiles, true);
+  report.checks.push(
+    'English/Chinese save switch takes effect immediately and retains on/off choices after panel reload, without requiring model credentials',
+  );
+  await panel.evaluate(() => chrome.offscreen.closeDocument());
+  assert.equal((await call('files:status')).staged, 2);
+  await startSession(session);
   const wait = async (check) => {
     for (let i = 0; i < 150; i++) {
       const s = await call('files:status');
@@ -327,6 +412,7 @@ try {
     db.close();
   });
   await root.send('Browser.setDownloadBehavior', { behavior: 'deny' });
+  await call('files:set-enabled', { enabled: false });
   await call('files:merge');
   status = await wait((s) => !!s.error && !s.saving);
   assert.equal(status.staged, 2);
@@ -374,6 +460,11 @@ try {
             target: 'background',
             type: 'files:status',
           });
+          const toggle = await chrome.runtime.sendMessage({
+            target: 'background',
+            type: 'files:set-enabled',
+            enabled: true,
+          });
           let bypass = false;
           try {
             const response = await chrome.runtime.sendMessage({
@@ -382,12 +473,21 @@ try {
             });
             bypass = !!response?.ok;
           } catch {}
-          return { metadataDenied: !denied.ok, offscreenBypass: bypass };
+          return {
+            metadataDenied: !denied.ok,
+            toggleDenied: !toggle.ok,
+            offscreenBypass: bypass,
+          };
         },
       })
     )[0].result;
   });
-  assert.deepEqual(security, { metadataDenied: true, offscreenBypass: false });
+  assert.deepEqual(security, {
+    metadataDenied: true,
+    toggleDenied: true,
+    offscreenBypass: false,
+  });
+  assert.equal((await call('settings:get')).autoSaveFiles, false);
   report.checks.push(
     'Webpage/content-script access to file metadata and direct offscreen commands rejected',
   );
