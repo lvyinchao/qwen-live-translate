@@ -4,9 +4,9 @@ This document distinguishes observed behavior from product goals. Detailed, date
 
 ## 0.2.2 software and distribution checks
 
-The current candidate passed 181 unit tests in 29 files, all nine isolated browser gates, TypeScript checks, the production build and a dependency audit with zero known vulnerabilities. This includes seven real-browser audio checks for tails/classification/stop and bilingual title persistence. [CI run 38875384478](https://github.com/lvyinchao/timbradub/actions/runs/38875384478) passed for candidate `5cf3d09`: its artifact runtime matches the digest below, and a clean source ZIP passed dependency installation, corresponding-source checks, types, unit tests, build and all nine browser gates. Download/install and source receipts retain their actual archive hashes; a later documentation/package update requires its own matching receipt. Generated tones and controlled pages do not establish language quality or speaker similarity.
+The released 0.2.2 runtime passed 181 unit tests in 29 files, all nine isolated browser gates, TypeScript checks, the production build and a dependency audit with zero known vulnerabilities. This includes seven real-browser audio checks for tails/classification/stop and bilingual title persistence. [Release run 38876940892](https://github.com/lvyinchao/timbradub/actions/runs/38876940892) and [main CI 38876940320](https://github.com/lvyinchao/timbradub/actions/runs/38876940320) passed at `792afbc`. The published runtime matches the digest below and the locally installed/Store-submitted build. Actual public GitHub downloads passed archive checksums and root-folder installation; the downloaded clean source ZIP passed dependency installation, corresponding-source checks, types, unit tests, build and all nine browser gates. See the [public-download receipt](../outputs/release-smoke-verification.json). The release also attaches its original CI receipt and a separate public-download receipt, both naming the same archive hashes. Later documentation receipts do not alter the frozen tag packages. Generated tones and controlled pages do not establish language quality or speaker similarity.
 
-Final candidate runtime:
+Released 0.2.2 runtime:
 
 ```text
 dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968

@@ -1,0 +1,60 @@
+{
+  "at": "2026-10-16T08:59:08.115Z",
+  "version": "0.2.2",
+  "scope": "Actual ZIP downloads, root-folder installation and clean source-archive checks; synthetic fixtures only, no provider calls",
+  "source": "public-release",
+  "checks": [
+    "Chrome actually downloaded the Chrome ZIP, source ZIP and checksums; both downloaded archives match SHA-256",
+    "The extracted root folder loads in actual Chrome; the English panel opens with no credentials and saving off",
+    "UTF-8 Chinese evidence filenames survive source ZIP download and extraction",
+    "A clean source ZIP installs locked dependencies, verifies MPL source, typechecks, passes unit tests, builds and passes every offline browser gate without historical recordings"
+  ],
+  "downloads": [
+    {
+      "name": "timbradub-0.2.2-chrome.zip",
+      "sha256": "e224e08d6750e1511517e00ce110f4b30a31af5f4edaeed5bf931e9d34f6f089"
+    },
+    {
+      "name": "timbradub-0.2.2-source.zip",
+      "sha256": "c1371df9d3e7dd1b6988e37f24d1a5e93eed48de7fd3bdb4a3a16f5952c620d6"
+    }
+  ],
+  "commands": [
+    {
+      "command": "npm ci --registry=https://registry.npmjs.org",
+      "exitCode": 0,
+      "elapsedMs": 83090
+    },
+    {
+      "command": "npm run verify:media-source",
+      "exitCode": 0,
+      "elapsedMs": 1825
+    },
+    {
+      "command": "npm run check",
+      "exitCode": 0,
+      "elapsedMs": 19950
+    },
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "elapsedMs": 21313
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "elapsedMs": 23810
+    },
+    {
+      "command": "npm run test:browser",
+      "exitCode": 0,
+      "elapsedMs": 181902
+    }
+  ],
+  "passed": true,
+  "releaseUrl": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.2",
+  "downloadBaseUrl": "https://github.com/lvyinchao/timbradub/releases/download/v0.2.2",
+  "releaseCommit": "792afbcdd728046799d57502962606528d0162fc",
+  "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38876940892",
+  "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968"
+}

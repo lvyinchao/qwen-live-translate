@@ -49,6 +49,10 @@
     "freshJapaneseChineseAndChineseEnglish15xRuns": true,
     "candidateCiCleanSourceZipPassed": true,
     "candidateCiCommit": "5cf3d09057d1ae09ba19f3df3ee5a90e4daa2330",
-    "runtimeDigestMatchesCandidateCi": true
+    "runtimeDigestMatchesCandidateCi": true,
+    "releaseCommit": "792afbcdd728046799d57502962606528d0162fc",
+    "releaseRun": "https://github.com/lvyinchao/timbradub/actions/runs/38876940892",
+    "publicReleaseDownloadAndCleanSourcePassed": true,
+    "publicReceipt": "release-smoke-verification.json"
   }
 }
