@@ -178,10 +178,10 @@ const english = {
   双语字幕: 'Bilingual subtitles',
   显示原语言字幕: 'Show original-language subtitles',
   显示目标语言字幕: 'Show target-language subtitles',
-  '为跟随画面，已有 {count} 处过长译音跳过尾部。完整译文仍可查看。':
-    'To keep up with the video, {count} long audio tails were skipped. Full translations remain available.',
+  '为跟随画面，已有 {count} 处译音截短尾部（含微小截尾）。完整译文仍可查看。':
+    'To stay aligned with the video, {count} audio tails were trimmed, including very small trims. Full translations remain available.',
   译文片段: 'Transcript',
-  译音尾部已跳过: 'Audio tail skipped',
+  译音尾部已截短: 'Audio tail trimmed',
   '先准备一小段译音，再边看边翻译。':
     'Prepare a short buffer, then translate as you watch.',
   '暂停、跳转和倍速，译音跟随视频。':

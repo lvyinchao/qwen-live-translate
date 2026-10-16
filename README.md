@@ -17,7 +17,7 @@ An independent, open-source Chrome extension that translates video speech **in t
 
 [Download the extension](https://github.com/lvyinchao/timbradub/releases/latest) · [Chinese guide](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Report a problem](https://github.com/lvyinchao/timbradub/issues/new/choose)
 
-> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent support is verified for one specific clear HLS episode. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.3 is submitted and pending review, with automatic publication selected after approval. It is not yet approved or publicly available in the store. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
+> **Preview software.** Bilibili has real translated-playback checks, with measured buffering and truncation limits documented below. YouTube discovery and some audio windows work, but sustained playback can be blocked by SABR playback-verification requirements. Tencent has sample-specific HLS and translated-playback evidence. Detection on a site does not guarantee that its videos can be translated. See the [compatibility and validation record](docs/VALIDATION.md). Chrome Web Store v0.2.3 is submitted and pending review, with automatic publication selected after approval. It is not yet approved or publicly available in the store. GitHub downloads are a separate channel. See [store status](docs/store/STATUS.md).
 
 ## What it does
 
@@ -62,7 +62,7 @@ The [October 16 platform assessment](docs/COMPATIBILITY-2026-10-16.md) separates
 | ------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Bilibili VOD              | Real English→Chinese, Chinese→English and Japanese→Chinese playback, controls, seeks, and in-playback target switching | CDN, account, codec and page changes can affect availability; faster viewing can buffer and truncate speech |
 | YouTube VOD               | Main-player selection, resolution deduplication, some audio windows                   | Long playback has unresolved SABR verification failures                                    |
-| Tencent Video             | One specified episode: clear HLS, middle-of-video decoding and English dubbing        | Not a claim of all episodes, qualities or protected content                                |
+| Tencent Video             | Sample-specific HLS and English dubbing; [0.2.4 signed-in 4K middle-of-video playback](docs/TENCENT-PLAYBACK-2026-10-16.md) | Short single-account check with buffering and tail cuts; earlier protection refusal was not reproduced or explained, and whole-episode/all-quality support is unverified |
 | CCTV desktop VOD (0.2.4) | One reported programme: paused ahead-decoding at the beginning, 1180.15 seconds and ending | Targeted public metadata/HLS support; no new translated-playback claim, no live streams or DRM |
 | Youku, iQIYI, other sites | Generic player and media-request discovery                                            | Translation requires an unencrypted, ahead-readable audio source; no universal DASH parser |
 

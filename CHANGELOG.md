@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.5 — 2026-10-16
+
+- Clarify the English and Chinese playback notices: the tail counter includes very small timeline trims, not only long speech. Label affected transcript entries as trimmed. Playback, source discovery, the 2× audio-rate limit and cut accounting are unchanged.
+- Publish the short real-provider Tencent Video test on a complete 4K episode: Chinese→English from approximately 16:54 to 19:33, with 46 native audio `playing` observations, 35.173 seconds to first readiness and 0.844× preparation throughput. One rebuffer and 41 tail trims remain quality limitations; 35 trims were at most 100 ms and the total was 3.914 seconds of output audio.
+- Keep the earlier protection-warning cause unconfirmed: reopening the same watch URL made a readable audio source available in that account, and the warning did not recur. This is not a DRM repair, a full-episode or 20-minute acceptance, or a platform-wide compatibility claim. See the [Tencent playback record](docs/TENCENT-PLAYBACK-2026-10-16.md).
+
 ## 0.2.4 — 2026-10-16
 
 - Add targeted discovery for public CCTV desktop VOD pages. Query CCTV's fixed official metadata endpoint with the current programme GUID; prefer its audio-only HLS, with a validated public HLS fallback. Associate it only with the unique native main player, without media protection and within two seconds of the programme duration.

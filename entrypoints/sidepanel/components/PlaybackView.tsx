@@ -108,7 +108,7 @@ export function PlaybackView({ session, mix, locale }: {
                 {session.skipped > 0 && (
                   <p className="skip-note">
                     {t(
-                      '为跟随画面，已有 {count} 处过长译音跳过尾部。完整译文仍可查看。',
+                      '为跟随画面，已有 {count} 处译音截短尾部（含微小截尾）。完整译文仍可查看。',
                       { count: session.skipped },
                     )}
                   </p>
@@ -139,7 +139,7 @@ export function PlaybackView({ session, mix, locale }: {
                             <small>{s.sourceText}</small>
                             {s.skipped && (
                               <small className="skip-note">
-                                {t('译音尾部已跳过')}
+                                {t('译音尾部已截短')}
                               </small>
                             )}
                           </p>
