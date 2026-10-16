@@ -203,18 +203,31 @@ try {
     dubVolume: 0.7,
     subtitles: false,
   });
-  const before = await page.locator('video').evaluate((v) => v.currentTime);
+  const sourceClock = () => page.locator('video').evaluate((v) => ({
+    position: v.currentTime, at: performance.now(), rate: v.playbackRate,
+  }));
+  const before = await sourceClock();
   await panel.locator('#language').selectOption('en');
+  const afterAction = await sourceClock();
   let active = await poll(async () => {
     const s = await call('session:get');
     return (
       s?.language === 'en' && s.phase === 'playing' && s.segments.length && s
     );
   }, 'English cache playback');
-  assert.ok(
-    Math.abs(active.position - before) < 1,
-    `switch position ${active.position} versus ${before}`,
-  );
+  const afterReady = await sourceClock();
+  // A playing 1.5x source can legitimately advance while UI and cache messages
+  // are processed. Bound real media-clock progress by elapsed time rather than
+  // misclassifying a slow browser action as a seek after a fixed one-second gap.
+  for (const [previous, next] of [[before, afterAction], [afterAction, afterReady]]) {
+    const elapsed = (next.at - previous.at) / 1000;
+    const advance = next.position - previous.position;
+    assert.ok(advance >= -0.05 && advance <= elapsed * Math.max(previous.rate, next.rate) + 0.05,
+      `source clock jumped ${advance}s over ${elapsed}s at ${previous.rate}x/${next.rate}x`);
+  }
+  assert.ok(active.position >= before.position - 0.05 && active.position <= afterReady.position + 0.05,
+    `switch position ${active.position} outside observed source interval ${before.position}–${afterReady.position}`);
+  report.activeSwitchClock = { before, afterAction, afterReady, readyPosition: active.position };
   assert.equal(active.rate, 1.5);
   assert.equal(active.originalVolume, 0.12);
   assert.equal(active.dubVolume, 0.7);
@@ -415,8 +428,11 @@ try {
   await panel.locator('#language').selectOption('fr');
   await poll(async () => {
     const s = await call('session:get');
-    return s.language === 'fr' && s.phase === 'buffering' && !s.segments.length;
-  }, 'uncached language clears old queue');
+    if (s.language !== 'fr' || s.phase !== 'buffering' || s.segments.length) return false;
+    const snapshot = await playerSnapshot();
+    const nativePaused = await page.locator('video').evaluate((v) => v.paused);
+    return snapshot.src === null && snapshot.paused && !snapshot.caption.includes('TARGET-') && nativePaused;
+  }, 'uncached language clears the actual audio/captions and pauses the native video');
   const buffering = await playerSnapshot();
   assert.equal(buffering.src, null);
   assert.equal(buffering.paused, true);
@@ -437,6 +453,7 @@ try {
   );
   const second = await context.newPage();
   await second.goto(`chrome-extension://${id}/sidepanel.html`);
+  await second.locator('#language:enabled').waitFor();
   await second.waitForFunction(
     () => document.querySelector('#language')?.value === 'en',
   );
@@ -537,7 +554,7 @@ try {
   throw e;
 } finally {
   await fs.writeFile(
-    'outputs/language-switch-verification.json',
+    process.env.LANGUAGE_SWITCH_REPORT ?? 'outputs/language-switch-verification.json',
     JSON.stringify(report, null, 2),
   );
   await context.close();

@@ -63,11 +63,16 @@ try {
               (window.__fixtureOnsets ??= []).push({mediaTime:document.querySelector("video").currentTime,audioTime:this.currentTime,duration:this.duration});
             });
             for (const type of ["playing", "pause", "ended"]) this.addEventListener(type, (event) => {
-              (window.__fixtureAudioEvents ??= []).push({
+              const record = {
                 id:this.dataset.fixtureAudioId,type,at:performance.now(),trusted:event.isTrusted,
                 mediaTime:document.querySelector("video").currentTime,
                 audioTime:this.currentTime,duration:this.duration,
-              });
+              };
+              // The natural-tail case delays observation of a real native event.
+              // Its property and the observer's record are distinct conditions.
+              if (type === "ended" && window.__fixtureHoldEndedRecords)
+                (window.__fixturePendingAudioEnds ??= []).push(record);
+              else (window.__fixtureAudioEvents ??= []).push(record);
             });
           }
           return {id:this.dataset.fixtureAudioId,paused:this.paused,ended:this.ended,time:this.currentTime,volume:this.volume,src:this.getAttribute("src"),ready:this.readyState,duration:Number.isFinite(this.duration)?this.duration:null};
@@ -184,6 +189,10 @@ try {
 
   const natural = await resetCase('short-natural-tail');
   const naturalClip = await addAudio(natural, 'short-natural', 0.5, 4, 1);
+  await page.evaluate(() => {
+    window.__fixtureHoldEndedRecords = true;
+    window.__fixturePendingAudioEnds = [];
+  });
   await page.locator('video').evaluate((video) => video.play());
   await wait(async () => (await audios()).some((audio) => !audio.paused && audio.time > 0.05 && audio.duration === 1), 'short utterance is genuinely playing');
   await wait(async () => (await telemetry(natural.id, naturalClip.id)).some((event) => event.kind === 'start'), 'short utterance receives a real playing event');
@@ -192,6 +201,18 @@ try {
   assert.equal(naturalInjection.missed, false, 'the fixture must observe a positive real audio tail after predicted completion');
   assert.ok(naturalInjection.remaining > 0 && naturalInjection.remaining < 0.1);
   await wait(async () => (await audios()).some((audio) => audio.id === naturalAudio.id && audio.ended), 'real audio ended before the source sentence ends');
+  await wait(async () => page.evaluate((audioId) => window.__fixturePendingAudioEnds.some((event) =>
+    event.id === audioId && event.type === 'ended' && event.trusted), naturalAudio.id), 'native ended event reaches its delayed observer');
+  assert.equal(await page.evaluate((audioId) => window.__fixtureAudioEvents.some((event) =>
+    event.id === audioId && event.type === 'ended'), naturalAudio.id), false,
+  'ended=true must not be mistaken for an observer record already being available');
+  await page.evaluate(() => {
+    window.__fixtureHoldEndedRecords = false;
+    window.__fixtureAudioEvents.push(...window.__fixturePendingAudioEnds);
+    window.__fixturePendingAudioEnds = [];
+  });
+  await wait(async () => page.evaluate((audioId) => window.__fixtureAudioEvents.some((event) =>
+    event.id === audioId && event.type === 'ended'), naturalAudio.id), 'real native ended event is recorded');
   const naturalEnd = await page.evaluate((audioId) => window.__fixtureAudioEvents.find((event) => event.id === audioId && event.type === 'ended'), naturalAudio.id);
   assert.equal(naturalEnd.trusted, true, 'natural completion must come from a real media ended event');
   assert.ok(naturalEnd.mediaTime < naturalClip.end - 0.5, 'short translation must finish inside the original sentence window');
@@ -204,7 +225,8 @@ try {
   assert.equal(naturalTerminals[0].reason, 'natural');
   assert.equal(naturalTerminals[0].remaining, 0);
   assert.equal((await telemetry(natural.id, naturalClip.id)).some((event) => event.type === 'player:skip'), false);
-  result.shortNaturalTail = { injection: naturalInjection, realEndedAtSourceTime: naturalEnd.mediaTime, replayed, terminal: naturalTerminals[0] };
+  result.shortNaturalTail = { injection: naturalInjection, realEndedAtSourceTime: naturalEnd.mediaTime,
+    delayedNativeEventRecord: true, replayed, terminal: naturalTerminals[0] };
   result.checks.push('A real short WAV with a controlled 60 ms tail finishes naturally after predicted completion, before source end, emits exactly one natural terminal, and does not replay during the timeline blank');
 
   const cut = await resetCase('sub-100ms-timeline-cut');
@@ -263,6 +285,6 @@ try {
   await context.close();
   await fs.rm(extension, { recursive: true, force: true });
   await fs.rm(profile, { recursive: true, force: true });
-  await fs.writeFile('outputs/playback-audio-verification.json', JSON.stringify(result, null, 2) + '\n');
+  await fs.writeFile(process.env.PLAYBACK_AUDIO_REPORT ?? 'outputs/playback-audio-verification.json', JSON.stringify(result, null, 2) + '\n');
 }
 console.log(JSON.stringify(result));

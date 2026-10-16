@@ -1,0 +1,89 @@
+{
+  "at": "2026-10-16T09:52:19.849929+00:00",
+  "scope": "Test-observer and CI-diagnostic changes only; production extension runtime and immutable v0.2.3 release artifacts are unchanged. No provider calls or fresh real-video timing claim.",
+  "runtimeSha256": "9d4a272455c034a6db3a1c1b9431cd10ccd08a71f7b6a0a0549f6626b6e2ae28",
+  "earlierFailure": "CI 38882418044 passed all nine direct browser gates, but its clean-source browser subprocess failed without exposing the underlying stack. The original cause remains unconfirmed.",
+  "diagnosticCi": {
+    "url": "https://github.com/lvyinchao/timbradub/actions/runs/38882848226",
+    "commit": "de436a9b2c5d9fc3b6281533886f8369e932e875",
+    "passed": true,
+    "allNineBrowserGatesAndCleanSourcePassed": true
+  },
+  "changes": [
+    "Print a bounded isolated command-log tail and retain source logs on CI failure without adding raw output to release receipts",
+    "Wait for the actual native ended event record as well as the ended media property; a controlled observer delay preserves trusted native events",
+    "Wait for actual player audio/caption cleanup and native video pause after target switching",
+    "Wait for the new panel language selector to be enabled",
+    "Bound active source-clock progress by observed elapsed time instead of assuming browser actions finish within a fixed one-second interval"
+  ],
+  "localAudio": {
+    "checks": 7,
+    "errors": [],
+    "onsetSourceSeconds": 1.087171,
+    "delayedNativeEventRecord": true,
+    "shortNaturalTail": {
+      "injection": {
+        "missed": false,
+        "videoTime": 1.504045,
+        "audioTime": 0.94,
+        "remaining": 0.06000000000000005,
+        "ended": false
+      },
+      "realEndedAtSourceTime": 1.628198,
+      "delayedNativeEventRecord": true,
+      "replayed": false,
+      "terminal": {
+        "type": "player:metric",
+        "sessionId": "short-natural-tail",
+        "epoch": 0,
+        "languageVersion": 0,
+        "kind": "terminal",
+        "reason": "natural",
+        "segmentId": "short-natural",
+        "frontendAt": 4511,
+        "videoTime": 1.628048,
+        "audioTime": 1,
+        "audioDuration": 1,
+        "sourceStart": 0.5,
+        "sourceEnd": 4,
+        "readyState": 4,
+        "preloadHit": true,
+        "readyThrough": 8,
+        "stateVersion": 0,
+        "tickGapMs": 0.20000004768371582,
+        "maxTickGapMs": 52.10000014305115,
+        "videoRate": 1,
+        "audioRate": 1,
+        "videoPaused": false,
+        "audioPaused": true,
+        "phase": "paused",
+        "sourceTime": 1.628048,
+        "remaining": 0,
+        "error": -2.3719520000000003
+      }
+    }
+  },
+  "localLanguage": {
+    "passed": true,
+    "checks": 10,
+    "activeSwitchClock": {
+      "before": {
+        "position": 23.250026,
+        "at": 1901,
+        "rate": 1.5
+      },
+      "afterAction": {
+        "position": 23.315975,
+        "at": 2004.5,
+        "rate": 1.5
+      },
+      "afterReady": {
+        "position": 23.498767,
+        "at": 2405.199999809265,
+        "rate": 1.5
+      },
+      "readyPosition": 23.315975
+    }
+  },
+  "limits": "These confirmed test-observation risks are not presented as a proven explanation of the original failed CI subprocess."
+}
