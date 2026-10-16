@@ -125,6 +125,13 @@ async function command(args, cwd) {
     elapsedMs: Date.now() - started,
   });
   if (result.code !== 0) {
+    // These subprocesses use isolatedTestEnv and fixture-only tests. Surface a
+    // bounded diagnostic tail in CI, without adding raw logs to release receipts.
+    const diagnostic = (await fs.readFile(log, 'utf8'))
+      .slice(-20000)
+      .replaceAll(directory, '<isolated release workspace>')
+      .replaceAll(root, '<project>');
+    console.error(`Source archive failure diagnostic:\n${diagnostic}`);
     // Logs stay under ignored work/. Do not copy raw command output into published reports.
     throw new Error(
       `Source archive npm ${args.join(' ')} failed (${result.code ?? result.signal}); see ignored work/release-smoke-* logs`,

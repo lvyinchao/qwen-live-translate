@@ -44,6 +44,16 @@ jobs:
       - run: npm run verify:release
       - name: Download, extract, install and verify the clean source ZIP
         run: npm run test:release
+      - name: Preserve isolated source-test failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: isolated-source-failure-diagnostics
+          path: |
+            work/release-smoke-*/source-*.log
+            outputs/release-smoke-verification.json
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validated-release-packages
