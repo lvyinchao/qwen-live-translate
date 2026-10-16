@@ -32,7 +32,7 @@ function fixture(page = 'https://fixture.example.org/watch') {
   registerMediaObserver({ scope, sources, detected, captureStats: stats, getSession: () => null, stop: async () => {} });
   const request = {
     requestId: 'late-request', tabId: 7, frameId: 0, method: 'GET',
-    url: page.includes('bilibili.com') ? 'https://cdn.bilivideo.com/audio.m4a' : 'https://cdn.example.org/audio.mp4',
+    url: /(?:^|\.)bilibili\.com$/.test(new URL(page).hostname) ? 'https://cdn.bilivideo.com/audio.m4a' : 'https://cdn.example.org/audio.mp4',
     initiator: page,
   };
   const start = () => {

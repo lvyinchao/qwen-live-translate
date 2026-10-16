@@ -2,7 +2,7 @@
 
 The next work should improve reliable original-player viewing before expanding scope.
 
-- Extend the repaired scheduler's complete terminal accounting from the two measured speed cases to long runs, and reduce the observed truncation and buffering. Preserve earlier onset failures and unknown completions rather than inferring full speech from a small natural-end sample.
+- Repeat complete terminal accounting beyond the measured long/speed cases and reduce the remaining onset outliers, larger truncated tails and speed-related buffering. Preserve earlier failures and unknown completions rather than inferring full speech from a limited natural-end sample.
 - Repeat and expand native-player acceptance across builds and videos, reporting continuous viewing, eligible onset P95, end offsets, truncation, preparation waits, buffering, memory and disk separately. Confirm provider cost against account billing as well as reported-usage estimates.
 - Extend the repaired media-identity and signed-source handling with reproducible cases, including more clear-media sites and account/codec combinations.
 - Investigate YouTube SABR playback verification failures without weakening protected-content boundaries or presenting partial windows as complete support.

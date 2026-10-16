@@ -1,16 +1,15 @@
 {
-  "at": "2026-10-16T08:37:33.766Z",
+  "at": "2026-10-16T08:53:03.004000+00:00",
   "version": "0.2.2",
   "runtimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
   "sourceBaseCommit": "b8952ac",
   "releaseCommit": null,
   "storeItemId": "knlbmnbdcnnhhpimbeagojbacmjkcald",
-  "observedStoreStatus": "draft; the previous v0.2.1 review was withdrawn",
-  "submitted": false,
+  "observedStoreStatus": "Pending review; v0.2.2 submitted after the previous v0.2.1 review was withdrawn",
+  "submitted": true,
   "approved": false,
-  "autoPublishAfterApproval": null,
-  "uploadedDraftVersion": "0.2.2",
-  "uploadedDraftRuntimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+  "autoPublishAfterApproval": true,
+  "uploadedDraftVersion": null,
   "webstoreZipSha256": "f3b6b25341216225650fe36dd946204adcba1d5bdab428cd05611344e6ce079f",
   "languages": [
     "en",
@@ -20,8 +19,8 @@
   "githubRepositoryVisibility": "public",
   "githubRelease": "https://github.com/lvyinchao/timbradub/releases/tag/v0.2.1",
   "candidateRelease": "v0.2.2",
-  "ciRun": null,
-  "codeqlRun": null,
+  "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38875384478",
+  "codeqlRun": "https://github.com/lvyinchao/timbradub/actions/runs/38875384401",
   "releaseRun": null,
   "localChrome": {
     "observedVersion": "0.2.2",
@@ -38,5 +37,13 @@
     "low": 0,
     "scope": "Full npm audit, including development dependencies, official npm registry; checked 2026-10-16"
   },
-  "scope": "Candidate snapshot. A draft upload and local installation are not Store submission, approval or GitHub v0.2.2 publication. Final current-build live and source-archive validation are still in progress."
+  "scope": "The final runtime passed 181 unit tests, all nine offline browser gates, candidate CI clean-source ZIP checks and a new 20-minute real-provider Bilibili test. See acceptance-0.2.2.json for onset eligibility, high tail-cut counts and buffering limitations. Store submission is pending external review; v0.2.2 GitHub release publication and final public-download verification are still pending.",
+  "storeSubmittedRuntimeSha256": "dd3e6dc4cf0d82b964ad59122212d216fb35acfc57a818969e9192f062810968",
+  "candidateSourceValidation": {
+    "commit": "5cf3d09057d1ae09ba19f3df3ee5a90e4daa2330",
+    "ciRun": "https://github.com/lvyinchao/timbradub/actions/runs/38875384478",
+    "runtimeMatchesInstalledAndSubmitted": true,
+    "cleanSourceCommandsPassed": true,
+    "sourceZipSha256": "47c60cc48e365287ccf6335b7fe92d7e64f1a6916372a52478eebc55278bfa5c"
+  }
 }

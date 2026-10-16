@@ -41,5 +41,14 @@
       "unchangedFromBaseline": true
     }
   ],
-  "scope": "Earlier reports retain their actual build hashes. The final runtime receives a fresh 20-minute real-provider check, multilingual/1.5x playback, browser gates and source-archive verification; only completed checks are reported as passed."
+  "scope": "Earlier reports retain their actual build hashes and failures. Completed final-runtime checks are identified above; onset timing uses the qualified cohort and does not establish full spoken coverage, voice similarity, universal site support or a good sustained 1.5x experience. Final public-release download verification is recorded separately.",
+  "completedVerification": {
+    "unitTests": 181,
+    "offlineBrowserGates": 9,
+    "realProvider20MinuteRun": "acceptance-022-tailfix-long-en-zh.json",
+    "freshJapaneseChineseAndChineseEnglish15xRuns": true,
+    "candidateCiCleanSourceZipPassed": true,
+    "candidateCiCommit": "5cf3d09057d1ae09ba19f3df3ee5a90e4daa2330",
+    "runtimeDigestMatchesCandidateCi": true
+  }
 }
