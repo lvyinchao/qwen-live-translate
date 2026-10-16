@@ -1,5 +1,7 @@
 # Compatibility and validation
 
+The [2026-10-16 platform assessment](COMPATIBILITY-2026-10-16.md) adds a public-page media audit and official restrictions review across 24 platforms. It uses the unchanged 0.2.4 runtime and does not add provider translation, synchronization or long-viewing acceptance.
+
 This document distinguishes observed behavior from product goals. Detailed, dated evidence is in [the historical validation record](../outputs/真实验收记录.md), the [0.2.2 review and repair record](REVIEW-2026-10-16.md) and individual JSON reports in `outputs/`. Results from different versions or build hashes must not be combined into one acceptance claim.
 
 ## 0.2.4 CCTV public VOD discovery

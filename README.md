@@ -56,6 +56,8 @@ See the [English / Chinese language table and codes](docs/LANGUAGES.md). Every t
 
 ## Compatibility
 
+The [October 16 platform assessment](docs/COMPATIBILITY-2026-10-16.md) separates public-page discovery, paused audio decoding, access restrictions and historical translated playback across 24 platforms. Sample results do not establish site-wide support.
+
 | Source                    | Current evidence                                                                      | Limits                                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Bilibili VOD              | Real English→Chinese, Chinese→English and Japanese→Chinese playback, controls, seeks, and in-playback target switching | CDN, account, codec and page changes can affect availability; faster viewing can buffer and truncate speech |
