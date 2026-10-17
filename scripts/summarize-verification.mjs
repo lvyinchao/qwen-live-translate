@@ -1,9 +1,7 @@
 import fs from 'node:fs/promises';
 const quantile = (values, p) => {
   const sorted = values.slice().sort((a, b) => a - b);
-  return sorted.length
-    ? sorted[Math.max(0, Math.ceil(sorted.length * p) - 1)]
-    : null;
+  return sorted.length ? sorted[Math.max(0, Math.ceil(sorted.length * p) - 1)] : null;
 };
 const files = [
   'gate-bili-en-zh-original.json',
@@ -26,13 +24,9 @@ for (const file of files) {
   const d = r.diagnostics?.value ?? {},
     events = d.events ?? [];
   const skipped = new Set(
-    events
-      .filter((e) => e.type === 'player:skip')
-      .map((e) => `${e.epoch}:${e.segmentId}`),
+    events.filter((e) => e.type === 'player:skip').map((e) => `${e.epoch}:${e.segmentId}`),
   );
-  const starts = events.filter(
-    (e) => e.type === 'player:metric' && e.kind === 'start',
-  );
+  const starts = events.filter((e) => e.type === 'player:metric' && e.kind === 'start');
   // Older preview builds misclassified late starts as seek entries. Derive the
   // initial source position from the test's explicit seek actions instead.
   const epochStarts = { 1: 0 };
@@ -44,9 +38,7 @@ for (const file of files) {
       !skipped.has(`${e.epoch}:${e.segmentId}`) &&
       e.mediaTime - e.error >= (epochStarts[e.epoch] ?? 0) - 0.3,
   );
-  const end = events.filter(
-    (e) => e.type === 'player:metric' && e.kind === 'end',
-  );
+  const end = events.filter((e) => e.type === 'player:metric' && e.kind === 'end');
   const tokens = { inputAudio: 0, outputAudio: 0, outputText: 0 };
   const groups = new Map();
   let legacy = 0,
@@ -61,18 +53,9 @@ for (const file of files) {
       outputText: 0,
     };
     groups.set(key, {
-      inputAudio: Math.max(
-        old.inputAudio,
-        u.input_tokens_details?.audio_tokens ?? 0,
-      ),
-      outputAudio: Math.max(
-        old.outputAudio,
-        u.output_tokens_details?.audio_tokens ?? 0,
-      ),
-      outputText: Math.max(
-        old.outputText,
-        u.output_tokens_details?.text_tokens ?? 0,
-      ),
+      inputAudio: Math.max(old.inputAudio, u.input_tokens_details?.audio_tokens ?? 0),
+      outputAudio: Math.max(old.outputAudio, u.output_tokens_details?.audio_tokens ?? 0),
+      outputText: Math.max(old.outputText, u.output_tokens_details?.text_tokens ?? 0),
     });
   }
   for (const g of groups.values()) {
@@ -80,11 +63,7 @@ for (const file of files) {
     tokens.outputAudio += g.outputAudio;
     tokens.outputText += g.outputText;
   }
-  const yuan =
-    (tokens.inputAudio * 40 +
-      tokens.outputAudio * 160 +
-      tokens.outputText * 100) /
-    1e6;
+  const yuan = (tokens.inputAudio * 40 + tokens.outputAudio * 160 + tokens.outputText * 100) / 1e6;
   cases.push({
     file,
     url: r.url,
@@ -127,9 +106,7 @@ for (const file of files) {
       cacheBytes: d.cacheBytes,
       providerTokens: tokens,
       estimatedYuan: yuan,
-      estimatedYuanPerInputHour: d.inputSeconds
-        ? (yuan / d.inputSeconds) * 3600
-        : null,
+      estimatedYuanPerInputHour: d.inputSeconds ? (yuan / d.inputSeconds) * 3600 : null,
     },
     notes: file.includes('long-bili')
       ? [
@@ -142,14 +119,10 @@ for (const file of files) {
 const siteReports = [];
 for (const suffix of ['', '-youtube', '-bilibili']) {
   try {
-    siteReports.push(
-      ...JSON.parse(await fs.readFile(`work/gate-sites${suffix}.json`, 'utf8')),
-    );
+    siteReports.push(...JSON.parse(await fs.readFile(`work/gate-sites${suffix}.json`, 'utf8')));
   } catch {}
 }
-const voice = JSON.parse(
-  await fs.readFile('work/probe-original-sample.json', 'utf8'),
-);
+const voice = JSON.parse(await fs.readFile('work/probe-original-sample.json', 'utf8'));
 const config = voice.events?.find((e) => e.type === 'session.updated')?.session;
 const data = {
   generatedAt: new Date().toISOString(),
@@ -169,10 +142,7 @@ const data = {
   cases,
   siteReports,
 };
-await fs.writeFile(
-  'outputs/验收数据.json',
-  JSON.stringify(data, null, 2) + '\n',
-);
+await fs.writeFile('outputs/验收数据.json', JSON.stringify(data, null, 2) + '\n');
 console.log(
   JSON.stringify(
     cases.map((c) => ({ file: c.file, ok: c.ok, ...c.metrics })),

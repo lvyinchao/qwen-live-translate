@@ -1,12 +1,6 @@
 import { AppError } from './errors';
 import { decode64, encode64, pcm16, wav } from './audio';
-import {
-  MODEL,
-  OUTPUT_RATE,
-  VOICE,
-  MODEL_VOICE,
-  type TranslationSegment,
-} from './types';
+import { MODEL, OUTPUT_RATE, VOICE, MODEL_VOICE, type TranslationSegment } from './types';
 
 interface SourceTurn {
   start?: number;
@@ -90,8 +84,7 @@ export class TranslationAssembler {
         if (id && event.transcript) this.output(id).text = event.transcript;
         break;
       case 'response.audio.delta':
-        if (id && event.delta)
-          this.output(id).parts.push(decode64(event.delta));
+        if (id && event.delta) this.output(id).parts.push(decode64(event.delta));
         break;
       case 'response.done':
         if (event.response?.status && event.response.status !== 'completed')
@@ -107,19 +100,9 @@ export class TranslationAssembler {
   }
   commitReady() {
     for (const [id, output] of this.outputs) {
-      if (
-        !output.done ||
-        output.emitted ||
-        !output.parts.length ||
-        !output.source
-      )
-        continue;
+      if (!output.done || output.emitted || !output.parts.length || !output.source) continue;
       const source = this.sources.get(output.source);
-      if (
-        source?.start === undefined ||
-        source.end === undefined ||
-        source.end <= source.start
-      )
+      if (source?.start === undefined || source.end === undefined || source.end <= source.start)
         continue;
       const size = output.parts.reduce((sum, p) => sum + p.length, 0);
       const segment: TranslationSegment = {
@@ -157,12 +140,7 @@ export class TranslationAssembler {
         through = Math.max(through, source.end);
         continue;
       }
-      if (
-        source.end === undefined ||
-        !outputs.length ||
-        outputs.some((o) => !o.emitted)
-      )
-        break;
+      if (source.end === undefined || !outputs.length || outputs.some((o) => !o.emitted)) break;
       through = Math.max(through, source.end);
     }
     return through;
@@ -225,10 +203,7 @@ export async function translateWindow(
     throw abortError();
   }
   const end = options.start + options.samples.length / 16000;
-  const assembler = new TranslationAssembler(
-    { ...options, end },
-    options.onSegment,
-  );
+  const assembler = new TranslationAssembler({ ...options, end }, options.onSegment);
   let socket: WebSocket | undefined;
   try {
     return await new Promise<TranslationSegment[]>((resolve, reject) => {
@@ -259,7 +234,9 @@ export async function translateWindow(
         clearTimeout(timer);
         timer = setTimeout(
           () =>
-            done(new AppError('provider-timeout', '模型连接或响应超时，请检查地域、网络和模型权限')),
+            done(
+              new AppError('provider-timeout', '模型连接或响应超时，请检查地域、网络和模型权限'),
+            ),
           ms,
         );
       };
@@ -280,7 +257,10 @@ export async function translateWindow(
       ws.onclose = (event) => {
         if (!settled)
           done(
-            new AppError('provider-disconnected', `翻译连接提前断开（${event.code}），本段未标记为完成`),
+            new AppError(
+              'provider-disconnected',
+              `翻译连接提前断开（${event.code}），本段未标记为完成`,
+            ),
           );
       };
       ws.onmessage = (event) => {
@@ -328,7 +308,9 @@ export async function translateWindow(
             });
           } else if (data.type === 'session.updated' && !configured) {
             if (data.session?.enable_voice_clone !== true)
-              return done(new AppError('provider-voice-clone', '模型未确认启用原音色复刻，已停止翻译'));
+              return done(
+                new AppError('provider-voice-clone', '模型未确认启用原音色复刻，已停止翻译'),
+              );
             configured = true;
             sending = true;
             void (async () => {
@@ -344,9 +326,7 @@ export async function translateWindow(
                   audio: encode64(pcm16(options.samples.subarray(i, i + 1600))),
                 });
                 armTimeout(45000);
-                inputThrough =
-                  options.start +
-                  Math.min(i + 1600, options.samples.length) / 16000;
+                inputThrough = options.start + Math.min(i + 1600, options.samples.length) / 16000;
                 options.onProgress(inputThrough, assembler.coverage());
                 // Do not assume the provider accepts faster-than-real-time input.
                 await delay(100, senderAbort.signal);

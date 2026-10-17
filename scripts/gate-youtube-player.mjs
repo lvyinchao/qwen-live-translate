@@ -6,19 +6,13 @@ import assert from 'node:assert/strict';
 const directory = await fs.mkdtemp(path.resolve('work/youtube-player-'));
 const extension = path.join(directory, 'extension');
 await fs.cp('.output/chrome-mv3', extension, { recursive: true });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--enable-unsafe-extension-debugging',
-      '--autoplay-policy=no-user-gesture-required',
-    ],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging', '--autoplay-policy=no-user-gesture-required'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -130,8 +124,7 @@ try {
   for (const selector of ['#hidden', '#clone', '#preview'])
     assert.equal(await page.locator(selector).evaluate((v) => v.muted), false);
   await panel.evaluate(
-    async (tabId) =>
-      chrome.tabs.sendMessage(tabId, { type: 'player:stop' }, { frameId: 0 }),
+    async (tabId) => chrome.tabs.sendMessage(tabId, { type: 'player:stop' }, { frameId: 0 }),
     tabId,
   );
   assert.equal(await page.locator('#main').evaluate((v) => v.muted), false);
@@ -178,10 +171,7 @@ try {
   report.error = e.stack;
   throw e;
 } finally {
-  await fs.writeFile(
-    'outputs/youtube-player-verification.json',
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile('outputs/youtube-player-verification.json', JSON.stringify(report, null, 2));
   await context.close();
   await fs.rm(directory, { recursive: true, force: true });
   console.log(JSON.stringify(report, null, 2));

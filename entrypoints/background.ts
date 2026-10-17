@@ -28,8 +28,7 @@ export default defineBackground(() => {
       title: t((await ctx.loadSettings()).uiLanguage, '打开听译 · 原音色视频翻译'),
     });
     const saved = (await chrome.storage.session.get('activeSession')).activeSession as
-      | PlaybackSession
-      | undefined;
+      PlaybackSession | undefined;
     if (saved && (await ctx.hasOffscreen())) {
       ctx.session = { ...saved, ...captionPreferences(saved) };
       await ctx.rules.restore();
@@ -45,7 +44,8 @@ export default defineBackground(() => {
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local' || !changes.settings) return;
-    const autoSave = (value: unknown) => (value as Partial<Settings> | undefined)?.autoSaveFiles === true;
+    const autoSave = (value: unknown) =>
+      (value as Partial<Settings> | undefined)?.autoSaveFiles === true;
     if (autoSave(changes.settings.oldValue) === autoSave(changes.settings.newValue)) return;
     void (async () => {
       if (await ctx.hasOffscreen()) await ctx.toOffscreen('files:configure');
@@ -72,7 +72,11 @@ export default defineBackground(() => {
     ctx.panels.set(port, watch);
     port.onMessage.addListener((message) => {
       if (message.type !== 'watch' || !Number.isInteger(message.tabId)) return;
-      if (watch.tabId !== undefined && watch.tabId !== message.tabId && ctx.observedTaskTab() !== watch.tabId)
+      if (
+        watch.tabId !== undefined &&
+        watch.tabId !== message.tabId &&
+        ctx.observedTaskTab() !== watch.tabId
+      )
         ctx.releaseObservation(watch.tabId);
       watch.tabId = message.tabId;
       watch.windowId = message.windowId;
@@ -86,7 +90,11 @@ export default defineBackground(() => {
   chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
     for (const watch of ctx.panels.values())
       if (watch.windowId === undefined || watch.windowId === windowId) {
-        if (watch.tabId !== undefined && watch.tabId !== tabId && ctx.observedTaskTab() !== watch.tabId)
+        if (
+          watch.tabId !== undefined &&
+          watch.tabId !== tabId &&
+          ctx.observedTaskTab() !== watch.tabId
+        )
           ctx.releaseObservation(watch.tabId);
         watch.tabId = tabId;
         ctx.observation.watch(tabId);
@@ -119,15 +127,21 @@ export default defineBackground(() => {
       void stop();
   });
 
-  chrome.runtime.onMessage.addListener((message: BackgroundMessage | { target?: string; type: string }, sender, respond) => {
-    if (message.target === 'offscreen' || (BROADCASTS as readonly string[]).includes(message.type)) return;
-    void (async () => {
-      await initialized;
-      return dispatch(routes, ctx, message as BackgroundMessage, sender);
-    })().then(
-      (value) => respond({ ok: true, value }),
-      (error) => respond({ ok: false, error: messageError(error), code: errorCode(error) }),
-    );
-    return true;
-  });
+  chrome.runtime.onMessage.addListener(
+    (message: BackgroundMessage | { target?: string; type: string }, sender, respond) => {
+      if (
+        message.target === 'offscreen' ||
+        (BROADCASTS as readonly string[]).includes(message.type)
+      )
+        return;
+      void (async () => {
+        await initialized;
+        return dispatch(routes, ctx, message as BackgroundMessage, sender);
+      })().then(
+        (value) => respond({ ok: true, value }),
+        (error) => respond({ ok: false, error: messageError(error), code: errorCode(error) }),
+      );
+      return true;
+    },
+  );
 });

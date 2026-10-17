@@ -1,33 +1,20 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import {
-  copyFileSync,
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 const project = process.cwd();
 const installed = JSON.parse(
-  readFileSync(
-    path.join(project, 'node_modules/mediabunny/package.json'),
-    'utf8',
-  ),
+  readFileSync(path.join(project, 'node_modules/mediabunny/package.json'), 'utf8'),
 );
-const lock = JSON.parse(
-  readFileSync(path.join(project, 'package-lock.json'), 'utf8'),
-);
+const lock = JSON.parse(readFileSync(path.join(project, 'package-lock.json'), 'utf8'));
 let directory: string;
 const run = () =>
-  execFileSync(
-    process.execPath,
-    [path.join(project, 'scripts/check-media-source.mjs')],
-    { cwd: directory, stdio: 'pipe' },
-  );
+  execFileSync(process.execPath, [path.join(project, 'scripts/check-media-source.mjs')], {
+    cwd: directory,
+    stdio: 'pipe',
+  });
 const write = (name: string, data: unknown) =>
   writeFileSync(path.join(directory, name), JSON.stringify(data));
 

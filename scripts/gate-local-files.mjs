@@ -11,16 +11,13 @@ const extension = path.join(directory, 'extension'),
   downloads = path.join(directory, 'downloads');
 await fs.mkdir(downloads);
 await fs.cp(path.resolve('.output/chrome-mv3'), extension, { recursive: true });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: ['--enable-unsafe-extension-debugging'],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -135,16 +132,12 @@ try {
   assert.equal(status.pending, 1);
   assert.equal(status.error, undefined);
   assert.equal(status.saving, false);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    0,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, 0);
   const privateFiles = await panel.evaluate(async () => {
     const paths = [];
     async function walk(dir, prefix = '') {
       for await (const [name, handle] of dir.entries()) {
-        if (handle.kind === 'directory')
-          await walk(handle, prefix + name + '/');
+        if (handle.kind === 'directory') await walk(handle, prefix + name + '/');
         else {
           const f = await handle.getFile();
           paths.push({ path: prefix + name, size: f.size });
@@ -162,10 +155,7 @@ try {
   status = await call('files:status');
   assert.equal(status.staged, 2);
   assert.equal(status.pending, 1);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    0,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, 0);
   report.checks.push(
     'Offscreen recreation restores quiet staged chunks without automatically retrying or starting downloads',
   );
@@ -185,13 +175,7 @@ try {
       const tx = db.transaction(['windows', 'metadata'], 'readwrite'),
         s = segments[0];
       const row = {
-        key: JSON.stringify([
-          s.mediaId + '|audio:default',
-          'zh',
-          s.voice,
-          23,
-          90,
-        ]),
+        key: JSON.stringify([s.mediaId + '|audio:default', 'zh', s.voice, 23, 90]),
         mediaId: s.mediaId + '|audio:default',
         language: 'zh',
         voice: s.voice,
@@ -205,13 +189,7 @@ try {
       const disabledId = 'save-disabled-fixture';
       const disabledRow = {
         ...row,
-        key: JSON.stringify([
-          disabledId + '|audio:default',
-          'zh',
-          s.voice,
-          23,
-          90,
-        ]),
+        key: JSON.stringify([disabledId + '|audio:default', 'zh', s.voice, 23, 90]),
         mediaId: disabledId + '|audio:default',
       };
       tx.objectStore('windows').put({
@@ -288,10 +266,7 @@ try {
     chrome.runtime.sendMessage({ target: 'offscreen', type: 'engine:stop' }),
   );
   assert.equal((await call('files:status')).staged, 2);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    0,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, 0);
   report.checks.push(
     'Automatic saving defaults off; the real engine loads a different cached video and stops without staging new WAVs or starting downloads, while old chunks remain',
   );
@@ -313,20 +288,14 @@ try {
     true,
   );
   await panel.locator('.locale-select:enabled').selectOption('zh');
-  await panel
-    .getByRole('switch', { name: '自动保存翻译文件', exact: true })
-    .uncheck();
+  await panel.getByRole('switch', { name: '自动保存翻译文件', exact: true }).uncheck();
   await panel.reload();
   await panel.locator('input[role="switch"]:enabled').waitFor();
   assert.equal(
-    await panel
-      .getByRole('switch', { name: '自动保存翻译文件', exact: true })
-      .isChecked(),
+    await panel.getByRole('switch', { name: '自动保存翻译文件', exact: true }).isChecked(),
     false,
   );
-  await panel
-    .getByRole('switch', { name: '自动保存翻译文件', exact: true })
-    .check();
+  await panel.getByRole('switch', { name: '自动保存翻译文件', exact: true }).check();
   await panel.locator('.locale-select:enabled').selectOption('en');
   assert.equal((await call('settings:get')).autoSaveFiles, true);
   report.checks.push(
@@ -344,19 +313,14 @@ try {
     throw new Error('Merge queue did not settle');
   };
   status = await wait((s) => s.saved === 1 && s.pending === 0 && !s.saving);
-  const items = await panel.evaluate(() =>
-    chrome.downloads.search({ state: 'complete' }),
-  );
+  const items = await panel.evaluate(() => chrome.downloads.search({ state: 'complete' }));
   assert.equal(items.length, 1);
   const filename = items[0].filename;
   execFileSync('unzip', ['-t', filename]);
   const merged = execFileSync('unzip', ['-p', filename, 'combined.wav']);
   assert.equal(merged.readUInt32LE(24), 24000);
   assert.equal(merged.length, 44 + (wav.length - 44) * 2);
-  assert.deepEqual(
-    merged.subarray(44),
-    Buffer.concat([wav.subarray(44), wav.subarray(44)]),
-  );
+  assert.deepEqual(merged.subarray(44), Buffer.concat([wav.subarray(44), wav.subarray(44)]));
   const metadata = JSON.parse(
     execFileSync('unzip', ['-p', filename, 'transcript.json']).toString(),
   );
@@ -388,10 +352,7 @@ try {
     chrome.runtime.sendMessage({ target: 'offscreen', type: 'engine:stop' }),
   );
   await panel.waitForTimeout(250);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    1,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, 1);
   await call('cache:clear');
   assert.equal((await call('files:status')).staged, 2);
   assert.equal((await fs.stat(filename)).isFile(), true);
@@ -431,13 +392,9 @@ try {
   assert.equal(status.pending, 1);
   await panel.evaluate(() => chrome.offscreen.closeDocument());
   status = await call('files:status');
-  const before = (await panel.evaluate(() => chrome.downloads.search({})))
-    .length;
+  const before = (await panel.evaluate(() => chrome.downloads.search({}))).length;
   await panel.waitForTimeout(300);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    before,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, before);
   await root.send('Browser.setDownloadBehavior', {
     behavior: 'allow',
     downloadPath: downloads,
@@ -512,18 +469,14 @@ try {
     }),
   );
   assert.equal(invalid.ok, false);
-  report.checks.push(
-    'Sidepanel cannot bypass the offscreen-only local download route',
-  );
+  report.checks.push('Sidepanel cannot bypass the offscreen-only local download route');
   await panel.setViewportSize({ width: 360, height: 950 });
   await panel.screenshot({
     path: 'outputs/local-files-en.png',
     fullPage: true,
   });
   await panel.locator('.locale-select').selectOption('zh');
-  await panel
-    .getByRole('button', { name: '查看已保存文件', exact: true })
-    .waitFor();
+  await panel.getByRole('button', { name: '查看已保存文件', exact: true }).waitFor();
   await panel.screenshot({
     path: 'outputs/local-files-zh.png',
     fullPage: true,

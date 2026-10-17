@@ -1,13 +1,7 @@
 import type { ArchiveStorageSummary } from './local-files';
 import type { LocalFileStatus } from './archive';
 import type { MediaTempSummary } from './range-media';
-import type {
-  AudioSource,
-  MediaCandidate,
-  PlaybackSession,
-  Settings,
-  UILanguage,
-} from './types';
+import type { AudioSource, MediaCandidate, PlaybackSession, Settings, UILanguage } from './types';
 import type { ErrorCode } from './errors';
 
 export type PublicSettings = Omit<Settings, 'apiKey'> & { hasKey: boolean };
@@ -99,9 +93,10 @@ export type BackgroundMessage<K extends BackgroundType = BackgroundType> = {
   [T in K]: { target?: 'background'; type: T } & BackgroundRequest<T>;
 }[K];
 /** Parameters are optional only for routes whose request has no required fields. */
-export type RequestArgs<K extends BackgroundType> = Empty extends BackgroundRequest<K>
-  ? [parameters?: BackgroundRequest<K>]
-  : [parameters: BackgroundRequest<K>];
+export type RequestArgs<K extends BackgroundType> =
+  Empty extends BackgroundRequest<K>
+    ? [parameters?: BackgroundRequest<K>]
+    : [parameters: BackgroundRequest<K>];
 export type BackgroundCall = <K extends BackgroundType>(
   type: K,
   ...args: RequestArgs<K>
@@ -113,6 +108,4 @@ export type Broadcast =
   | { type: 'sources:updated'; tabId: number };
 /** Messages the background broadcasts and must not answer itself. */
 export const BROADCASTS = ['session:updated', 'files:updated', 'sources:updated'] as const;
-export type Result<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: string; code?: ErrorCode };
+export type Result<T> = { ok: true; value: T } | { ok: false; error: string; code?: ErrorCode };

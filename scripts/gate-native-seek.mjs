@@ -6,18 +6,12 @@ import assert from 'node:assert/strict';
 const directory = await fs.mkdtemp(path.resolve('work/native-seek-'));
 const extension = path.join(directory, 'extension');
 await fs.cp('.output/chrome-mv3', extension, { recursive: true });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--enable-unsafe-extension-debugging',
-      '--autoplay-policy=no-user-gesture-required',
-    ],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging', '--autoplay-policy=no-user-gesture-required'],
+});
 const report = {
   at: new Date().toISOString(),
   scope: process.env.TRANSLATE
@@ -26,9 +20,7 @@ const report = {
   discoveries: [],
   responses: [],
 };
-const url =
-  process.env.VIDEO_URL ??
-  'https://v.qq.com/x/cover/mzc00200803dr6b/z4102cn0lk3.html';
+const url = process.env.VIDEO_URL ?? 'https://v.qq.com/x/cover/mzc00200803dr6b/z4102cn0lk3.html';
 const safeUrl = (s) => {
   const u = new URL(s);
   return u.origin + '/…/' + u.pathname.split('/').pop();
@@ -74,9 +66,7 @@ try {
     .split(',')
     .map(Number)) {
     const video = await page.locator('video').evaluateAll((vs, position) => {
-      const v = vs
-        .filter((v) => v.duration > 100)
-        .sort((a, b) => b.clientWidth - a.clientWidth)[0];
+      const v = vs.filter((v) => v.duration > 100).sort((a, b) => b.clientWidth - a.clientWidth)[0];
       if (!v) return null;
       v.pause();
       v.currentTime = Math.min(position, v.duration - 35);
@@ -109,8 +99,8 @@ try {
     const c = found.find((c) => c.source && c.duration > 100);
     if (c) {
       await call('media:headers', { source: c.source });
-      const asset = (await fs.readdir(path.join(extension, 'assets'))).find(
-        (f) => /^decode-.*\.js$/.test(f),
+      const asset = (await fs.readdir(path.join(extension, 'assets'))).find((f) =>
+        /^decode-.*\.js$/.test(f),
       );
       entry.decode = await panel.evaluate(
         async ({ asset, source, start }) => {
@@ -158,10 +148,7 @@ try {
   report.page = safeUrl(page.url());
   if (process.env.TRANSLATE) {
     const cfg = JSON.parse(
-      await fs.readFile(
-        path.join(os.homedir(), '.bailian/config.json'),
-        'utf8',
-      ),
+      await fs.readFile(path.join(os.homedir(), '.bailian/config.json'), 'utf8'),
     );
     const host = new URL(cfg.base_url).hostname.split('.');
     const language = process.env.TARGET_LANGUAGE ?? 'en';
@@ -175,9 +162,7 @@ try {
     });
     const position = Number(process.env.TRANSLATE_START ?? 1180.15);
     await page.locator('video').evaluateAll((vs, position) => {
-      const v = vs
-        .filter((v) => v.duration > 100)
-        .sort((a, b) => b.clientWidth - a.clientWidth)[0];
+      const v = vs.filter((v) => v.duration > 100).sort((a, b) => b.clientWidth - a.clientWidth)[0];
       v.pause();
       v.currentTime = position;
     }, position);
@@ -204,8 +189,7 @@ try {
       segments: state.segments.length,
     };
     await page.waitForTimeout(7500);
-    if (process.env.SCREENSHOT)
-      await page.screenshot({ path: process.env.SCREENSHOT });
+    if (process.env.SCREENSHOT) await page.screenshot({ path: process.env.SCREENSHOT });
     await page.waitForTimeout(2500);
     state = await call('session:get');
     report.translation.playback = {
@@ -218,17 +202,13 @@ try {
         text: s.text,
       })),
     };
-    assert.ok(
-      state.position > position + 5,
-      'Original page video did not advance',
-    );
+    assert.ok(state.position > position + 5, 'Original page video did not advance');
     assert.ok(
       state.segments.some((s) => s.start >= position && s.text),
       'No real translated utterance at the requested position',
     );
     const diagnostics = await call('session:diagnostics');
-    report.translation.audioEvents =
-      diagnostics.value?.events ?? diagnostics.events;
+    report.translation.audioEvents = diagnostics.value?.events ?? diagnostics.events;
     assert.ok(
       report.translation.audioEvents?.some((e) => e.kind === 'start'),
       'Translated audio did not emit a real playing event',
@@ -236,8 +216,7 @@ try {
     await call('session:stop');
     report.translation.stopped = true;
   }
-  if (process.env.SCREENSHOT)
-    await page.screenshot({ path: process.env.SCREENSHOT });
+  if (process.env.SCREENSHOT) await page.screenshot({ path: process.env.SCREENSHOT });
 } catch (e) {
   report.error = e.message;
   throw e;

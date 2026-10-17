@@ -4,12 +4,16 @@ import { closeDecodeWorker } from '../lib/worker-lifecycle';
 class WorkerFixture extends EventTarget {
   lastMessage?: { type: string; id: string };
   terminate = vi.fn();
-  postMessage(message: { type: string; id: string }) { this.lastMessage = message; }
+  postMessage(message: { type: string; id: string }) {
+    this.lastMessage = message;
+  }
   reply(id = this.lastMessage!.id) {
     this.dispatchEvent(new MessageEvent('message', { data: { type: 'shutdown', id, ok: true } }));
   }
 }
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => {
+  vi.useRealTimers();
+});
 it('waits for the matching shutdown acknowledgement before terminating and cleanup', async () => {
   const worker = new WorkerFixture();
   const cleanup = vi.fn(async () => {});

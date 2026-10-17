@@ -14,17 +14,29 @@ class RealtimeFixture {
     socket = this;
     queueMicrotask(() => {
       this.onopen?.();
-      this.receive({ type: 'session.created', session: { model: 'qwen3.8-livetranslate-flash-realtime' } });
+      this.receive({
+        type: 'session.created',
+        session: { model: 'qwen3.8-livetranslate-flash-realtime' },
+      });
     });
   }
-  receive(data: unknown) { this.onmessage?.({ data: JSON.stringify(data) }); }
+  receive(data: unknown) {
+    this.onmessage?.({ data: JSON.stringify(data) });
+  }
   send(raw: string) {
     const event = JSON.parse(raw);
     frames.push({ at: Date.now(), type: event.type });
-    if (event.type === 'session.update') queueMicrotask(() => this.receive({ type: 'session.updated', session: { enable_voice_clone: true } }));
-    if (event.type === 'session.finish') queueMicrotask(() => this.receive({ type: 'session.finished' }));
+    if (event.type === 'session.update')
+      queueMicrotask(() =>
+        this.receive({ type: 'session.updated', session: { enable_voice_clone: true } }),
+      );
+    if (event.type === 'session.finish')
+      queueMicrotask(() => this.receive({ type: 'session.finished' }));
   }
-  close() { this.readyState = 3; this.onclose?.({ code: 1000 }); }
+  close() {
+    this.readyState = 3;
+    this.onclose?.({ code: 1000 });
+  }
 }
 function run(waitForHeadroom?: TranslateWindowOptions['waitForHeadroom']) {
   frames.length = 0;
@@ -34,13 +46,24 @@ function run(waitForHeadroom?: TranslateWindowOptions['waitForHeadroom']) {
   const abort = new AbortController();
   const afterClose = vi.fn(async () => {});
   const result = translateWindow({
-    url: 'wss://isolated-fixture.test', mediaId: 'fixture', language: 'zh', start: 0,
-    samples: new Float32Array(16000), signal: abort.signal,
-    beforeConnect: async () => {}, afterClose, onSegment: () => {}, onProgress: () => {}, waitForHeadroom,
+    url: 'wss://isolated-fixture.test',
+    mediaId: 'fixture',
+    language: 'zh',
+    start: 0,
+    samples: new Float32Array(16000),
+    signal: abort.signal,
+    beforeConnect: async () => {},
+    afterClose,
+    onSegment: () => {},
+    onProgress: () => {},
+    waitForHeadroom,
   });
   return { result, abort, afterClose };
 }
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 it('continues to send at most one 100 ms input frame per 100 ms instead of assuming faster model ingestion', async () => {
   const f = run();
   await vi.advanceTimersByTimeAsync(99);

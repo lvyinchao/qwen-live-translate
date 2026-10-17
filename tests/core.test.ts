@@ -1,27 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { pcm16, renderMono, wav } from '../lib/audio';
-import {
-  activeSegment,
-  coverageEnd,
-  mergeCoverage,
-  planDub,
-} from '../lib/timeline';
+import { activeSegment, coverageEnd, mergeCoverage, planDub } from '../lib/timeline';
 import { TranslationAssembler } from '../lib/qwen';
 import { AUTH_RULE, authRule, safeMediaUrl } from '../lib/security';
 import { observedAudio, normalizeAudioRequest } from '../lib/adapters';
-import {
-  DEFAULT_SETTINGS,
-  messageError,
-  type TranslationSegment,
-} from '../lib/types';
+import { DEFAULT_SETTINGS, messageError, type TranslationSegment } from '../lib/types';
 
 describe('sample timing and resampling', () => {
   it('writes signed little-endian PCM without wraparound', () => {
     const data = pcm16(new Float32Array([-2, -1, 0, 1, 2]));
     const view = new DataView(data.buffer);
-    expect(
-      Array.from({ length: 5 }, (_, i) => view.getInt16(i * 2, true)),
-    ).toEqual([-32768, -32768, 0, 32767, 32767]);
+    expect(Array.from({ length: 5 }, (_, i) => view.getInt16(i * 2, true))).toEqual([
+      -32768, -32768, 0, 32767, 32767,
+    ]);
   });
   it('uses media timestamps and downmixes instead of joining packets', () => {
     const out = new Float32Array(32000);
@@ -36,9 +27,7 @@ describe('sample timing and resampling', () => {
     );
     const out = new Float32Array(16000);
     renderMono([source], 48000, 0, 0, out);
-    const rms = Math.sqrt(
-      out.subarray(100, 15900).reduce((n, v) => n + v * v, 0) / 15800,
-    );
+    const rms = Math.sqrt(out.subarray(100, 15900).reduce((n, v) => n + v * v, 0) / 15800);
     expect(rms).toBeLessThan(0.03);
   });
   it('writes a correct mono WAV and rejects incomplete PCM', () => {
@@ -75,20 +64,18 @@ describe('continuous-picture timeline', () => {
     ).toEqual([{ start: 0, end: 20 }]);
   });
   it('accelerates to fit speech and respects the absolute speed cap', () => {
-    expect(
-      planDub({ start: 10, end: 14, audioDuration: 6 }, 10, 1),
-    ).toMatchObject({ rate: 1.5, truncated: false });
-    expect(
-      planDub({ start: 10, end: 14, audioDuration: 12 }, 10, 1.5),
-    ).toMatchObject({ rate: 2, truncated: true });
+    expect(planDub({ start: 10, end: 14, audioDuration: 6 }, 10, 1)).toMatchObject({
+      rate: 1.5,
+      truncated: false,
+    });
+    expect(planDub({ start: 10, end: 14, audioDuration: 12 }, 10, 1.5)).toMatchObject({
+      rate: 2,
+      truncated: true,
+    });
   });
   it('seeks within an utterance and expires it at the next timeline boundary', () => {
-    expect(
-      planDub({ start: 10, end: 14, audioDuration: 6 }, 12, 1).offset,
-    ).toBe(3);
-    expect(
-      planDub({ start: 10, end: 14, audioDuration: 6 }, 14, 1).expired,
-    ).toBe(true);
+    expect(planDub({ start: 10, end: 14, audioDuration: 6 }, 12, 1).offset).toBe(3);
+    expect(planDub({ start: 10, end: 14, audioDuration: 6 }, 14, 1).expired).toBe(true);
     const segments = [
       { id: 'a', start: 0, end: 3 },
       { id: 'b', start: 2, end: 4 },
@@ -101,9 +88,8 @@ describe('Qwen 3.8 message correlation', () => {
     const emitted: TranslationSegment[] = [];
     return {
       emitted,
-      a: new TranslationAssembler(
-        { start: 60, end: 90, mediaId: 'video', language: 'zh' },
-        (s) => emitted.push(s),
+      a: new TranslationAssembler({ start: 60, end: 90, mediaId: 'video', language: 'zh' }, (s) =>
+        emitted.push(s),
       ),
     };
   }
@@ -192,20 +178,13 @@ describe('credential and request boundaries', () => {
         'wss://llm-test.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model=qwen3.8-livetranslate-flash-realtime',
       ),
     ).toBe(true);
-    expect(
-      regex.test('wss://evil.test/?model=qwen3.8-livetranslate-flash-realtime'),
-    ).toBe(false);
+    expect(regex.test('wss://evil.test/?model=qwen3.8-livetranslate-flash-realtime')).toBe(false);
     expect(() =>
-      authRule(
-        { ...DEFAULT_SETTINGS, apiKey: 'test\r\nsecret', workspace: 'test' },
-        'id',
-      ),
+      authRule({ ...DEFAULT_SETTINGS, apiKey: 'test\r\nsecret', workspace: 'test' }, 'id'),
     ).toThrow();
   });
   it('rejects credential-bearing and arbitrary media URLs', () => {
-    expect(safeMediaUrl('https://user:pass@cdn.bilivideo.com/audio.m4s')).toBe(
-      false,
-    );
+    expect(safeMediaUrl('https://user:pass@cdn.bilivideo.com/audio.m4s')).toBe(false);
     expect(safeMediaUrl('http://127.0.0.1/audio')).toBe(false);
     expect(safeMediaUrl('https://bilivideo.com.evil.test/audio')).toBe(false);
     expect(safeMediaUrl('https://a.bilivideo.com/audio')).toBe(true);
@@ -221,9 +200,7 @@ describe('credential and request boundaries', () => {
   });
   it('redacts provider secrets and signed media URLs from displayed errors', () => {
     expect(
-      messageError(
-        new Error('Bearer sk-real-key https://cdn.test/a?sig=secret'),
-      ),
+      messageError(new Error('Bearer sk-real-key https://cdn.test/a?sig=secret')),
     ).not.toContain('sk-real-key');
     expect(messageError('https://cdn.test/a?sig=secret')).not.toContain('sig=');
   });

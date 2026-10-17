@@ -6,7 +6,11 @@ export function usePanelWatch() {
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; port.current?.disconnect(); port.current = null; };
+    return () => {
+      mounted.current = false;
+      port.current?.disconnect();
+      port.current = null;
+    };
   }, []);
   return (tab?: chrome.tabs.Tab) => {
     if (!mounted.current) return;
@@ -23,7 +27,10 @@ export function usePanelWatch() {
       });
       port.current = connected;
     }
-    try { port.current.postMessage({ type: 'watch', tabId: tab.id, windowId: tab.windowId }); }
-    catch { port.current = null; }
+    try {
+      port.current.postMessage({ type: 'watch', tabId: tab.id, windowId: tab.windowId });
+    } catch {
+      port.current = null;
+    }
   };
 }

@@ -30,7 +30,4 @@ await fs.writeFile('docs/assets/banner.svg', banner);
 // Store tile is a separate composition, not a distorted banner.
 const tile = `<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280"><rect width="440" height="280" fill="#f5f7f2"/><g transform="translate(32 32) scale(.65)">${mark}</g><g font-family="Arial,Helvetica,sans-serif" fill="#164a3f"><text x="32" y="169" font-size="42" font-weight="700" letter-spacing="-1">TimbraDub</text><text x="34" y="205" font-size="17">Keep the voice. Change the language.</text><text x="34" y="232" font-size="13" fill="#61736a">Original voice · 29 languages</text></g></svg>`;
 await fs.mkdir('docs/store/assets', { recursive: true });
-await fs.writeFile(
-  'docs/store/assets/small-promo-440x280.png',
-  new Resvg(tile).render().asPng(),
-);
+await fs.writeFile('docs/store/assets/small-promo-440x280.png', new Resvg(tile).render().asPng());

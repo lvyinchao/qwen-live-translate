@@ -22,11 +22,27 @@ const inspectMain = (tabId: number) =>
   chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: inspectPlayerMain });
 
 /** Looks up the fixed CCTV API once per page GUID, with a short failure backoff. */
-function cctvLookup(ctx: BackgroundContext, tabId: number, identity: string, guid: string, url: string) {
+function cctvLookup(
+  ctx: BackgroundContext,
+  tabId: number,
+  identity: string,
+  guid: string,
+  url: string,
+) {
   const stored = ctx.cctvSources.get(tabId);
-  if (stored && stored.identity === identity && stored.guid === guid && stored.expiresAt > Date.now())
+  if (
+    stored &&
+    stored.identity === identity &&
+    stored.guid === guid &&
+    stored.expiresAt > Date.now()
+  )
     return stored.value;
-  const next = { identity, guid, expiresAt: Date.now() + CCTV_TTL_MS, value: fetchCctvMedia(url, guid) };
+  const next = {
+    identity,
+    guid,
+    expiresAt: Date.now() + CCTV_TTL_MS,
+    value: fetchCctvMedia(url, guid),
+  };
   ctx.cctvSources.set(tabId, next);
   // Briefly back off failed lookups, while allowing the panel's next scan
   // to recover from transient API/network errors instead of caching them.
@@ -165,7 +181,10 @@ export async function discover(ctx: BackgroundContext, tabId: number): Promise<M
         // The fixed CCTV API binds public CDN mirrors to one verified GUID.
         // A refreshed/rotated CDN must not invalidate the same video's cache.
         const identitySource =
-          selectedSource && cctvPlayer?.id === v.id && cctvMedia && selectedSource.url === cctvMedia.url
+          selectedSource &&
+          cctvPlayer?.id === v.id &&
+          cctvMedia &&
+          selectedSource.url === cctvMedia.url
             ? {
                 ...selectedSource,
                 url: `${CCTV_IDENTITY_API}${cctvMedia.guid}`,
@@ -230,7 +249,8 @@ export async function discover(ctx: BackgroundContext, tabId: number): Promise<M
     );
     const youtubeTrackChanged =
       meta.site === 'youtube' &&
-      ((meta.currentAudioTrackId && meta.currentAudioTrackId !== active.candidate.source?.trackId) ||
+      ((meta.currentAudioTrackId &&
+        meta.currentAudioTrackId !== active.candidate.source?.trackId) ||
         (current?.source && current.source.trackId !== active.candidate.source?.trackId));
     if ((current?.source && current.mediaId !== active.candidate.mediaId) || youtubeTrackChanged)
       await stopSession(ctx, active.id);

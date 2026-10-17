@@ -179,13 +179,19 @@ export const sessionRoutes: RouteGroup<
           next.readyThrough = next.inputThrough = clock.position;
           await chrome.storage.session.set({ activeSession: next });
           if (ctx.session !== next) return ctx.session;
-          void chrome.runtime.sendMessage({ type: 'session:updated', session: next }).catch(() => {});
+          void chrome.runtime
+            .sendMessage({ type: 'session:updated', session: next })
+            .catch(() => {});
           const result = await ctx.toOffscreen<Result<unknown> | undefined>('engine:language', {
             session: next,
             userPaused: clock.userPaused,
           });
           const current = ctx.session as PlaybackSession | null;
-          if (current?.id !== next.id || current.epoch !== next.epoch || current.language !== language)
+          if (
+            current?.id !== next.id ||
+            current.epoch !== next.epoch ||
+            current.language !== language
+          )
             return current;
           if (result?.ok !== true) {
             await stopOwned(ctx, next);
@@ -267,7 +273,9 @@ export const sessionRoutes: RouteGroup<
       }
       await toPlayer(ctx, 'player:state', { session: accepted }, accepted);
       if (ctx.session === accepted)
-        void chrome.runtime.sendMessage({ type: 'session:updated', session: accepted }).catch(() => {});
+        void chrome.runtime
+          .sendMessage({ type: 'session:updated', session: accepted })
+          .catch(() => {});
       return true;
     },
   },
@@ -283,7 +291,11 @@ export const sessionRoutes: RouteGroup<
       const delivered = await toPlayer(
         ctx,
         'player:segment',
-        { segment: message.segment, epoch: message.epoch, languageVersion: message.languageVersion },
+        {
+          segment: message.segment,
+          epoch: message.epoch,
+          languageVersion: message.languageVersion,
+        },
         owner,
       );
       return delivered?.ok === true;

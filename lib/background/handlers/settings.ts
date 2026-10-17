@@ -41,7 +41,9 @@ export const settingsRoutes: RouteGroup<
           ...input,
           apiKey: input.apiKey?.trim() || current.apiKey,
           autoSaveFiles:
-            input.autoSaveFiles === undefined ? current.autoSaveFiles : input.autoSaveFiles === true,
+            input.autoSaveFiles === undefined
+              ? current.autoSaveFiles
+              : input.autoSaveFiles === true,
         };
         endpoint(next);
         if (

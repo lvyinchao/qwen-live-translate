@@ -5,9 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { checkMediaSource } from './check-media-source.mjs';
 import { unzipSync } from 'fflate';
 
-const { version, license } = JSON.parse(
-  await fs.readFile('package.json', 'utf8'),
-);
+const { version, license } = JSON.parse(await fs.readFile('package.json', 'utf8'));
 assert.equal(license, 'MIT');
 const mediaSource = await checkMediaSource();
 const prefix = `timbradub-${version}`;
@@ -32,8 +30,7 @@ const readEntry = (archiveEntries, entry) => {
   assert.ok(value, 'Missing archive entry: ' + entry);
   return Buffer.from(value);
 };
-const jsonEntry = (archive, entry) =>
-  JSON.parse(readEntry(archive, entry).toString('utf8'));
+const jsonEntry = (archive, entry) => JSON.parse(readEntry(archive, entry).toString('utf8'));
 const sensitive = [
   /\bsk-[A-Za-z0-9_-]{24,}\b/,
   /\bLTAI[A-Za-z0-9]{12,}\b/,
@@ -46,10 +43,7 @@ for (const kind of ['chrome', 'webstore', 'source']) {
   const name = `${prefix}-${kind}.zip`,
     file = `outputs/${name}`;
   const bytes = await fs.readFile(file);
-  assert.equal(
-    crypto.createHash('sha256').update(bytes).digest('hex'),
-    checksums.get(name),
-  );
+  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), checksums.get(name));
   execFileSync('unzip', ['-tqq', file]);
   const archiveEntries = unzipSync(bytes);
   const entries = Object.keys(archiveEntries);
@@ -60,17 +54,12 @@ for (const kind of ['chrome', 'webstore', 'source']) {
   );
   assert.ok(
     !paths.some((p) =>
-      /(^|\/)(?:node_modules|\.git|work|\.env[^/]*|config\.json|[^/]*\.(?:pem|key))(\/|$)/i.test(
-        p,
-      ),
+      /(^|\/)(?:node_modules|\.git|work|\.env[^/]*|config\.json|[^/]*\.(?:pem|key))(\/|$)/i.test(p),
     ),
     `${kind}: private/development files`,
   );
   for (let index = 0; index < entries.length; index++) {
-    if (
-      !/\.(?:[cm]?js|[cm]?tsx?|json|md|ya?ml|html|txt|svg)$/i.test(paths[index])
-    )
-      continue;
+    if (!/\.(?:[cm]?js|[cm]?tsx?|json|md|ya?ml|html|txt|svg)$/i.test(paths[index])) continue;
     const content = readEntry(archiveEntries, entries[index]).toString('utf8');
     assert.ok(
       !sensitive.some((pattern) => pattern.test(content)),
@@ -78,10 +67,7 @@ for (const kind of ['chrome', 'webstore', 'source']) {
     );
   }
   if (kind !== 'source') {
-    assert.ok(
-      paths.includes('manifest.json'),
-      `${kind}: choose the extracted root directly`,
-    );
+    assert.ok(paths.includes('manifest.json'), `${kind}: choose the extracted root directly`);
     assert.ok(
       !paths.includes('extension/manifest.json'),
       `${kind}: unexpected nested installation folder`,
@@ -90,13 +76,8 @@ for (const kind of ['chrome', 'webstore', 'source']) {
     assert.equal(manifest.version, version);
     assert.equal(manifest.manifest_version, 3);
     assert.equal(manifest.default_locale, 'en');
-    assert.ok(
-      !manifest.permissions.some((p) =>
-        ['tabCapture', 'debugger', 'history'].includes(p),
-      ),
-    );
-    for (const size of [16, 32, 48, 128])
-      assert.ok(paths.includes(manifest.icons[size]));
+    assert.ok(!manifest.permissions.some((p) => ['tabCapture', 'debugger', 'history'].includes(p)));
+    for (const size of [16, 32, 48, 128]) assert.ok(paths.includes(manifest.icons[size]));
     for (const required of [
       'LICENSE',
       'THIRD_PARTY_NOTICES.md',
@@ -131,24 +112,17 @@ for (const kind of ['chrome', 'webstore', 'source']) {
       'eslint.config.js',
     ])
       assert.ok(paths.includes(`${prefix}/${required}`), required);
-    assert.equal(
-      jsonEntry(archiveEntries, `${prefix}/package.json`).version,
-      version,
-    );
+    assert.equal(jsonEntry(archiveEntries, `${prefix}/package.json`).version, version);
     assert.equal(
       `sha512-${crypto
         .createHash('sha512')
-        .update(
-          readEntry(archiveEntries, `${prefix}/vendor/${mediaSource.filename}`),
-        )
+        .update(readEntry(archiveEntries, `${prefix}/vendor/${mediaSource.filename}`))
         .digest('base64')}`,
       mediaSource.integrity,
       'Source archive MPL mismatch',
     );
     assert.ok(
-      !paths.some(
-        (p) => p.startsWith(`${prefix}/outputs/`) && /\.(wav|pcm|mp4)$/.test(p),
-      ),
+      !paths.some((p) => p.startsWith(`${prefix}/outputs/`) && /\.(wav|pcm|mp4)$/.test(p)),
       'Historical recordings are excluded from the source archive',
     );
   }

@@ -11,7 +11,8 @@ const sources = (dir: string): string[] =>
   });
 // User-facing failures are written in Chinese and localized by their text, so
 // a reworded message must not silently lose its English translation.
-const MESSAGE = /(?:Error\(\s*|AppError\(\s*'[a-z-]+',\s*|reason:\s*|sourceReason:\s*)'([^'\n]*[一-龥][^'\n]*)'/g;
+const MESSAGE =
+  /(?:Error\(\s*|AppError\(\s*'[a-z-]+',\s*|reason:\s*|sourceReason:\s*)'([^'\n]*[一-龥][^'\n]*)'/g;
 
 it('has an English translation for every literal user-facing error message', () => {
   const missing = ['lib', 'entrypoints', 'workers']

@@ -6,8 +6,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 const cfg = JSON.parse(
   await fs.readFile(
-    process.env.BAILIAN_CONFIG ??
-      path.join(os.homedir(), '.bailian/config.json'),
+    process.env.BAILIAN_CONFIG ?? path.join(os.homedir(), '.bailian/config.json'),
     'utf8',
   ),
 );
@@ -18,19 +17,13 @@ const workspace = host.split('.')[0],
 const directory = await fs.mkdtemp(path.resolve('work/language-live-'));
 const extension = path.join(directory, 'extension');
 await fs.cp('.output/chrome-mv3', extension, { recursive: true });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--enable-unsafe-extension-debugging',
-      '--autoplay-policy=no-user-gesture-required',
-    ],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging', '--autoplay-policy=no-user-gesture-required'],
+});
 const report = {
   at: new Date().toISOString(),
   url: 'https://www.bilibili.com/video/BV13rsaeaEgE/',
@@ -102,8 +95,7 @@ try {
     const start = Date.now();
     while (Date.now() - start < 100000) {
       const s = await call('session:get');
-      if (!s || s.phase === 'error')
-        throw Error(s?.error ?? 'Session disappeared');
+      if (!s || s.phase === 'error') throw Error(s?.error ?? 'Session disappeared');
       if (s.language === language && s.phase === 'playing' && s.segments.length)
         return { session: s, waitMs: Date.now() - start };
       await page.waitForTimeout(500);
@@ -147,9 +139,7 @@ try {
     current.session.segments.some((s) => /[ぁ-んァ-ン]/.test(s.text)),
     'Japanese transcript must contain actual Japanese',
   );
-  assert.ok(
-    current.session.segments.every((s) => s.start >= report.switchAt - 0.5),
-  );
+  assert.ok(current.session.segments.every((s) => s.start >= report.switchAt - 0.5));
   await page.waitForTimeout(6000);
   const response = await call('session:diagnostics');
   const diagnostics = response.value ?? response;
@@ -176,10 +166,7 @@ try {
   assert.equal(report.after.paused, false);
   assert.ok(report.after.position > report.switchAt + 3);
   assert.equal((await call('settings:get')).autoSaveFiles, false);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    0,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, 0);
   await call('session:stop');
   report.rulesAfterStop = (
     await panel.evaluate(() => chrome.declarativeNetRequest.getSessionRules())
@@ -196,10 +183,7 @@ try {
   throw e;
 } finally {
   if (call) await call('session:stop').catch(() => {});
-  await fs.writeFile(
-    'outputs/language-live-verification.json',
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile('outputs/language-live-verification.json', JSON.stringify(report, null, 2));
   await context.close();
   await fs.rm(directory, { recursive: true, force: true });
   console.log(JSON.stringify(report, null, 2));

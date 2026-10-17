@@ -91,7 +91,7 @@ const hlsFiles = Object.fromEntries(
 const small = await fs.readFile(path.join(directory, 'small.m4a'));
 const long = await fs.readFile(path.join(directory, 'long.m4a'));
 let moov = -1;
-for (let at = 0; at < small.length; ) {
+for (let at = 0; at < small.length;) {
   const size = small.readUInt32BE(at);
   assert.ok(size >= 8);
   if (small.toString('ascii', at + 4, at + 8) === 'moov') {
@@ -106,40 +106,25 @@ assert.ok(moov > 0);
 const padding = Buffer.alloc(10 * 1024 ** 2);
 padding.writeUInt32BE(padding.length, 0);
 padding.write('free', 4);
-const fixture = Buffer.concat([
-  small.subarray(0, moov),
-  padding,
-  small.subarray(moov),
-]);
+const fixture = Buffer.concat([small.subarray(0, moov), padding, small.subarray(moov)]);
 const requests = [];
 const server = http.createServer((req, res) => {
   const range = req.headers.range;
   requests.push({ path: req.url, range });
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader(
-    'Access-Control-Expose-Headers',
-    'Content-Length, Content-Range, Accept-Ranges',
-  );
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
   res.setHeader('Content-Type', 'audio/mp4');
   if (hlsFiles[req.url]) {
     res.setHeader(
       'Content-Type',
-      req.url.endsWith('.m3u8')
-        ? 'application/vnd.apple.mpegurl'
-        : 'video/mp2t',
+      req.url.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t',
     );
     res.writeHead(200, { 'Content-Length': hlsFiles[req.url].length });
     res.end(hlsFiles[req.url]);
     return;
   }
-  const bytes =
-    req.url === '/long.m4a' ? long : req.url === '/short.m4a' ? small : fixture;
-  if (
-    (req.url === '/honest.m4a' ||
-      req.url === '/long.m4a' ||
-      req.url === '/short.m4a') &&
-    range
-  ) {
+  const bytes = req.url === '/long.m4a' ? long : req.url === '/short.m4a' ? small : fixture;
+  if ((req.url === '/honest.m4a' || req.url === '/long.m4a' || req.url === '/short.m4a') && range) {
     const match = range.match(/^bytes=(\d+)-(\d*)$/);
     assert.ok(match);
     const start = Number(match[1]),
@@ -161,16 +146,13 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: ['--enable-unsafe-extension-debugging'],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -186,13 +168,10 @@ try {
   });
   const setup = await context.newPage();
   await setup.goto(`chrome-extension://${id}/THIRD_PARTY_NOTICES.md`);
-  const workerFile = (await fs.readdir(path.join(extension, 'assets'))).find(
-    (f) => /^decode-.*\.js$/.test(f),
+  const workerFile = (await fs.readdir(path.join(extension, 'assets'))).find((f) =>
+    /^decode-.*\.js$/.test(f),
   );
-  const inlinePlaylist = await fs.readFile(
-    path.join(directory, 'hls.m3u8'),
-    'utf8',
-  );
+  const inlinePlaylist = await fs.readFile(path.join(directory, 'hls.m3u8'), 'utf8');
   const run = async (asset, cases, graceful = true) =>
     setup.evaluate(
       async ({ asset, cases, base, inlinePlaylist, graceful }) => {
@@ -218,9 +197,9 @@ try {
                   const hash = crypto.subtle
                     .digest('SHA-256', data.samples)
                     .then((b) =>
-                      Array.from(new Uint8Array(b), (v) =>
-                        v.toString(16).padStart(2, '0'),
-                      ).join(''),
+                      Array.from(new Uint8Array(b), (v) => v.toString(16).padStart(2, '0')).join(
+                        '',
+                      ),
                     );
                   hash.then((hash) =>
                     resolve({
@@ -280,9 +259,7 @@ try {
   const case0 = { path: '/ignored.m4a', start: 1, end: 3 };
   if (process.env.BASELINE_DIR) {
     const assets = path.resolve(process.env.BASELINE_DIR, 'assets');
-    const original = (await fs.readdir(assets)).find((f) =>
-      /^decode-.*\.js$/.test(f),
-    );
+    const original = (await fs.readdir(assets)).find((f) => /^decode-.*\.js$/.test(f));
     // Include dependencies of the old worker under their original hashed names.
     await fs.cp(assets, path.join(extension, 'assets'), {
       recursive: true,
@@ -292,9 +269,7 @@ try {
     report.baseline = failure;
     assert.equal(failure.ok, false);
     assert.match(failure.error, /already-evicted/);
-    report.checks.push(
-      'Unmodified 0.1.3 reproduced the exact already-evicted cache error',
-    );
+    report.checks.push('Unmodified 0.1.3 reproduced the exact already-evicted cache error');
     report.baselineRequests = requests.splice(0);
   }
   const cases = await run(workerFile, [
@@ -332,9 +307,7 @@ try {
     'A second disk-backed resource did not evict or delete the first live temporary file',
   );
   assert.equal(requests.filter((r) => r.path === '/inline.m3u8').length, 0);
-  report.checks.push(
-    'Inline HLS metadata decoded without re-requesting a playlist URL',
-  );
+  report.checks.push('Inline HLS metadata decoded without re-requesting a playlist URL');
   report.checks.push(
     'Unencrypted HLS VOD playlist and audio segments decoded through the same worker',
   );
@@ -387,10 +360,7 @@ try {
   throw error;
 } finally {
   report.requests = requests;
-  await fs.writeFile(
-    'outputs/range-source-verification.json',
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile('outputs/range-source-verification.json', JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
   await context.close();
   await new Promise((resolve) => server.close(resolve));

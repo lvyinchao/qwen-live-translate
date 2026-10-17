@@ -29,9 +29,7 @@ export class PrivateFiles implements FileStore {
   }
   async create(path: string): Promise<FileSink> {
     const { directory, name } = await this.parent(path, true);
-    return (
-      await directory.getFileHandle(name, { create: true })
-    ).createWritable();
+    return (await directory.getFileHandle(name, { create: true })).createWritable();
   }
   async remove(path: string) {
     const { directory, name } = await this.parent(path, false);
@@ -41,9 +39,7 @@ export class PrivateFiles implements FileStore {
     const files: { path: string; size: number }[] = [];
     let root: FileSystemDirectoryHandle;
     try {
-      root = await (await navigator.storage.getDirectory()).getDirectoryHandle(
-        'qwen-video-dub',
-      );
+      root = await (await navigator.storage.getDirectory()).getDirectoryHandle('qwen-video-dub');
     } catch (error) {
       if ((error as DOMException).name === 'NotFoundError') return files;
       throw error;
@@ -76,7 +72,7 @@ export class PrivateFiles implements FileStore {
 export async function writeBlob(sink: FileSink, blob: Blob) {
   const reader = blob.stream().getReader();
   try {
-    for (; ;) {
+    for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
       await sink.write(new Uint8Array(value));
@@ -91,7 +87,7 @@ export async function putBlob(store: FileStore, path: string, blob: Blob) {
     await writeBlob(sink, blob);
     await sink.close();
   } catch (error) {
-    await sink.abort().catch(() => { });
+    await sink.abort().catch(() => {});
     throw error;
   }
 }

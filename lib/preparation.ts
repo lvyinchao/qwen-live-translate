@@ -2,9 +2,7 @@ import type { PreparationStatus } from './types';
 
 /** Targets are source-media seconds. Input remains conservatively paced at 1×. */
 export function bufferPolicy(videoRate: number) {
-  const rate = Number.isFinite(videoRate)
-    ? Math.min(2, Math.max(0.5, videoRate))
-    : 1;
+  const rate = Number.isFinite(videoRate) ? Math.min(2, Math.max(0.5, videoRate)) : 1;
   return {
     videoRate: rate,
     startupTargetSeconds: 30 * Math.max(1, rate),

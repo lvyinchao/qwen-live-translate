@@ -106,8 +106,7 @@ export class BackgroundContext {
 
   async loadSettings(): Promise<Settings> {
     const saved = (await chrome.storage.local.get('settings')).settings as
-      | Partial<Settings>
-      | undefined;
+      Partial<Settings> | undefined;
     return {
       ...DEFAULT_SETTINGS,
       ...saved,

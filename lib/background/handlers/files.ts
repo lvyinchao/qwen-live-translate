@@ -95,9 +95,18 @@ export const fileRoutes: RouteGroup<
         return publicSettings(await ctx.loadSettings());
       }),
   },
-  'files:status': { privileged: READ_FILES, handle: ({ ctx }) => offscreenValue(ctx, 'files:status') },
-  'files:merge': { privileged: READ_FILES, handle: ({ ctx }) => offscreenValue(ctx, 'files:merge') },
-  'files:retry': { privileged: READ_FILES, handle: ({ ctx }) => offscreenValue(ctx, 'files:retry') },
+  'files:status': {
+    privileged: READ_FILES,
+    handle: ({ ctx }) => offscreenValue(ctx, 'files:status'),
+  },
+  'files:merge': {
+    privileged: READ_FILES,
+    handle: ({ ctx }) => offscreenValue(ctx, 'files:merge'),
+  },
+  'files:retry': {
+    privileged: READ_FILES,
+    handle: ({ ctx }) => offscreenValue(ctx, 'files:retry'),
+  },
   'files:show': {
     privileged: READ_FILES,
     handle: async ({ message }) => {

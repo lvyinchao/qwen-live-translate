@@ -27,8 +27,7 @@ const context = await chromium.launchPersistentContext(
 );
 const record = {
   at: new Date().toISOString(),
-  scope:
-    'Real isolated Chrome extension; local key kept in memory and browser-local storage only',
+  scope: 'Real isolated Chrome extension; local key kept in memory and browser-local storage only',
   model: 'qwen3.8-livetranslate-flash-realtime',
 };
 try {
@@ -36,17 +35,12 @@ try {
   const control = await context.browser().newBrowserCDPSession();
   await control.send('Extensions.loadUnpacked', { path: extension });
   console.log('Browser launched; waiting for extension service worker');
-  const worker =
-    context.serviceWorkers()[0] ??
-    (await context.waitForEvent('serviceworker'));
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   const extensionId = new URL(worker.url()).hostname;
   const page = await context.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error')
-      console.log(
-        'Browser error:',
-        m.text().replaceAll(config.api_key, '[redacted]'),
-      );
+      console.log('Browser error:', m.text().replaceAll(config.api_key, '[redacted]'));
   });
   await page.goto(`chrome-extension://${extensionId}/offscreen.html`);
   await page.waitForTimeout(500);
@@ -68,9 +62,9 @@ try {
   cdp.on('Network.webSocketFrameError', (e) => {
     record.networkError = e.errorMessage;
   });
-  const pcm = (
-    await fs.readFile(process.env.PROBE_PCM ?? 'tests/fixtures/probe.pcm')
-  ).toString('base64');
+  const pcm = (await fs.readFile(process.env.PROBE_PCM ?? 'tests/fixtures/probe.pcm')).toString(
+    'base64',
+  );
   record.result = await page.evaluate(
     async ({ url, pcm }) => {
       return await new Promise((resolve) => {
@@ -86,10 +80,7 @@ try {
           socket.close();
           resolve({ ...result, bytes, text, counts, events });
         };
-        const timer = setTimeout(
-          () => finish({ ok: false, error: 'timeout' }),
-          45000,
-        );
+        const timer = setTimeout(() => finish({ ok: false, error: 'timeout' }), 45000);
         socket.onerror = () => {
           clearTimeout(timer);
           finish({ ok: false, error: 'websocket handshake failed' });
@@ -103,10 +94,8 @@ try {
         socket.onmessage = async (e) => {
           const data = JSON.parse(e.data);
           counts[data.type] = (counts[data.type] ?? 0) + 1;
-          if (data.type === 'response.audio.delta')
-            bytes += atob(data.delta).length;
-          else if (data.type === 'response.audio_transcript.delta')
-            text += data.delta;
+          if (data.type === 'response.audio.delta') bytes += atob(data.delta).length;
+          else if (data.type === 'response.audio_transcript.delta') text += data.delta;
           if (
             ![
               'response.audio.delta',
@@ -141,8 +130,7 @@ try {
             const bytes = Uint8Array.from(atob(pcm), (c) => c.charCodeAt(0));
             for (let i = 0; i < bytes.length && !done; i += 3200) {
               let s = '';
-              for (const b of bytes.subarray(i, i + 3200))
-                s += String.fromCharCode(b);
+              for (const b of bytes.subarray(i, i + 3200)) s += String.fromCharCode(b);
               socket.send(
                 JSON.stringify({
                   type: 'input_audio_buffer.append',
@@ -170,9 +158,7 @@ try {
       target: 'background',
       type: 'auth:remove',
     });
-    return !(await chrome.declarativeNetRequest.getSessionRules()).some(
-      (r) => r.id === 910001,
-    );
+    return !(await chrome.declarativeNetRequest.getSessionRules()).some((r) => r.id === 910001);
   });
 } catch (error) {
   record.error = String(error.message).replace(/sk-[\w-]+/g, '[redacted]');

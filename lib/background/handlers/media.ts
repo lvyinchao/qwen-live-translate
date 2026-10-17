@@ -34,7 +34,8 @@ export const mediaRoutes: RouteGroup<
     // Sent by the isolated Tencent bridge, never by an extension page.
     handle: async ({ ctx, message, sender }) => {
       const tabId = sender.tab?.id;
-      if (!tabId || !sender.url?.startsWith(TENCENT_PAGE)) throw new AppError('forbidden', '不允许网页触发扫描');
+      if (!tabId || !sender.url?.startsWith(TENCENT_PAGE))
+        throw new AppError('forbidden', '不允许网页触发扫描');
       if (!ctx.observation.allows(tabId, ctx.observedTaskTab())) return false;
       const observedRevision = ctx.observation.revision(tabId);
       const stillObserved = () =>

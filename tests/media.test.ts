@@ -11,10 +11,9 @@ it('parses UMP correctly even when every byte arrives separately', () => {
   writer.write(22, new Uint8Array([0]));
   const parser = new UmpFramer(),
     parts: { type: number; data: Uint8Array }[] = [];
-  const consume = (type: number, data: Uint8Array) =>
-    parts.push({ type, data: data.slice() });
+  const consume = (type: number, data: Uint8Array) => parts.push({ type, data: data.slice() });
   for (const chunk of buffer.chunks)
-    for (let i = 0; i < chunk.length; ) {
+    for (let i = 0; i < chunk.length;) {
       const n = i < 12 ? 1 : Math.min(131, chunk.length - i);
       parser.push(chunk.subarray(i, i + n), consume);
       i += n;

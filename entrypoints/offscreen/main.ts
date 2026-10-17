@@ -22,9 +22,7 @@ const bg = createBackgroundRpc((message) => chrome.runtime.sendMessage(message))
 const files = new LocalFiles(
   (url, filename) => bg('files:download', { url, filename }),
   (status) => {
-    void chrome.runtime
-      .sendMessage({ type: 'files:updated', status })
-      .catch(() => {});
+    void chrome.runtime.sendMessage({ type: 'files:updated', status }).catch(() => {});
   },
 );
 let filePreferenceVersion = 0;
@@ -33,8 +31,7 @@ async function configureFiles() {
   // remain background-owned; ignore older replies when toggles race startup.
   const version = ++filePreferenceVersion;
   const saved = await bg('settings:get');
-  if (version === filePreferenceVersion)
-    files.setAutoSave(saved?.autoSaveFiles === true);
+  if (version === filePreferenceVersion) files.setAutoSave(saved?.autoSaveFiles === true);
 }
 const filesReady = configureFiles();
 void filesReady.then(() => files.flush()).catch((error) => files.failed(error));
@@ -47,7 +44,9 @@ const engine = new PlaybackEngine({
 });
 async function storageSummary() {
   const [cacheBytes, media, archives] = await Promise.all([
-    cache.size(), mediaTempSummary(), files.summary(),
+    cache.size(),
+    mediaTempSummary(),
+    files.summary(),
   ]);
   return { playback: { bytes: cacheBytes, limitBytes: CACHE_LIMIT }, media, archives };
 }
@@ -66,23 +65,21 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
       return true;
     }
     if (message.type === 'engine:start') {
-      await engine.start(
-        message.session as PlaybackSession,
-        message.settings as Settings,
-      );
+      await engine.start(message.session as PlaybackSession, message.settings as Settings);
       return true;
     }
     if (message.type === 'engine:language') {
-      await engine.switchLanguage(
-        message.session as PlaybackSession,
-        Boolean(message.userPaused),
-      );
+      await engine.switchLanguage(message.session as PlaybackSession, Boolean(message.userPaused));
       return true;
     }
     if (message.type === 'engine:mix') {
       const current = engine.session;
-      if (current && current.id === message.sessionId &&
-          (message.languageVersion === undefined || message.languageVersion === (current.languageVersion ?? 0)))
+      if (
+        current &&
+        current.id === message.sessionId &&
+        (message.languageVersion === undefined ||
+          message.languageVersion === (current.languageVersion ?? 0))
+      )
         Object.assign(current, {
           originalVolume: Number(message.originalVolume),
           dubVolume: Number(message.dubVolume),
@@ -106,10 +103,7 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
     }
     if (message.type === 'files:status') return files.status();
     if (message.type === 'files:merge') {
-      await files.finish(
-        engine.session ? archiveContext(engine.session) : undefined,
-        false,
-      );
+      await files.finish(engine.session ? archiveContext(engine.session) : undefined, false);
       return files.status();
     }
     if (message.type === 'files:retry') {
@@ -126,9 +120,7 @@ chrome.runtime.onMessage.addListener((message: Envelope, sender, respond) => {
         ...engine.diagnostics,
         preparation: engine.preparation(),
         cacheBytes: await cache.size(),
-        heap: memory
-          ? { used: memory.usedJSHeapSize, total: memory.totalJSHeapSize }
-          : undefined,
+        heap: memory ? { used: memory.usedJSHeapSize, total: memory.totalJSHeapSize } : undefined,
       };
     }
     if (message.type === 'engine:probe') {

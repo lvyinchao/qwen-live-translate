@@ -3,36 +3,48 @@ import type { UILanguage } from './types';
 // Keep the original internal errors stable: retry classification and diagnostics
 // use them. Localize at the presentation boundary, never model text or subtitles.
 const english = {
-  '扩展后台未返回有效响应，请重试': 'The extension background returned no valid response. Please retry.',
+  '扩展后台未返回有效响应，请重试':
+    'The extension background returned no valid response. Please retry.',
   '请先停止翻译，再修改服务凭据': 'Stop translation before changing service credentials.',
   '视频或音轨已变化，请重新扫描': 'The video or audio track changed. Please rescan.',
-  '播放器未接收译音，请重新扫描视频后重试': 'The player did not accept translated audio. Rescan the video and retry.',
-  '播放器未提供可确认当前音轨归属的信息，请先播放几秒或重新选择音轨后扫描': 'The player has not identified its current audio track. Play briefly or select a track, then scan again.',
-  '音轨解码没有取得有效音频': 'Audio decoding returned no usable samples.',
+  '播放器未接收译音，请重新扫描视频后重试':
+    'The player did not accept translated audio. Rescan the video and retry.',
+  '播放器未提供可确认当前音轨归属的信息，请先播放几秒或重新选择音轨后扫描':
+    'The player has not identified its current audio track. Play briefly or select a track, then scan again.',
+  音轨解码没有取得有效音频: 'Audio decoding returned no usable samples.',
   '请先停止翻译，再清理本机空间': 'Stop translation before clearing local storage.',
-  '译音准备状态': 'Translation preparation',
-  '启动准备 {seconds} 秒 · 持续准备 {maintain} 秒': 'Start with {seconds}s · Keep {maintain}s ahead',
+  译音准备状态: 'Translation preparation',
+  '启动准备 {seconds} 秒 · 持续准备 {maintain} 秒':
+    'Start with {seconds}s · Keep {maintain}s ahead',
   '实际准备速度 {rate}× · 当前播放 {videoRate}×': 'Preparation {rate}× · Playback {videoRate}×',
   '正在测量实际准备速度…': 'Measuring preparation speed…',
-  '模型音频按原速输入，倍速观看可能需要再次缓冲。': 'Audio is sent to the model at its original speed. Faster playback may need more buffering.',
-  '当前播放快于准备速度，缓存耗尽时会暂停等待。': 'Playback is faster than preparation. The video pauses when its buffer runs out.',
-  '本机存储空间': 'Storage on this device',
-  '刷新存储统计': 'Refresh storage usage',
-  '译音播放缓存': 'Translated playback cache',
-  '再次观看时复用译音，清除后需要重新生成。': 'Reuses translated audio when you watch again. Clearing requires generating it again.',
+  '模型音频按原速输入，倍速观看可能需要再次缓冲。':
+    'Audio is sent to the model at its original speed. Faster playback may need more buffering.',
+  '当前播放快于准备速度，缓存耗尽时会暂停等待。':
+    'Playback is faster than preparation. The video pauses when its buffer runs out.',
+  本机存储空间: 'Storage on this device',
+  刷新存储统计: 'Refresh storage usage',
+  译音播放缓存: 'Translated playback cache',
+  '再次观看时复用译音，清除后需要重新生成。':
+    'Reuses translated audio when you watch again. Clearing requires generating it again.',
   '上限 {size}': 'Limit {size}',
-  '原媒体临时文件': 'Temporary source media',
-  '为提前读取音轨临时存放，任务关闭后会清理。': 'Temporary audio data used to read ahead. Cleans up when the task closes.',
+  原媒体临时文件: 'Temporary source media',
+  '为提前读取音轨临时存放，任务关闭后会清理。':
+    'Temporary audio data used to read ahead. Cleans up when the task closes.',
   '{count} 个文件': '{count} files',
-  '清除原媒体临时文件': 'Clear temporary source media',
-  '译音与脚本暂存': 'Staged audio and transcripts',
-  '开启自动保存后的分段和待合并内容；不包含下载目录中的文件。': 'Chunks and pending merges created with automatic saving on. Excludes files in Downloads.',
+  清除原媒体临时文件: 'Clear temporary source media',
+  译音与脚本暂存: 'Staged audio and transcripts',
+  '开启自动保存后的分段和待合并内容；不包含下载目录中的文件。':
+    'Chunks and pending merges created with automatic saving on. Excludes files in Downloads.',
   '{count} 段 · {jobs} 个视频': '{count} chunks · {jobs} videos',
-  '清除译音与脚本暂存': 'Clear staged audio and transcripts',
+  清除译音与脚本暂存: 'Clear staged audio and transcripts',
   '停止翻译后可以清理本机空间。': 'Stop translation to clear storage on this device.',
-  '已清理可删除的临时文件；仍在使用的文件会在任务关闭后清理。': 'Available temporary files were cleared. Files still in use will be cleaned when their tasks close.',
-  '缓存按记录估算，浏览器实际占用可能略有差异。': 'Cache usage is estimated from its records. Actual browser storage may differ slightly.',
-  '浏览器中的暂存数据已清理，已下载文件不会删除。': 'Browser storage cleared. Downloaded files are kept.',
+  '已清理可删除的临时文件；仍在使用的文件会在任务关闭后清理。':
+    'Available temporary files were cleared. Files still in use will be cleaned when their tasks close.',
+  '缓存按记录估算，浏览器实际占用可能略有差异。':
+    'Cache usage is estimated from its records. Actual browser storage may differ slightly.',
+  '浏览器中的暂存数据已清理，已下载文件不会删除。':
+    'Browser storage cleared. Downloaded files are kept.',
   自动保存翻译文件: 'Save translation files automatically',
   '关闭时仅使用播放缓存，不自动保存脚本、译音文件或发起下载。已有文件会保留。':
     'When off, only the playback cache is used. Transcripts and audio files are not saved automatically, and no automatic downloads start. Existing files are kept.',
@@ -55,8 +67,7 @@ const english = {
   '打开视频网站的点播页面，播放几秒后重新扫描。':
     'Open a video page, play a few seconds, then rescan.',
 
-  '音轨服务器读取超时，请重试':
-    'Reading the audio server timed out. Please retry.',
+  '音轨服务器读取超时，请重试': 'Reading the audio server timed out. Please retry.',
   '音轨服务器返回的数据不完整，请刷新资源后重试':
     'The audio server returned incomplete data. Refresh the media and retry.',
   '音轨临时存储空间不足，请释放磁盘空间后重试':
@@ -70,25 +81,21 @@ const english = {
     'Audio chunks save quietly on this device. When translation finishes or stops, they merge into one audio package. No per-chunk downloads.',
   '正在合并并保存…': 'Merging and saving…',
   '已保存 {count} 个结果': '{count} saved results',
-  '译音先分段保存，完成后自动合并':
-    'Audio saves in chunks, then merges when finished',
+  '译音先分段保存，完成后自动合并': 'Audio saves in chunks, then merges when finished',
   '已暂存 {count} 段译音': '{count} audio chunks stored locally',
   '有 {count} 个视频待合并': '{count} videos ready to merge',
   合并并保存: 'Merge and save',
   '无法合并：译音 WAV 格式无效': 'Cannot merge: invalid translated WAV format.',
   '合并音频超过 WAV 文件上限': 'Merged audio exceeds the WAV file size limit.',
-  '本地译音片段不完整，无法合并':
-    'A local audio chunk is incomplete and cannot be merged.',
-  '合并文件超过 ZIP 文件上限':
-    'The merged package exceeds the ZIP file size limit.',
+  '本地译音片段不完整，无法合并': 'A local audio chunk is incomplete and cannot be merged.',
+  '合并文件超过 ZIP 文件上限': 'The merged package exceeds the ZIP file size limit.',
   本地译音片段信息无效: 'Invalid local audio chunk metadata.',
   本地保存: 'Local files',
   '脚本、字幕与原音色音频自动保存到下载目录，按视频和目标语言分文件夹。':
     'Transcripts, subtitles and original-voice audio save automatically to your Chrome download folder, organized by video and target language.',
   '正在保存文件…': 'Saving files…',
   '已保存 {count} 个译音包': '{count} translation bundles saved',
-  '翻译完成的内容会自动保存为 ZIP':
-    'Completed translations save automatically as ZIP files',
+  '翻译完成的内容会自动保存为 ZIP': 'Completed translations save automatically as ZIP files',
   '待保存 {count} 批': '{count} batches waiting to save',
   '本地保存失败，待保存内容已保留，请重试。':
     'Saving failed. Please retry to save the queued files.',
@@ -96,8 +103,7 @@ const english = {
   重试保存: 'Retry saving',
   '本地保存待处理内容已满，请先重试保存':
     'The local save queue is full. Retry saving before continuing.',
-  不允许网页读取本地保存内容:
-    'Web pages cannot access saved translation files.',
+  不允许网页读取本地保存内容: 'Web pages cannot access saved translation files.',
   本地保存暂不可用: 'Local saving is temporarily unavailable.',
   本地文件不存在: 'The saved file is unavailable.',
   不允许网页保存文件: 'Web pages cannot save extension files.',
@@ -143,18 +149,17 @@ const english = {
   清除译音缓存: 'Clear audio cache',
   移除凭据: 'Remove credentials',
   配置已保存在这台浏览器中: 'Settings saved in this browser.',
-  '播放诊断已导出，不含密钥和媒体地址':
-    'Diagnostics exported without credentials or media URLs.',
+  '播放诊断已导出，不含密钥和媒体地址': 'Diagnostics exported without credentials or media URLs.',
   译音缓存已清除: 'Audio cache cleared.',
   本机凭据已移除: 'Credentials removed from this device.',
   当前页面: 'Current page',
   选择要观看的视频: 'Choose a video',
   重新扫描视频: 'Rescan videos',
-  '用原声的音色，听另一种语言。':
-    'The original voice. A new language.',
+  '用原声的音色，听另一种语言。': 'The original voice. A new language.',
   当前页面的视频: 'Videos on this page',
   网页视频: 'Web video',
-  '央视音轨尚未就绪，请等待主视频开始后重试': 'The CCTV audio track is not ready. Wait for the main video to start, then try again.',
+  '央视音轨尚未就绪，请等待主视频开始后重试':
+    'The CCTV audio track is not ready. Wait for the main video to start, then try again.',
   音轨已识别: 'Audio track found',
   等待识别音轨: 'Waiting for audio track',
   让视频先出现: 'Find a video first',
@@ -183,17 +188,14 @@ const english = {
     'To stay aligned with the video, {count} audio tails were trimmed, including very small trims. Full translations remain available.',
   译文片段: 'Transcript',
   译音尾部已截短: 'Audio tail trimmed',
-  '先准备一小段译音，再边看边翻译。':
-    'Prepare a short buffer, then translate as you watch.',
-  '暂停、跳转和倍速，译音跟随视频。':
-    'Audio follows pauses, seeks and playback speed.',
+  '先准备一小段译音，再边看边翻译。': 'Prepare a short buffer, then translate as you watch.',
+  '暂停、跳转和倍速，译音跟随视频。': 'Audio follows pauses, seeks and playback speed.',
   '由 Qwen 提供译音': 'Audio by Qwen',
   '自用预览版 · {version}': 'Personal preview · {version}',
   '请点击视频播放按钮，继续观看': 'Click the video’s play button to continue.',
   '翻译已停止，请查看侧边栏': 'Translation stopped. Check the sidebar.',
   '正在准备译音 · 已准备 {seconds} 秒': 'Preparing audio · {seconds}s ready',
-  '请点击视频一次，允许播放译音':
-    'Click the video to allow translated audio playback.',
+  '请点击视频一次，允许播放译音': 'Click the video to allow translated audio playback.',
   '操作未完成，请重试': 'The action could not be completed. Please try again.',
   '已连接 Qwen3.8 LiveTranslate': 'Connected to Qwen3.8 LiveTranslate.',
   无效的界面语言: 'Invalid interface language.',
@@ -213,23 +215,18 @@ const english = {
   无效的目标语言: 'Invalid target language.',
   翻译任务已过期: 'This translation task has expired.',
   '视频已变化，请重新扫描': 'The video has changed. Please rescan.',
-  '请等待广告结束，再选择正片':
-    'Wait for the ad to finish, then select the video.',
+  '请等待广告结束，再选择正片': 'Wait for the ad to finish, then select the video.',
   首版仅支持普通点播视频: 'This preview supports on-demand videos only.',
   '尚未发现可预取的音轨。请先播放几秒，再重新扫描；本版本不会以滞后采集代替同步。':
     'No audio track is available for prefetching. Play a few seconds, then rescan. This preview requires audio that can be read ahead for synchronized playback.',
-  请先在设置中填写百炼凭据:
-    'Enter your Model Studio credentials in settings first.',
-  '播放器已被页面替换，请重新扫描':
-    'The page replaced the player. Please rescan.',
+  请先在设置中填写百炼凭据: 'Enter your Model Studio credentials in settings first.',
+  '播放器已被页面替换，请重新扫描': 'The page replaced the player. Please rescan.',
   媒体域名不在允许范围: 'This media domain is not allowed.',
   '请先停止翻译，再清理缓存': 'Stop translation before clearing the cache.',
   没有可预取的音轨: 'No audio track is available for prefetching.',
-  '音轨读取超时，请刷新视频后重新扫描':
-    'Audio loading timed out. Refresh the video and rescan.',
+  '音轨读取超时，请刷新视频后重新扫描': 'Audio loading timed out. Refresh the video and rescan.',
   媒体资源没有可解码的音轨: 'The media has no decodable audio track.',
-  当前浏览器不支持这条音轨的编码格式:
-    'This browser does not support the audio track’s codec.',
+  当前浏览器不支持这条音轨的编码格式: 'This browser does not support the audio track’s codec.',
   '未读到该时间段的音频，请刷新资源地址后重试':
     'No audio was found for this interval. Refresh the source and try again.',
   '提前读取请求未通过 YouTube 音轨播放验证，当前版本无法继续。翻译已停止，原声设置已恢复；可以重载视频后再试。':
@@ -244,8 +241,7 @@ const english = {
   '请填写有效的百炼 Workspace ID': 'Enter a valid Model Studio workspace ID.',
   请选择北京或新加坡地域: 'Choose the Beijing or Singapore region.',
   '请填写有效的百炼 API Key': 'Enter a valid Model Studio API key.',
-  '译音 PCM 字节长度不完整':
-    'The translated PCM audio has an incomplete byte length.',
+  '译音 PCM 字节长度不完整': 'The translated PCM audio has an incomplete byte length.',
   '翻译响应未完整完成，请重试当前片段':
     'The translation response is incomplete. Retry this segment.',
   '模型译音缺少可靠的源时间戳或消息关联，已停止本段以防音画错位':
@@ -257,16 +253,14 @@ const english = {
     'The model connection or response timed out. Check your region, network and model access.',
   '百炼 WebSocket 连接失败：请检查 Key、Workspace、地域和模型访问权限':
     'Model Studio WebSocket connection failed. Check your key, workspace, region and model access.',
-  '连接返回了不同模型，已停止':
-    'The connection returned a different model and has been stopped.',
+  '连接返回了不同模型，已停止': 'The connection returned a different model and has been stopped.',
   '模型未确认启用原音色复刻，已停止翻译':
     'The model did not confirm original voice cloning. Translation has stopped.',
   'UMP 分片超过安全读取上限': 'The UMP fragment exceeds the safe read limit.',
   '无效的 SABR 读取窗口': 'Invalid SABR read window.',
   '播放器尚未提供完整 SABR 音轨信息，请播放几秒后重新扫描':
     'The player has not provided complete SABR audio information. Play a few seconds, then rescan.',
-  'SABR 重定向到了未允许的媒体域名':
-    'SABR redirected to a media domain that is not allowed.',
+  'SABR 重定向到了未允许的媒体域名': 'SABR redirected to a media domain that is not allowed.',
   '音轨属于广告或其他视频，已停止':
     'The audio belongs to an ad or another video. Playback has stopped.',
   'SABR 窗口超出读取上限': 'The SABR window exceeds the read limit.',

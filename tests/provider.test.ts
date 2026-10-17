@@ -27,9 +27,7 @@ class Socket {
     const event = JSON.parse(raw);
     sent.push(event);
     if (event.type === 'session.update' && failureCode) {
-      queueMicrotask(() =>
-        this.receive({ type: 'error', error: { code: failureCode } }),
-      );
+      queueMicrotask(() => this.receive({ type: 'error', error: { code: failureCode } }));
       return;
     }
     if (event.type === 'session.update' && disconnect) {

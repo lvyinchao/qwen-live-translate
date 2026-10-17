@@ -16,9 +16,7 @@ export function pcm16(samples: Float32Array): Uint8Array {
   samples.forEach((value, i) =>
     view.setInt16(
       i * 2,
-      Math.round(
-        Math.max(-1, Math.min(1, value)) * (value < 0 ? 32768 : 32767),
-      ),
+      Math.round(Math.max(-1, Math.min(1, value)) * (value < 0 ? 32768 : 32767)),
       true,
     ),
   );
@@ -138,17 +136,12 @@ export function utteranceWindows(
     const limit = Math.min(samples.length, start + 12 * rate);
     let end = limit;
     const gap = gaps.find(
-      (p) =>
-        p >= start + 2 * rate && p <= limit && p < samples.length - 0.8 * rate,
+      (p) => p >= start + 2 * rate && p <= limit && p < samples.length - 0.8 * rate,
     );
     if (gap !== undefined) end = gap;
     else if (limit < samples.length) {
       let best = Infinity;
-      for (
-        let i = Math.floor((limit - rate) / frame);
-        i < Math.floor(limit / frame);
-        i++
-      )
+      for (let i = Math.floor((limit - rate) / frame); i < Math.floor(limit / frame); i++)
         if (energies[i]! < best) {
           best = energies[i]!;
           end = i * frame;

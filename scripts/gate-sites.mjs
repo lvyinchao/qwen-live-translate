@@ -10,10 +10,7 @@ const context = await chromium.launchPersistentContext(
     headless: false,
     timeout: 25000,
     ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--enable-unsafe-extension-debugging',
-      '--autoplay-policy=no-user-gesture-required',
-    ],
+    args: ['--enable-unsafe-extension-debugging', '--autoplay-policy=no-user-gesture-required'],
   },
 );
 const records = [];
@@ -23,9 +20,7 @@ try {
     path: extension,
   });
   await new Promise((resolve) => setTimeout(resolve, 800));
-  const sw =
-    context.serviceWorkers()[0] ??
-    (await context.waitForEvent('serviceworker'));
+  const sw = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   await sw.evaluate(() => true);
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${id}/sidepanel.html`);
@@ -56,8 +51,8 @@ try {
       record.playability = await page.evaluate(() => {
         try {
           return (
-            document.querySelector('#movie_player')?.getPlayerResponse?.()
-              ?.playabilityStatus?.reason ??
+            document.querySelector('#movie_player')?.getPlayerResponse?.()?.playabilityStatus
+              ?.reason ??
             document.querySelector('.ytp-error-content-wrap')?.textContent ??
             null
           );
@@ -65,10 +60,7 @@ try {
           return null;
         }
       });
-      await page
-        .locator('video')
-        .first()
-        .waitFor({ state: 'attached', timeout: 10000 });
+      await page.locator('video').first().waitFor({ state: 'attached', timeout: 10000 });
       await page
         .locator('video')
         .first()
@@ -77,13 +69,9 @@ try {
           void v.play().catch(() => {});
         });
       await page.waitForTimeout(
-        url.includes('youtube')
-          ? Number(process.env.NATIVE_PLAY_MS ?? 1000)
-          : 6000,
+        url.includes('youtube') ? Number(process.env.NATIVE_PLAY_MS ?? 1000) : 6000,
       );
-      const autoplay = page.locator(
-        '.ytp-autonav-toggle-button[aria-checked="true"]',
-      );
+      const autoplay = page.locator('.ytp-autonav-toggle-button[aria-checked="true"]');
       if (await autoplay.count())
         await autoplay
           .first()
@@ -91,8 +79,7 @@ try {
           .catch(() => {});
       for (
         let attempt = 0;
-        attempt < 45 &&
-        (await page.locator('#movie_player.ad-showing').count());
+        attempt < 45 && (await page.locator('#movie_player.ad-showing').count());
         attempt++
       ) {
         const skip = page.locator(
@@ -160,9 +147,7 @@ try {
           : process.env.WINDOW_START
             ? Number(process.env.WINDOW_START)
             : Math.min(candidate.duration - 3, before + 60),
-        end = process.env.EXTRACT_PCM
-          ? 30
-          : start + Number(process.env.WINDOW_SIZE ?? 3);
+        end = process.env.EXTRACT_PCM ? 30 : start + Number(process.env.WINDOW_SIZE ?? 3);
       record.prefetch = await panel.evaluate(
         async ({ source, decode, start, end, dump }) => {
           const result = await chrome.runtime.sendMessage({
@@ -172,10 +157,9 @@ try {
           });
           if (!result.ok) return result;
           return await new Promise((resolve) => {
-            const worker = new Worker(
-              chrome.runtime.getURL('assets/' + decode),
-              { type: 'module' },
-            );
+            const worker = new Worker(chrome.runtime.getURL('assets/' + decode), {
+              type: 'module',
+            });
             const timer = setTimeout(() => {
               worker.terminate();
               resolve({ ok: false, error: 'decode timeout' });
@@ -197,9 +181,7 @@ try {
                 raw,
                 ok: true,
                 samples: samples.length,
-                rms: Math.sqrt(
-                  samples.reduce((s, v) => s + v * v, 0) / samples.length,
-                ),
+                rms: Math.sqrt(samples.reduce((s, v) => s + v * v, 0) / samples.length),
                 window: [start, end],
                 decodedStart: e.data.decodedStart,
                 decodedEnd: e.data.decodedEnd,
@@ -228,10 +210,7 @@ try {
         },
       );
       if (record.prefetch.raw) {
-        await fs.writeFile(
-          'work/native-source.f32',
-          Buffer.from(record.prefetch.raw, 'base64'),
-        );
+        await fs.writeFile('work/native-source.f32', Buffer.from(record.prefetch.raw, 'base64'));
         delete record.prefetch.raw;
       }
       const after = await page
@@ -240,10 +219,7 @@ try {
         .evaluate((v) => v.currentTime);
       record.pausedDuringPrefetch = Math.abs(after - before) < 0.02;
     } catch (error) {
-      record.error = error.message.replace(
-        /https?:\/\/[^\s]+\?[^\s]+/g,
-        '[media url]',
-      );
+      record.error = error.message.replace(/https?:\/\/[^\s]+\?[^\s]+/g, '[media url]');
     }
     await fs.writeFile(
       `work/gate-sites${process.env.SITE_FILTER ? '-' + process.env.SITE_FILTER : ''}.json`,

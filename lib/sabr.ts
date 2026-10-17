@@ -6,12 +6,7 @@ import {
   UMPPartId,
 } from 'googlevideo/protos';
 import { SabrStream } from 'googlevideo/sabr-stream';
-import {
-  buildSabrFormat,
-  EnabledTrackTypes,
-  Logger,
-  LogLevel,
-} from 'googlevideo/utils';
+import { buildSabrFormat, EnabledTrackTypes, Logger, LogLevel } from 'googlevideo/utils';
 import { decode64, encode64 } from './audio';
 import { safeMediaUrl } from './security';
 import { preserveSabrContext } from './protobuf-wire';
@@ -36,26 +31,11 @@ export class UmpFramer {
     const integer = (at: number): [number, number] | undefined => {
       const first = bytes[at];
       if (first === undefined) return;
-      const length =
-        first < 128
-          ? 1
-          : first < 192
-            ? 2
-            : first < 224
-              ? 3
-              : first < 240
-                ? 4
-                : 5;
+      const length = first < 128 ? 1 : first < 192 ? 2 : first < 224 ? 3 : first < 240 ? 4 : 5;
       if (at + length > bytes.length) return;
       if (length === 1) return [first, 1];
       if (length === 5)
-        return [
-          new DataView(bytes.buffer, bytes.byteOffset + at + 1, 4).getUint32(
-            0,
-            true,
-          ),
-          5,
-        ];
+        return [new DataView(bytes.buffer, bytes.byteOffset + at + 1, 4).getUint32(0, true), 5];
       let value = first & ((1 << (8 - length)) - 1),
         factor = 2 ** (8 - length);
       for (let i = 1; i < length; i++) {
@@ -69,8 +49,7 @@ export class UmpFramer {
       if (!type) break;
       const size = integer(offset + type[1]);
       if (!size) break;
-      if (size[0] > 16 * 1024 * 1024)
-        throw new Error('UMP 分片超过安全读取上限');
+      if (size[0] > 16 * 1024 * 1024) throw new Error('UMP 分片超过安全读取上限');
       const begin = offset + type[1] + size[1],
         end = begin + size[0];
       if (end > bytes.length) break;
@@ -94,9 +73,7 @@ export function openSabrWindow(
   const request = VideoPlaybackAbrRequest.decode(nativeBytes);
   const nativeTrack = request.clientAbrState?.audioTrackId;
   const formats = (source.sabrFormats ?? [])
-    .filter((f) =>
-      nativeTrack ? f.audioTrackId === nativeTrack : f.isDefault !== false,
-    )
+    .filter((f) => (nativeTrack ? f.audioTrackId === nativeTrack : f.isDefault !== false))
     .map((f) => ({
       ...buildSabrFormat({ ...f, bitrate: f.bitrate ?? 0 }),
       isDrc: !!f.isDrc,
@@ -104,12 +81,8 @@ export function openSabrWindow(
     }));
   const chosen = request.selectedAudioFormatIds?.[0];
   const audio =
-    formats.find(
-      (f) => chosen && f.itag === chosen.itag && f.xtags === chosen.xtags,
-    ) ??
-    formats.find(
-      (f) => f.itag === 140 && f.isDrc === !!request.clientAbrState?.drcEnabled,
-    ) ??
+    formats.find((f) => chosen && f.itag === chosen.itag && f.xtags === chosen.xtags) ??
+    formats.find((f) => f.itag === 140 && f.isDrc === !!request.clientAbrState?.drcEnabled) ??
     formats.find((f) => f.itag === 140) ??
     formats[0];
   const context = request.streamerContext;
@@ -121,20 +94,15 @@ export function openSabrWindow(
     videoId: source.identity.split(':')[1]!,
     formats,
     serverAbrStreamingUrl: source.url,
-    videoPlaybackUstreamerConfig: encode64(
-      request.videoPlaybackUstreamerConfig,
-    ),
+    videoPlaybackUstreamerConfig: encode64(request.videoPlaybackUstreamerConfig),
     clientInfo: context.clientInfo,
     poToken: context.poToken ? encode64(context.poToken) : undefined,
     audioHighWaterMark: 256 * 1024,
     fetchFunction: async (url, init) => {
-      if (!safeMediaUrl(String(url)))
-        throw new Error('SABR 重定向到了未允许的媒体域名');
+      if (!safeMediaUrl(String(url))) throw new Error('SABR 重定向到了未允许的媒体域名');
       signal.throwIfAborted();
       const body =
-        init?.body instanceof Uint8Array
-          ? VideoPlaybackAbrRequest.decode(init.body)
-          : undefined;
+        init?.body instanceof Uint8Array ? VideoPlaybackAbrRequest.decode(init.body) : undefined;
       if (body?.streamerContext) {
         const next = body.streamerContext;
         body.streamerContext = {
@@ -143,19 +111,13 @@ export function openSabrWindow(
           playbackCookie: next.playbackCookie ?? context.playbackCookie,
           sabrContexts: [
             ...new Map(
-              [...context.sabrContexts, ...next.sabrContexts].map((c) => [
-                c.type,
-                c,
-              ]),
+              [...context.sabrContexts, ...next.sabrContexts].map((c) => [c.type, c]),
             ).values(),
           ],
         };
         init = {
           ...init,
-          body: preserveSabrContext(
-            nativeBytes,
-            VideoPlaybackAbrRequest.encode(body).finish(),
-          ),
+          body: preserveSabrContext(nativeBytes, VideoPlaybackAbrRequest.encode(body).finish()),
         };
       }
       const record: {
@@ -174,15 +136,10 @@ export function openSabrWindow(
       const response = await fetch(url, {
         ...init,
         credentials: 'include',
-        signal: AbortSignal.any([
-          signal,
-          ...(init?.signal ? [init.signal] : []),
-        ]),
+        signal: AbortSignal.any([signal, ...(init?.signal ? [init.signal] : [])]),
       });
       if (!response.ok)
-        throw new Error(
-          `YouTube SABR 读取失败（HTTP ${response.status}），请刷新播放凭据后重试`,
-        );
+        throw new Error(`YouTube SABR 读取失败（HTTP ${response.status}），请刷新播放凭据后重试`);
       if (!response.body) return response;
       const framer = new UmpFramer();
       return new Response(
@@ -210,8 +167,7 @@ export function openSabrWindow(
                   };
                 }
                 if (type === UMPPartId.STREAM_PROTECTION_STATUS)
-                  record.protection =
-                    StreamProtectionStatus.decode(data).status;
+                  record.protection = StreamProtectionStatus.decode(data).status;
               });
               controller.enqueue(chunk);
             },
@@ -243,9 +199,7 @@ export function openSabrWindow(
       transform(chunk, controller) {
         bytes += chunk.byteLength;
         if (bytes > 32 * 1024 * 1024) throw new Error('SABR 窗口超出读取上限');
-        controller.enqueue(
-          new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength),
-        );
+        controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
       },
     }),
   );

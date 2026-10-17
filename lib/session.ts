@@ -3,10 +3,12 @@ import { captionPreferences } from './captions';
 
 /** An RPC retry may arrive after a more recent snapshot from the same epoch. */
 export function isOlderStateVersion(current: PlaybackSession, next: PlaybackSession) {
-  return current.id === next.id &&
+  return (
+    current.id === next.id &&
     current.epoch === next.epoch &&
     (current.languageVersion ?? 0) === (next.languageVersion ?? 0) &&
-    (next.stateVersion ?? 0) < (current.stateVersion ?? 0);
+    (next.stateVersion ?? 0) < (current.stateVersion ?? 0)
+  );
 }
 
 /** Playback progress is engine-owned; user volume/subtitle choices are UI-owned. */

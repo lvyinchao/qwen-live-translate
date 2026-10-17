@@ -18,8 +18,7 @@ export function syntheticWav(duration = 3.84, sampleRate = 24000) {
     const time = i / sampleRate;
     const ramp = Math.min(1, time / 0.02, (duration - time) / 0.02);
     const signal =
-      Math.sin(2 * Math.PI * 220 * time) * 0.08 +
-      Math.sin(2 * Math.PI * 330 * time) * 0.03;
+      Math.sin(2 * Math.PI * 220 * time) * 0.08 + Math.sin(2 * Math.PI * 330 * time) * 0.03;
     wav.writeInt16LE(Math.round(signal * ramp * 32767), 44 + i * 2);
   }
   return wav;

@@ -19,12 +19,7 @@ import {
   type PlaybackSession,
   type Settings,
 } from '../../lib/types';
-import {
-  languageName,
-  localizeMessage,
-  normalizeUILanguage,
-  t as translate,
-} from '../../lib/i18n';
+import { languageName, localizeMessage, normalizeUILanguage, t as translate } from '../../lib/i18n';
 import type { UILanguage } from '../../lib/types';
 import { EMPTY_FILE_STATUS, type LocalFileStatus } from '../../lib/archive';
 import { isOlderStateVersion } from '../../lib/session';
@@ -105,7 +100,9 @@ export function App() {
       try {
         const active = await call('session:get');
         if (request === languageRequest.current && mounted.current) receiveSession(active);
-      } catch { /* Keep the actionable language error if state recovery also fails. */ }
+      } catch {
+        /* Keep the actionable language error if state recovery also fails. */
+      }
     }
   };
   const scanning = useRef(false);
@@ -133,16 +130,11 @@ export function App() {
         active: true,
         currentWindow: true,
       });
-      if (
-        !mounted.current ||
-        active?.id !== current.id ||
-        active?.url !== current.url
-      )
-        return;
+      if (!mounted.current || active?.id !== current.id || active?.url !== current.url) return;
       items.sort((a, b) => b.width * b.height - a.width * a.height);
       setVideos(items);
       setSelected((old) =>
-        items.some((v) => candidateKey(v) === old) ? old : (items[0] ? candidateKey(items[0]) : ''),
+        items.some((v) => candidateKey(v) === old) ? old : items[0] ? candidateKey(items[0]) : '',
       );
     } finally {
       scanning.current = false;
@@ -165,15 +157,18 @@ export function App() {
     void call('settings:get')
       .then((s) => {
         setSettings(s);
-        if (!sessionRef.current && !languagePending.current)
-          setLanguage(s.language);
+        if (!sessionRef.current && !languagePending.current) setLanguage(s.language);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoaded(true));
     const hydration = sessionUpdates.current;
-    void call('session:get').then((next) => {
-      if (mounted.current && sessionUpdates.current === hydration) receiveSession(next);
-    }).catch((error) => { if (mounted.current) setError(error.message); });
+    void call('session:get')
+      .then((next) => {
+        if (mounted.current && sessionUpdates.current === hydration) receiveSession(next);
+      })
+      .catch((error) => {
+        if (mounted.current) setError(error.message);
+      });
     void call('files:status')
       .then(setFiles)
       .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
@@ -195,34 +190,30 @@ export function App() {
     const polling = setInterval(() => {
       if (!document.hidden && Date.now() - lastScan.current >= POLL_MS - 500) activated();
     }, POLL_MS);
-    const visible = () => { if (!document.hidden) activated(); };
+    const visible = () => {
+      if (!document.hidden) activated();
+    };
     document.addEventListener('visibilitychange', visible);
     const updated = (
       _id: number,
       change: { url?: string; status?: string },
       current: chrome.tabs.Tab,
     ) => {
-      if (current.active && (change.url || change.status === 'complete'))
-        activated();
+      if (current.active && (change.url || change.status === 'complete')) activated();
     };
     chrome.runtime.onMessage.addListener(listener);
     chrome.tabs.onActivated.addListener(activated);
     chrome.tabs.onUpdated.addListener(updated);
-    const onSettings = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
+    const onSettings = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area === 'local' && changes.settings)
         setSettings((old) => ({
           ...old,
           uiLanguage: normalizeUILanguage(
-            (changes.settings!.newValue as Partial<Settings> | undefined)
-              ?.uiLanguage,
+            (changes.settings!.newValue as Partial<Settings> | undefined)?.uiLanguage,
           ),
           hasKey: Boolean((changes.settings!.newValue as Partial<Settings> | undefined)?.apiKey),
           autoSaveFiles:
-            (changes.settings!.newValue as Partial<Settings> | undefined)
-              ?.autoSaveFiles === true,
+            (changes.settings!.newValue as Partial<Settings> | undefined)?.autoSaveFiles === true,
         }));
     };
     chrome.storage.onChanged.addListener(onSettings);
@@ -258,9 +249,12 @@ export function App() {
   const candidate = videos.find((v) => candidateKey(v) === selected);
   const chooseVideo = (candidate: MediaCandidate) => {
     setSelected(candidateKey(candidate));
-    if (!candidate.detectionOnly) void call('media:highlight', {
-      tabId: candidate.tabId, frameId: candidate.frameId, id: candidate.id,
-    }).catch((error) => setError(error.message));
+    if (!candidate.detectionOnly)
+      void call('media:highlight', {
+        tabId: candidate.tabId,
+        frameId: candidate.frameId,
+        id: candidate.id,
+      }).catch((error) => setError(error.message));
   };
   const mix = (changes: MixChanges) => {
     const current = sessionRef.current;
@@ -269,11 +263,17 @@ export function App() {
     sessionRef.current = next;
     setSession(next);
     void call('session:mix', {
-      sessionId: next.id, languageVersion: next.languageVersion ?? 0,
-      originalVolume: next.originalVolume, dubVolume: next.dubVolume, ...captionPreferences(next),
+      sessionId: next.id,
+      languageVersion: next.languageVersion ?? 0,
+      originalVolume: next.originalVolume,
+      dubVolume: next.dubVolume,
+      ...captionPreferences(next),
     }).catch((error) => {
-      if (sessionRef.current?.id === next.id &&
-          (sessionRef.current.languageVersion ?? 0) === (next.languageVersion ?? 0)) setError(error.message);
+      if (
+        sessionRef.current?.id === next.id &&
+        (sessionRef.current.languageVersion ?? 0) === (next.languageVersion ?? 0)
+      )
+        setError(error.message);
     });
   };
   const toggleFiles = (enabled: boolean) => {
@@ -313,10 +313,7 @@ export function App() {
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download =
-      locale === 'zh'
-        ? '听译-播放诊断.json'
-        : 'timbradub-playback-diagnostics.json';
+    a.download = locale === 'zh' ? '听译-播放诊断.json' : 'timbradub-playback-diagnostics.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     setNotice('播放诊断已导出，不含密钥和媒体地址');
@@ -359,29 +356,43 @@ export function App() {
         </div>
       </header>
       <div className="modebar">
-        <span
-          className={`status-dot ${session?.phase === 'playing' ? 'live' : ''}`}
-        />
+        <span className={`status-dot ${session?.phase === 'playing' ? 'live' : ''}`} />
         <span>{status}</span>
         <span className="modebar-end">{t('原网页 · 同步译音')}</span>
       </div>
       <main>
         {view === 'settings' ? (
-          <SettingsView locale={locale} settings={settings} apiKey={apiKey} busy={busy}
-            activeSession={!!session} saving={files.saving} onBack={() => setView('videos')}
-            onApiKey={setApiKey} onSettings={setSettings} onSave={() => void act('save', save)}
-            onTest={() => void act('test', async () => {
-              await save();
-              const result = await call('settings:test');
-              if (!result.ok) throw new Error(result.error);
-              setNotice(result.value);
-            })} onForget={() => void act('forget', async () => {
-              const next = await call('settings:forget');
-              setSettings(next);
-              setApiKey('');
-              setNotice('本机凭据已移除');
-            })} onDiagnostics={() => void act('diagnostics', exportDiagnostics)}
-            onAction={act} onNotice={setNotice} />
+          <SettingsView
+            locale={locale}
+            settings={settings}
+            apiKey={apiKey}
+            busy={busy}
+            activeSession={!!session}
+            saving={files.saving}
+            onBack={() => setView('videos')}
+            onApiKey={setApiKey}
+            onSettings={setSettings}
+            onSave={() => void act('save', save)}
+            onTest={() =>
+              void act('test', async () => {
+                await save();
+                const result = await call('settings:test');
+                if (!result.ok) throw new Error(result.error);
+                setNotice(result.value);
+              })
+            }
+            onForget={() =>
+              void act('forget', async () => {
+                const next = await call('settings:forget');
+                setSettings(next);
+                setApiKey('');
+                setNotice('本机凭据已移除');
+              })
+            }
+            onDiagnostics={() => void act('diagnostics', exportDiagnostics)}
+            onAction={act}
+            onNotice={setNotice}
+          />
         ) : (
           <>
             <div className="section-heading">
@@ -395,17 +406,17 @@ export function App() {
                 aria-label={t('重新扫描视频')}
                 onClick={() => act('scan', scan)}
               >
-                <RefreshCw
-                  size={17}
-                  className={busy === 'scan' ? 'spin' : ''}
-                />
+                <RefreshCw size={17} className={busy === 'scan' ? 'spin' : ''} />
               </button>
             </div>
-            <p className="description">
-              {t('用原声的音色，听另一种语言。')}
-            </p>
-            <VideoList videos={videos} selected={selected} locale={locale}
-              onChoose={chooseVideo} onScan={() => void act('scan', scan)} />
+            <p className="description">{t('用原声的音色，听另一种语言。')}</p>
+            <VideoList
+              videos={videos}
+              selected={selected}
+              locale={locale}
+              onChoose={chooseVideo}
+              onScan={() => void act('scan', scan)}
+            />
             <p className="hint" role="status">
               <RefreshCw size={14} />
               {t('持续检测音轨中，找到可用资源后自动更新。')}
@@ -413,9 +424,7 @@ export function App() {
             {candidate?.site === 'youtube' && (
               <p className="hint">
                 <CircleHelp size={14} />
-                {t(
-                  'YouTube 长视频尚未通过连续译音验收；遇到音轨播放验证限制时会停止翻译。',
-                )}
+                {t('YouTube 长视频尚未通过连续译音验收；遇到音轨播放验证限制时会停止翻译。')}
               </p>
             )}
             {candidate && !candidate.source && (
@@ -444,9 +453,7 @@ export function App() {
                   </option>
                 ))}
               </select>
-              <span className="auto-source">
-                {t('自动识别原语言 · 保留原音色')}
-              </span>
+              <span className="auto-source">{t('自动识别原语言 · 保留原音色')}</span>
             </section>
             {!settings.hasKey ? (
               <button className="primary" onClick={() => setView('settings')}>
@@ -505,13 +512,25 @@ export function App() {
             )}
           </>
         )}
-        <LocalFilesView settings={settings} files={files} busy={busy} loaded={loaded} locale={locale}
-          onToggle={toggleFiles} onShow={() => void act('files-show', async () => {
-            if (files.lastDownloadId !== undefined)
-              await call('files:show', { id: files.lastDownloadId });
-          })} onRetry={() => void act('files-retry', async () => {
-            setFiles(await call(files.error ? 'files:retry' : 'files:merge'));
-          })} />
+        <LocalFilesView
+          settings={settings}
+          files={files}
+          busy={busy}
+          loaded={loaded}
+          locale={locale}
+          onToggle={toggleFiles}
+          onShow={() =>
+            void act('files-show', async () => {
+              if (files.lastDownloadId !== undefined)
+                await call('files:show', { id: files.lastDownloadId });
+            })
+          }
+          onRetry={() =>
+            void act('files-retry', async () => {
+              setFiles(await call(files.error ? 'files:retry' : 'files:merge'));
+            })
+          }
+        />
         {(error || session?.error) && (
           <div className="feedback error" role="alert">
             {localizeMessage(error || session?.error || '', locale)}

@@ -15,9 +15,7 @@ function body(
             enc: '0',
             ul: {
               m3u8: playlist,
-              ui: [
-                { url: 'https://ltscsy.qq.com/path/index.m3u8?signature=keep' },
-              ],
+              ui: [{ url: 'https://ltscsy.qq.com/path/index.m3u8?signature=keep' }],
             },
             ...changes,
           },
@@ -32,20 +30,11 @@ it('extracts only the matching Tencent video playlist and preserves returned sig
   expect(media.protected).toBe(false);
   expect(media.url).toContain('signature=keep');
   expect(media.playlist).toContain('token=keep');
-  expect(Object.keys(media).sort()).toEqual([
-    'playlist',
-    'protected',
-    'url',
-    'videoId',
-  ]);
+  expect(Object.keys(media).sort()).toEqual(['playlist', 'protected', 'url', 'videoId']);
 });
 it('rejects other episodes, other pages, malformed and oversized metadata', () => {
-  expect(
-    parseTencentMedia(body(), page.replace('z4102cn0lk3', 'other')),
-  ).toBeUndefined();
-  expect(
-    parseTencentMedia(body(), 'https://v.qq.com.evil.test/z4102cn0lk3.html'),
-  ).toBeUndefined();
+  expect(parseTencentMedia(body(), page.replace('z4102cn0lk3', 'other'))).toBeUndefined();
+  expect(parseTencentMedia(body(), 'https://v.qq.com.evil.test/z4102cn0lk3.html')).toBeUndefined();
   expect(parseTencentMedia('not-json', page)).toBeUndefined();
   expect(
     parseTencentMedia(
@@ -58,17 +47,11 @@ it('rejects other episodes, other pages, malformed and oversized metadata', () =
       page,
     ),
   ).toBeUndefined();
-  expect(
-    parseTencentMedia(' '.repeat(2 * 1024 ** 2 + 1), page),
-  ).toBeUndefined();
+  expect(parseTencentMedia(' '.repeat(2 * 1024 ** 2 + 1), page)).toBeUndefined();
 });
 it('marks EME/custom encryption flags and encrypted HLS as protected', () => {
-  expect(parseTencentMedia(body(undefined, { drm: 1 }), page)?.protected).toBe(
-    true,
-  );
-  expect(
-    parseTencentMedia(body(undefined, { enc: '1' }), page)?.protected,
-  ).toBe(true);
+  expect(parseTencentMedia(body(undefined, { drm: 1 }), page)?.protected).toBe(true);
+  expect(parseTencentMedia(body(undefined, { enc: '1' }), page)?.protected).toBe(true);
   expect(
     parseTencentMedia(
       body(
@@ -80,10 +63,7 @@ it('marks EME/custom encryption flags and encrypted HLS as protected', () => {
 });
 it('rejects playlists escaping to non-Tencent or local URLs and unrelated metadata endpoints', () => {
   expect(
-    parseTencentMedia(
-      body('#EXTM3U\n#EXTINF:5,\nhttps://127.0.0.1/a.ts'),
-      page,
-    ),
+    parseTencentMedia(body('#EXTM3U\n#EXTINF:5,\nhttps://127.0.0.1/a.ts'), page),
   ).toBeUndefined();
   expect(
     parseTencentMedia(
@@ -92,8 +72,6 @@ it('rejects playlists escaping to non-Tencent or local URLs and unrelated metada
     ),
   ).toBeUndefined();
   expect(tencentInfoEndpoint('https://vd6.l.qq.com/proxyhttp')).toBe(true);
-  expect(tencentInfoEndpoint('https://vd6.l.qq.com.evil.com/proxyhttp')).toBe(
-    false,
-  );
+  expect(tencentInfoEndpoint('https://vd6.l.qq.com.evil.com/proxyhttp')).toBe(false);
   expect(tencentInfoEndpoint('https://vd6.l.qq.com/login')).toBe(false);
 });

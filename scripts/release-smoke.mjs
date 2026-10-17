@@ -32,15 +32,9 @@ const commandEnv = isolatedTestEnv({
   NPM_CONFIG_USERCONFIG: userConfig,
   NPM_CONFIG_GLOBALCONFIG: globalConfig,
 });
-const names = [
-  `${prefix}-chrome.zip`,
-  `${prefix}-source.zip`,
-  'SHA256SUMS.txt',
-];
+const names = [`${prefix}-chrome.zip`, `${prefix}-source.zip`, 'SHA256SUMS.txt'];
 const server = http.createServer((request, response) => {
-  const name = decodeURIComponent(
-    new URL(request.url, 'http://localhost').pathname.slice(1),
-  );
+  const name = decodeURIComponent(new URL(request.url, 'http://localhost').pathname.slice(1));
   if (name === '') {
     response.writeHead(200, { 'Content-Type': 'text/html' });
     const base = process.env.RELEASE_BASE_URL?.replace(/\/$/, '') ?? '';
@@ -54,9 +48,7 @@ const server = http.createServer((request, response) => {
     return;
   }
   response.writeHead(200, {
-    'Content-Type': name.endsWith('.zip')
-      ? 'application/zip'
-      : 'application/octet-stream',
+    'Content-Type': name.endsWith('.zip') ? 'application/zip' : 'application/octet-stream',
     'Content-Disposition': `attachment; filename="${name}"`,
   });
   createReadStream(path.join(root, 'outputs', name))
@@ -70,9 +62,7 @@ const report = {
   version,
   scope:
     'Actual ZIP downloads, root-folder installation and clean source-archive checks; synthetic fixtures only, no provider calls',
-  source: process.env.RELEASE_BASE_URL
-    ? 'public-release'
-    : 'local-http-download',
+  source: process.env.RELEASE_BASE_URL ? 'public-release' : 'local-http-download',
   checks: [],
   downloads: [],
   commands: [],
@@ -86,16 +76,12 @@ async function command(args, cwd) {
   const output = createWriteStream(log);
   const result = await new Promise((resolve, reject) => {
     const npm = process.env.npm_execpath;
-    const child = spawn(
-      npm ? process.execPath : 'npm',
-      npm ? [npm, ...args] : args,
-      {
-        cwd,
-        env: commandEnv,
-        detached: process.platform !== 'win32',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
+    const child = spawn(npm ? process.execPath : 'npm', npm ? [npm, ...args] : args, {
+      cwd,
+      env: commandEnv,
+      detached: process.platform !== 'win32',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     const timer = setTimeout(
       () => {
         if (process.platform === 'win32') child.kill('SIGTERM');
@@ -162,26 +148,21 @@ function extract(file, destination) {
 }
 
 try {
-  context = await chromium.launchPersistentContext(
-    path.join(directory, 'profile'),
-    {
-      env: isolatedTestEnv(),
-      channel: 'chromium',
-      headless: true,
-      acceptDownloads: true,
-      ignoreDefaultArgs: ['--disable-extensions'],
-      args: ['--enable-unsafe-extension-debugging'],
-    },
-  );
+  context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+    env: isolatedTestEnv(),
+    channel: 'chromium',
+    headless: true,
+    acceptDownloads: true,
+    ignoreDefaultArgs: ['--disable-extensions'],
+    args: ['--enable-unsafe-extension-debugging'],
+  });
   await context.route(/^https?:/, (route) => {
     const url = new URL(route.request().url());
     const remote =
       process.env.RELEASE_BASE_URL &&
       (url.origin === new URL(process.env.RELEASE_BASE_URL).origin ||
         url.hostname.endsWith('.githubusercontent.com'));
-    return url.origin === origin || remote
-      ? route.continue()
-      : route.abort('blockedbyclient');
+    return url.origin === origin || remote ? route.continue() : route.abort('blockedbyclient');
   });
   await context.routeWebSocket(/^wss?:/, (socket) =>
     socket.close({ code: 1000, reason: 'Release test: no provider calls' }),
@@ -219,9 +200,7 @@ try {
   const installation = path.join(directory, 'installation');
   extract(path.join(downloads, `${prefix}-chrome.zip`), installation);
   assert.equal(
-    JSON.parse(
-      await fs.readFile(path.join(installation, 'manifest.json'), 'utf8'),
-    ).version,
+    JSON.parse(await fs.readFile(path.join(installation, 'manifest.json'), 'utf8')).version,
     version,
   );
   const session = await context.browser().newBrowserCDPSession();
@@ -230,9 +209,7 @@ try {
   });
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${id}/sidepanel.html`);
-  await panel
-    .getByRole('heading', { name: 'Choose a video', exact: true })
-    .waitFor();
+  await panel.getByRole('heading', { name: 'Choose a video', exact: true }).waitFor();
   const installed = await panel.evaluate(async () => ({
     manifest: chrome.runtime.getManifest(),
     settings: await chrome.runtime.sendMessage({
@@ -253,18 +230,13 @@ try {
   extract(path.join(downloads, `${prefix}-source.zip`), sourceRoot);
   const source = path.join(sourceRoot, prefix);
   assert.equal(
-    JSON.parse(await fs.readFile(path.join(source, 'package.json'), 'utf8'))
-      .version,
+    JSON.parse(await fs.readFile(path.join(source, 'package.json'), 'utf8')).version,
     version,
   );
   await fs.access(path.join(source, 'tests/fixtures/audio.mjs'));
   await fs.access(path.join(source, 'outputs/真实验收记录.md'));
-  report.checks.push(
-    'UTF-8 Chinese evidence filenames survive source ZIP download and extraction',
-  );
-  await assert.rejects(
-    fs.access(path.join(source, 'outputs/原音色译音示例.wav')),
-  );
+  report.checks.push('UTF-8 Chinese evidence filenames survive source ZIP download and extraction');
+  await assert.rejects(fs.access(path.join(source, 'outputs/原音色译音示例.wav')));
   for (const args of [
     ['ci', '--registry=https://registry.npmjs.org'],
     ['run', 'verify:media-source'],
@@ -281,9 +253,7 @@ try {
   report.passed = true;
 } catch (error) {
   report.passed = false;
-  report.error = (
-    error instanceof Error ? error.message : 'Release smoke failed'
-  )
+  report.error = (error instanceof Error ? error.message : 'Release smoke failed')
     .replaceAll(directory, '<isolated release workspace>')
     .replaceAll(root, '<project>');
   process.exitCode = 1;

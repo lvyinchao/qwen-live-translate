@@ -14,14 +14,12 @@ export const digest = async (bytes: Uint8Array<ArrayBuffer>) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
     .map((n) => n.toString(16).padStart(2, '0'))
     .join('');
-export const textDigest = (value: string) =>
-  digest(new TextEncoder().encode(value));
+export const textDigest = (value: string) => digest(new TextEncoder().encode(value));
 export async function pcmSize(blob: Blob): Promise<number> {
   const header = new Uint8Array(await blob.slice(0, 44).arrayBuffer());
   if (header.length !== 44) throw new Error('无法合并：译音 WAV 格式无效');
   const v = new DataView(header.buffer),
-    text = (at: number, n: number) =>
-      String.fromCharCode(...header.slice(at, at + n));
+    text = (at: number, n: number) => String.fromCharCode(...header.slice(at, at + n));
   const size = v.getUint32(40, true);
   if (
     text(0, 4) !== 'RIFF' ||
@@ -48,11 +46,7 @@ export function mergedHeader(size: number) {
   view.setUint32(40, size, true);
   return header;
 }
-export async function mergeAudio(
-  store: FileStore,
-  path: string,
-  parts: StoredPart[],
-) {
+export async function mergeAudio(store: FileStore, path: string, parts: StoredPart[]) {
   const total = parts.reduce((n, p) => n + p.samples * 2, 0);
   const header = mergedHeader(total),
     sink = await store.create(path);
@@ -134,8 +128,7 @@ export function mergedScripts(context: ArchiveContext, parts: StoredPart[]) {
 }
 const crcTable = Uint32Array.from({ length: 256 }, (_, n) => {
   let value = n;
-  for (let bit = 0; bit < 8; bit++)
-    value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+  for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
   return value >>> 0;
 });
 async function crcOf(blob: Blob) {
@@ -145,8 +138,7 @@ async function crcOf(blob: Blob) {
     for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
-      for (const byte of value)
-        crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 255]!;
+      for (const byte of value) crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 255]!;
     }
   } finally {
     reader.releaseLock();

@@ -1,9 +1,5 @@
 import { AppError } from '../errors';
-import type {
-  BackgroundMessage,
-  BackgroundResponse,
-  BackgroundType,
-} from '../messages';
+import type { BackgroundMessage, BackgroundResponse, BackgroundType } from '../messages';
 import type { BackgroundContext } from './context';
 
 export interface RouteContext<K extends BackgroundType> {

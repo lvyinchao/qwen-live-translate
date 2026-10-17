@@ -11,11 +11,12 @@ import type { BackgroundMessage } from '../lib/messages';
 const routes = { ...fileRoutes, ...settingsRoutes, ...mediaRoutes, ...sessionRoutes } as Routes;
 const page = { id: 'other', url: 'https://example.com/' } as chrome.runtime.MessageSender;
 const untrusted = { trusted: () => false } as unknown as BackgroundContext;
-const send = (type: string) =>
-  dispatch(routes, untrusted, { type } as BackgroundMessage, page);
+const send = (type: string) => dispatch(routes, untrusted, { type } as BackgroundMessage, page);
 
 it('rejects every privileged route for web-page senders before running its handler', async () => {
-  const privileged = Object.entries(routes).filter(([, route]) => typeof route.privileged === 'string');
+  const privileged = Object.entries(routes).filter(
+    ([, route]) => typeof route.privileged === 'string',
+  );
   expect(privileged.length).toBeGreaterThan(20);
   for (const [type, route] of privileged) {
     const handle = vi.spyOn(route, 'handle');

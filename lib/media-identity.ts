@@ -1,6 +1,7 @@
 import type { AudioSource, MediaCandidate } from './types';
 
-const TRANSIENT = /^(?:expires?|deadline|signature|sign|sig|wssecret|wstime|auth_key|authkey|x-amz-(?:signature|date|expires|credential|security-token)|x-oss-(?:signature|date|expires|credential|security-token))$/i;
+const TRANSIENT =
+  /^(?:expires?|deadline|signature|sign|sig|wssecret|wstime|auth_key|authkey|x-amz-(?:signature|date|expires|credential|security-token)|x-oss-(?:signature|date|expires|credential|security-token))$/i;
 /** Retain unknown/content query parameters, including opaque tokens: a cache miss
  * is safer than treating a token-addressed different asset as the same video. */
 export function canonicalMediaResource(value: string): string {
@@ -23,9 +24,14 @@ export async function mediaResourceIdentity(
     ?.split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => line.startsWith('#')
-      ? line.replace(/URI="([^"]+)"/g, (_, uri: string) => `URI="${canonicalMediaResource(new URL(uri, source.url).href)}"`)
-      : canonicalMediaResource(new URL(line, source.url).href));
+    .map((line) =>
+      line.startsWith('#')
+        ? line.replace(
+            /URI="([^"]+)"/g,
+            (_, uri: string) => `URI="${canonicalMediaResource(new URL(uri, source.url).href)}"`,
+          )
+        : canonicalMediaResource(new URL(line, source.url).href),
+    );
   const bytes = new TextEncoder().encode(
     JSON.stringify([pageId, frameUrl, resource, source.trackId ?? 'default', manifestResources]),
   );

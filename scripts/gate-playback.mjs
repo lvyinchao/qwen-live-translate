@@ -7,8 +7,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 const cfg = JSON.parse(
   await fs.readFile(
-    process.env.BAILIAN_CONFIG ??
-      path.join(os.homedir(), '.bailian/config.json'),
+    process.env.BAILIAN_CONFIG ?? path.join(os.homedir(), '.bailian/config.json'),
     'utf8',
   ),
 );
@@ -18,22 +17,17 @@ const workspace = host.split('.')[0],
 const extension = await fs.mkdtemp(path.resolve('work/extension-snapshot-'));
 await fs.cp(path.resolve('.output/chrome-mv3'), extension, { recursive: true });
 const profile = await fs.mkdtemp(path.resolve('work/playback-browser-'));
-const c = await chromium.launchPersistentContext(
-  profile,
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: !!process.env.HEADLESS,
-    timeout: 25000,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--enable-unsafe-extension-debugging',
-      ...(process.env.NORMAL_POLICY
-        ? []
-        : ['--autoplay-policy=no-user-gesture-required']),
-    ],
-  },
-);
+const c = await chromium.launchPersistentContext(profile, {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: !!process.env.HEADLESS,
+  timeout: 25000,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: [
+    '--enable-unsafe-extension-debugging',
+    ...(process.env.NORMAL_POLICY ? [] : ['--autoplay-policy=no-user-gesture-required']),
+  ],
+});
 let call, panel, p;
 async function builtDigest(directory) {
   const hash = crypto.createHash('sha256');
@@ -41,7 +35,10 @@ async function builtDigest(directory) {
     for (const name of (await fs.readdir(path.join(directory, relative))).sort()) {
       const file = path.join(relative, name);
       if ((await fs.stat(path.join(directory, file))).isDirectory()) await walk(file);
-      else { hash.update(file.replaceAll(path.sep, '/')); hash.update(await fs.readFile(path.join(directory, file))); }
+      else {
+        hash.update(file.replaceAll(path.sep, '/'));
+        hash.update(await fs.readFile(path.join(directory, file)));
+      }
     }
   };
   await walk();
@@ -50,8 +47,13 @@ async function builtDigest(directory) {
 const report = {
   at: new Date().toISOString(),
   modelRegion: region,
-  provenance: {runner: 'scripts/gate-playback.mjs', source: 'bilibili-native-real-provider', generatedAudio: false,
-    model: 'qwen3.8-livetranslate-flash-realtime', clientRequiresVoiceConfirmation: true},
+  provenance: {
+    runner: 'scripts/gate-playback.mjs',
+    source: 'bilibili-native-real-provider',
+    generatedAudio: false,
+    model: 'qwen3.8-livetranslate-flash-realtime',
+    clientRequiresVoiceConfirmation: true,
+  },
   normalPolicy: !!process.env.NORMAL_POLICY,
   headless: !!process.env.HEADLESS,
   version: JSON.parse(await fs.readFile(path.join(extension, 'manifest.json'), 'utf8')).version,
@@ -82,10 +84,17 @@ try {
     );
   call = async (type, params = {}) => {
     for (let attempt = 0; ; attempt++) {
-      try { return await request(type, params); }
-      catch (error) {
-        if (!['session:get', 'session:diagnostics', 'storage:summary'].includes(type) || attempt >= 3 ||
-            !/message (?:channel|port).*closed|Receiving end does not exist|Service worker.*terminated|asynchronous response.*channel closed/i.test(error.message)) throw error;
+      try {
+        return await request(type, params);
+      } catch (error) {
+        if (
+          !['session:get', 'session:diagnostics', 'storage:summary'].includes(type) ||
+          attempt >= 3 ||
+          !/message (?:channel|port).*closed|Receiving end does not exist|Service worker.*terminated|asynchronous response.*channel closed/i.test(
+            error.message,
+          )
+        )
+          throw error;
         await new Promise((resolve) => setTimeout(resolve, [100, 300, 800][attempt]));
       }
     }
@@ -101,8 +110,7 @@ try {
   p = await c.newPage();
   await p.goto(report.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await p.waitForTimeout(6000);
-  if (process.env.NORMAL_POLICY)
-    await p.locator('video').first().click({ force: true });
+  if (process.env.NORMAL_POLICY) await p.locator('video').first().click({ force: true });
   await p
     .locator('video')
     .first()
@@ -118,11 +126,7 @@ try {
       .first()
       .click({ timeout: 500 })
       .catch(() => {});
-  for (
-    let i = 0;
-    i < 120 && (await p.locator('#movie_player.ad-showing').count());
-    i++
-  ) {
+  for (let i = 0; i < 120 && (await p.locator('#movie_player.ad-showing').count()); i++) {
     const skip = p.locator('.ytp-skip-ad-button,.ytp-ad-skip-button-modern');
     if (await skip.count())
       await skip
@@ -178,15 +182,16 @@ try {
       ['zh', '听译 · 原音色视频翻译'],
       ['en', 'TimbraDub · Original-Voice Video Translation'],
     ]) {
-      await call('ui:set', {language});
+      await call('ui:set', { language });
       await panel.waitForFunction((title) => document.title === title, title);
       localizedTitles[language] = await panel.evaluate(async () => ({
-        pageTitle: document.title, brand: document.querySelector('.brand strong')?.textContent,
+        pageTitle: document.title,
+        brand: document.querySelector('.brand strong')?.textContent,
         originalVoiceLabel: document.querySelector('.brand span:last-child')?.textContent,
         toolbarTitle: await chrome.action.getTitle({}),
       }));
     }
-    report.actions.push({localizedTitles});
+    report.actions.push({ localizedTitles });
   }
   if (process.env.RESTART_WORKER) {
     const debug = await c.newCDPSession(panel);
@@ -195,22 +200,16 @@ try {
     debug.on('ServiceWorker.workerVersionUpdated', (e) => {
       workerStates.push(
         ...e.versions
-          .filter(
-            (v) => v.scriptURL === `chrome-extension://${id}/background.js`,
-          )
+          .filter((v) => v.scriptURL === `chrome-extension://${id}/background.js`)
           .map((v) => v.runningStatus),
       );
       version =
-        e.versions.find(
-          (v) => v.scriptURL === `chrome-extension://${id}/background.js`,
-        )?.versionId ?? version;
+        e.versions.find((v) => v.scriptURL === `chrome-extension://${id}/background.js`)
+          ?.versionId ?? version;
     });
     await debug.send('ServiceWorker.enable');
     await p.waitForTimeout(500);
-    if (!version)
-      throw new Error(
-        'Could not locate the extension worker for restart verification',
-      );
+    if (!version) throw new Error('Could not locate the extension worker for restart verification');
     const oldWorker = c.serviceWorkers().find((w) => w.url().includes(id));
     let closed = false;
     oldWorker?.on('close', () => {
@@ -224,13 +223,13 @@ try {
       workerStates,
       sameSession: resumed?.id === s.id,
     });
-    if (resumed?.id !== s.id)
-      throw new Error('Worker restart lost the playback session');
+    if (resumed?.id !== s.id) throw new Error('Worker restart lost the playback session');
     await debug.detach();
   }
   await p.waitForTimeout(12000);
   const initial = await call('session:get');
-  if (initial.phase === 'error') throw new Error(initial.error ?? 'Playback entered an error state');
+  if (initial.phase === 'error')
+    throw new Error(initial.error ?? 'Playback entered an error state');
   report.snapshots.push({
     kind: 'initial',
     position: initial.position,
@@ -259,21 +258,32 @@ try {
   await p.waitForTimeout(8000);
   const playbackSpeed = (await call('session:get')).rate;
   report.actions.push({ speed: playbackSpeed });
-  if (playbackSpeed !== 1.5)
-    throw new Error('Playback speed did not synchronize');
+  if (playbackSpeed !== 1.5) throw new Error('Playback speed did not synchronize');
   if (Number(process.env.EXTENDED_RATE_SECONDS) > 0) {
-    const started = Date.now(), sourceStart = (await call('session:get')).position;
+    const started = Date.now(),
+      sourceStart = (await call('session:get')).position;
     while (Date.now() - started < Number(process.env.EXTENDED_RATE_SECONDS) * 1000) {
       await p.waitForTimeout(5000);
       const state = await call('session:get');
       if (!state || state.phase === 'error') throw new Error(state?.error ?? 'session disappeared');
       if (state.phase === 'ended') throw new Error('Video ended during the extended speed check');
-      report.snapshots.push({kind: 'extended-speed', at: Date.now(), position: state.position,
-        phase: state.phase, rate: state.rate, skipped: state.skipped});
+      report.snapshots.push({
+        kind: 'extended-speed',
+        at: Date.now(),
+        position: state.position,
+        phase: state.phase,
+        rate: state.rate,
+        skipped: state.skipped,
+      });
     }
     const final = await call('session:get');
-    report.extendedSpeed = {rate: final.rate, wallSeconds: (Date.now() - started) / 1000, sourceSeconds: final.position - sourceStart};
-    if (final.rate !== 1.5 || final.position - sourceStart < 30) throw new Error('Extended 1.5x playback made insufficient source progress');
+    report.extendedSpeed = {
+      rate: final.rate,
+      wallSeconds: (Date.now() - started) / 1000,
+      sourceSeconds: final.position - sourceStart,
+    };
+    if (final.rate !== 1.5 || final.position - sourceStart < 30)
+      throw new Error('Extended 1.5x playback made insufficient source progress');
   }
   await call('session:mix', {
     originalVolume: 0.1,
@@ -309,19 +319,11 @@ try {
     for (let i = 0; i < 150; i++) {
       s = await call('session:get');
       if (s?.phase === 'error') throw new Error(s.error);
-      if (
-        s?.phase === 'playing' &&
-        s.epoch > beforeEpoch &&
-        Math.abs(s.position - position) < 3
-      )
+      if (s?.phase === 'playing' && s.epoch > beforeEpoch && Math.abs(s.position - position) < 3)
         break;
       await p.waitForTimeout(500);
     }
-    if (
-      s?.phase !== 'playing' ||
-      s.epoch <= beforeEpoch ||
-      Math.abs(s.position - position) >= 3
-    )
+    if (s?.phase !== 'playing' || s.epoch <= beforeEpoch || Math.abs(s.position - position) >= 3)
       throw new Error('Seek did not become ready in the expected generation');
     report.actions.push({
       seek: position,
@@ -363,9 +365,7 @@ try {
     report.memorySamples = [];
     for (let i = 0; ; i++) {
       if (Date.now() - started > Number(process.env.LONG_RUN) * 2000)
-        throw new Error(
-          '20 minute source-time run exceeded the wall-time limit',
-        );
+        throw new Error('20 minute source-time run exceeded the wall-time limit');
       await p.waitForTimeout(report.url.includes('youtube') ? 1000 : 5000);
       const state = await call('session:get');
       if (!state) throw new Error('session disappeared');
@@ -374,12 +374,14 @@ try {
         const close = p.locator('.bili-mini-close-icon,.bili-mini-close').first();
         if (await close.isVisible().catch(() => false)) {
           await close.click();
-          await p.locator('video').first().evaluate((v) => v.play());
+          await p
+            .locator('video')
+            .first()
+            .evaluate((v) => v.play());
           report.actions.push({ dismissedOptionalLogin: true, at: Date.now() });
         }
       }
-      if (state.phase === 'ended')
-        throw new Error('Video ended before 20 minute acceptance');
+      if (state.phase === 'ended') throw new Error('Video ended before 20 minute acceptance');
       report.snapshots.push({
         at: Date.now(),
         position: state.position,
@@ -389,8 +391,7 @@ try {
         skipped: state.skipped,
       });
       if (i % 12 === 0) {
-        const processInfo = (await root.send('SystemInfo.getProcessInfo'))
-          .processInfo;
+        const processInfo = (await root.send('SystemInfo.getProcessInfo')).processInfo;
         const rss = execFileSync(
           'ps',
           ['-o', 'rss=', '-p', processInfo.map((p) => p.id).join(',')],
@@ -410,7 +411,7 @@ try {
         });
         await fs.writeFile(
           process.env.PLAYBACK_PROGRESS ?? 'work/playback-progress.json',
-          JSON.stringify({...report, diagnostics: d}, null, 2),
+          JSON.stringify({ ...report, diagnostics: d }, null, 2),
         );
         console.log('progress', JSON.stringify(report.snapshots.at(-1)));
       }
@@ -421,9 +422,7 @@ try {
     }
     report.continuousWallSeconds = (Date.now() - started) / 1000;
   }
-  const fullscreen = await p
-    .locator('.bpx-player-ctrl-full,.ytp-fullscreen-button')
-    .count();
+  const fullscreen = await p.locator('.bpx-player-ctrl-full,.ytp-fullscreen-button').count();
   if (fullscreen) {
     await p
       .locator('.bpx-player-ctrl-full,.ytp-fullscreen-button')
@@ -456,12 +455,8 @@ try {
   report.rulesAfterStop = await panel.evaluate(
     async () => (await chrome.declarativeNetRequest.getSessionRules()).length,
   );
-  if (report.rulesAfterStop !== 0)
-    throw new Error('Temporary rules remain after stop');
-  if (
-    report.restored?.muted !== true ||
-    Math.abs(report.restored?.volume - 0.35) > 0.001
-  )
+  if (report.rulesAfterStop !== 0) throw new Error('Temporary rules remain after stop');
+  if (report.restored?.muted !== true || Math.abs(report.restored?.volume - 0.35) > 0.001)
     throw new Error('Original sound was not restored');
   report.storageAfterStop = await call('storage:summary');
   report.ok = true;
@@ -495,10 +490,7 @@ try {
                 v.play(),
                 new Promise((_, reject) =>
                   setTimeout(
-                    () =>
-                      reject(
-                        new Error('Native playback wait exceeded 2 seconds'),
-                      ),
+                    () => reject(new Error('Native playback wait exceeded 2 seconds')),
                     2000,
                   ),
                 ),
@@ -509,8 +501,7 @@ try {
             }
           });
         report.rulesAfterError = await panel.evaluate(
-          async () =>
-            (await chrome.declarativeNetRequest.getSessionRules()).length,
+          async () => (await chrome.declarativeNetRequest.getSessionRules()).length,
         );
       }
       await call('session:stop');

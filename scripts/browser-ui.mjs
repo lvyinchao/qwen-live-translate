@@ -9,11 +9,9 @@ await fs.mkdir('work', { recursive: true });
 await fs.mkdir('outputs', { recursive: true });
 const extension = await fs.mkdtemp(path.resolve('work/extension-snapshot-'));
 const profile = await fs.mkdtemp(path.resolve('work/ui-browser-'));
-await fs.cp(
-  path.resolve(process.env.EXTENSION_DIR ?? '.output/chrome-mv3'),
-  extension,
-  { recursive: true },
-);
+await fs.cp(path.resolve(process.env.EXTENSION_DIR ?? '.output/chrome-mv3'), extension, {
+  recursive: true,
+});
 const context = await chromium.launchPersistentContext(profile, {
   env: isolatedTestEnv(),
   channel: 'chromium',
@@ -62,30 +60,36 @@ try {
     );
   const waitLocale = async (locale, page = panel) => {
     await page.waitForFunction(
-      (locale) =>
-        document.documentElement.lang === (locale === 'zh' ? 'zh-CN' : 'en'),
+      (locale) => document.documentElement.lang === (locale === 'zh' ? 'zh-CN' : 'en'),
       locale,
     );
     await page.locator('.locale-select:enabled').waitFor();
     assert.equal(await page.locator('.locale-select').inputValue(), locale);
     assert.equal(await call('ui:get'), locale);
-    const productTitle = locale === 'zh'
-      ? '听译 · 原音色视频翻译'
-      : 'TimbraDub · Original-Voice Video Translation';
+    const productTitle =
+      locale === 'zh' ? '听译 · 原音色视频翻译' : 'TimbraDub · Original-Voice Video Translation';
     await page.waitForFunction((title) => document.title === title, productTitle);
     assert.equal(await page.locator('.header').getAttribute('aria-label'), productTitle);
-    assert.equal(await page.locator('.brand strong').innerText(), locale === 'zh' ? '听译' : 'TimbraDub');
-    assert.equal(await page.locator('.brand span').last().innerText(), locale === 'zh' ? '原声音色' : 'ORIGINAL VOICE');
-    await page.waitForFunction(async (title) => (await chrome.action.getTitle({})) === title,
-      locale === 'zh' ? '打开听译 · 原音色视频翻译' : 'Open TimbraDub · Original-Voice Video Translation');
+    assert.equal(
+      await page.locator('.brand strong').innerText(),
+      locale === 'zh' ? '听译' : 'TimbraDub',
+    );
+    assert.equal(
+      await page.locator('.brand span').last().innerText(),
+      locale === 'zh' ? '原声音色' : 'ORIGINAL VOICE',
+    );
+    await page.waitForFunction(
+      async (title) => (await chrome.action.getTitle({})) === title,
+      locale === 'zh'
+        ? '打开听译 · 原音色视频翻译'
+        : 'Open TimbraDub · Original-Voice Video Translation',
+    );
   };
   const screenshot = async (locale, view) => {
     for (const width of [360, 480]) {
       await panel.setViewportSize({ width, height: 850 });
       assert.equal(
-        await panel.evaluate(
-          () => document.documentElement.scrollWidth > innerWidth,
-        ),
+        await panel.evaluate(() => document.documentElement.scrollWidth > innerWidth),
         false,
         `${locale}/${view} overflow at ${width}px`,
       );
@@ -96,17 +100,10 @@ try {
   };
   await panel.goto(url);
   await waitLocale('en');
-  await panel
-    .getByRole('heading', { name: 'Choose a video', exact: true })
-    .waitFor();
+  await panel.getByRole('heading', { name: 'Choose a video', exact: true }).waitFor();
   assert.equal(await panel.locator('#language').inputValue(), 'zh');
-  assert.equal(
-    await panel.locator('#language option[value="zh"]').textContent(),
-    'Chinese',
-  );
-  result.checks.push(
-    'English default even in a zh-CN browser; target language remains Chinese',
-  );
+  assert.equal(await panel.locator('#language option[value="zh"]').textContent(), 'Chinese');
+  result.checks.push('English default even in a zh-CN browser; target language remains Chinese');
   assert.equal(await panel.locator('#language option').count(), 29);
   assert.equal(
     await panel.locator('.provider-notice a').getAttribute('href'),
@@ -122,32 +119,22 @@ try {
   await screenshot('en', 'videos');
   await panel.locator('.locale-select').selectOption('zh');
   await waitLocale('zh');
-  await panel
-    .getByRole('heading', { name: '选择要观看的视频', exact: true })
-    .waitFor();
+  await panel.getByRole('heading', { name: '选择要观看的视频', exact: true }).waitFor();
   await screenshot('zh', 'videos');
   await panel.reload();
   await waitLocale('zh');
   result.checks.push('Chinese preference survives panel reload');
   await panel.getByRole('button', { name: '打开设置', exact: true }).click();
-  assert.match(
-    await panel.locator('.provider-notice').innerText(),
-    /注册账号并申请 API Key/,
-  );
+  assert.match(await panel.locator('.provider-notice').innerText(), /注册账号并申请 API Key/);
   assert.equal(
     await panel.locator('.provider-notice a').getAttribute('href'),
     'https://qianwenai.com/',
   );
-  result.checks.push(
-    'Chinese settings explicitly require the user’s own account and API key',
-  );
+  result.checks.push('Chinese settings explicitly require the user’s own account and API key');
   await panel.getByLabel('Workspace ID').fill('invalid workspace');
   await panel.getByLabel('API Key').fill('test-not-a-real-key');
   await panel.getByRole('button', { name: '保存配置', exact: true }).click();
-  await panel
-    .getByRole('alert')
-    .filter({ hasText: '请填写有效的百炼 Workspace ID' })
-    .waitFor();
+  await panel.getByRole('alert').filter({ hasText: '请填写有效的百炼 Workspace ID' }).waitFor();
   await panel.locator('.locale-select').selectOption('en');
   await waitLocale('en');
   // Switching locale preserves unsaved credential fields.
@@ -159,33 +146,18 @@ try {
   await panel.locator('input[role="switch"]:enabled').waitFor();
   await saveSwitch.uncheck();
   await panel.locator('input[role="switch"]:enabled').waitFor();
-  assert.equal(
-    await panel.getByLabel('Workspace ID').inputValue(),
-    'invalid workspace',
-  );
+  assert.equal(await panel.getByLabel('Workspace ID').inputValue(), 'invalid workspace');
   assert.equal((await call('settings:get')).hasKey, false);
-  result.checks.push(
-    'Save toggle preserves unsaved credential fields and does not submit them',
-  );
-  assert.equal(
-    await panel.getByLabel('API Key').inputValue(),
-    'test-not-a-real-key',
-  );
-  await panel
-    .getByRole('button', { name: 'Save settings', exact: true })
-    .click();
+  result.checks.push('Save toggle preserves unsaved credential fields and does not submit them');
+  assert.equal(await panel.getByLabel('API Key').inputValue(), 'test-not-a-real-key');
+  await panel.getByRole('button', { name: 'Save settings', exact: true }).click();
   await panel
     .getByRole('alert')
     .filter({ hasText: 'Enter a valid Model Studio workspace ID.' })
     .waitFor();
   await panel.getByLabel('Workspace ID').fill('ui-test');
-  await panel
-    .getByRole('button', { name: 'Save settings', exact: true })
-    .click();
-  await panel
-    .getByRole('status')
-    .filter({ hasText: 'Settings saved in this browser.' })
-    .waitFor();
+  await panel.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await panel.getByRole('status').filter({ hasText: 'Settings saved in this browser.' }).waitFor();
   assert.equal(await panel.getByLabel('API Key').inputValue(), '');
   await screenshot('en', 'settings');
   await panel.locator('.locale-select').selectOption('zh');
@@ -255,13 +227,10 @@ try {
   };
   const publish = async (value) =>
     second.evaluate(
-      (session) =>
-        chrome.runtime.sendMessage({ type: 'session:updated', session }),
+      (session) => chrome.runtime.sendMessage({ type: 'session:updated', session }),
       value,
     );
-  await panel
-    .getByRole('button', { name: 'Back to videos', exact: true })
-    .click();
+  await panel.getByRole('button', { name: 'Back to videos', exact: true }).click();
   for (const [phase, label] of Object.entries({
     idle: 'Not started',
     preparing: 'Preparing',
@@ -272,10 +241,7 @@ try {
     error: 'Needs attention',
   })) {
     await publish({ ...session, phase });
-    await panel
-      .locator('.session-line strong')
-      .filter({ hasText: label })
-      .waitFor();
+    await panel.locator('.session-line strong').filter({ hasText: label }).waitFor();
   }
   await publish({
     ...session,
@@ -286,28 +252,24 @@ try {
     .filter({ hasText: 'Translation disconnected early (1006).' })
     .waitFor();
   await panel.getByLabel('Show original-language subtitles', { exact: true }).waitFor();
-  assert.match(
-    await panel.locator('.buffer-label').innerText(),
-    /30s of audio ready ahead/,
-  );
-  assert.match(
-    await panel.locator('.buffer-label').innerText(),
-    /1.5× playback/,
-  );
+  assert.match(await panel.locator('.buffer-label').innerText(), /30s of audio ready ahead/);
+  assert.match(await panel.locator('.buffer-label').innerText(), /1.5× playback/);
   assert.equal(await panel.getByText('翻译内容', { exact: false }).count(), 1);
   await screenshot('en', 'session');
   await panel.locator('.locale-select').selectOption('zh');
   await waitLocale('zh');
   await panel.getByLabel('显示原语言字幕', { exact: true }).waitFor();
-  await panel
-    .getByRole('alert')
-    .filter({ hasText: '翻译连接提前断开（1006）' })
-    .waitFor();
+  await panel.getByRole('alert').filter({ hasText: '翻译连接提前断开（1006）' }).waitFor();
   await screenshot('zh', 'session');
   // A clean delivery screenshot demonstrates the new controls, without the
   // deliberate error above or any credential fields.
-  await publish({ ...session, phase: 'playing', error: undefined,
-    sourceSubtitles: false, targetSubtitles: true });
+  await publish({
+    ...session,
+    phase: 'playing',
+    error: undefined,
+    sourceSubtitles: false,
+    targetSubtitles: true,
+  });
   await panel.waitForFunction(() => !document.querySelector('[role="alert"]'));
   assert.equal(await panel.getByLabel('显示原语言字幕', { exact: true }).isChecked(), false);
   assert.equal(await panel.getByLabel('显示目标语言字幕', { exact: true }).isChecked(), true);
@@ -365,16 +327,11 @@ try {
     function visit(node) {
       if (
         (node.attributes ?? []).some(
-          (attribute, i, list) =>
-            attribute === 'class' && list[i + 1] === 'caption',
+          (attribute, i, list) => attribute === 'class' && list[i + 1] === 'caption',
         )
       )
         found = node;
-      for (const child of [
-        ...(node.children ?? []),
-        ...(node.shadowRoots ?? []),
-      ])
-        visit(child);
+      for (const child of [...(node.children ?? []), ...(node.shadowRoots ?? [])]) visit(child);
     }
     visit(root);
     function text(node) {
@@ -420,8 +377,7 @@ try {
   assert.match(await caption(), /Preparing audio/);
   const playerMessage = (message) =>
     panel.evaluate(
-      ({ tabId, message }) =>
-        chrome.tabs.sendMessage(tabId, message, { frameId: 0 }),
+      ({ tabId, message }) => chrome.tabs.sendMessage(tabId, message, { frameId: 0 }),
       { tabId, message },
     );
   const wav = syntheticWav().toString('base64');
@@ -449,29 +405,60 @@ try {
   const captionLines = async () => {
     const { found } = await captionNode();
     const { object } = await cdp.send('DOM.resolveNode', { backendNodeId: found.backendNodeId });
-    const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId,
-      functionDeclaration: 'function(){ const shown=(selector)=>{const e=this.querySelector(selector);return !!e && e.getBoundingClientRect().height>0 && getComputedStyle(e).display!=="none";};return {source:shown(".source"),target:shown(".target")}; }',
-      returnByValue: true });
+    const { result } = await cdp.send('Runtime.callFunctionOn', {
+      objectId: object.objectId,
+      functionDeclaration:
+        'function(){ const shown=(selector)=>{const e=this.querySelector(selector);return !!e && e.getBoundingClientRect().height>0 && getComputedStyle(e).display!=="none";};return {source:shown(".source"),target:shown(".target")}; }',
+      returnByValue: true,
+    });
     await cdp.send('Runtime.releaseObject', { objectId: object.objectId });
     return result.value;
   };
-  for (const [sourceSubtitles, targetSubtitles] of [[true,true],[true,false],[false,true],[false,false]]) {
-    const choices = { sourceSubtitles, targetSubtitles, subtitles: sourceSubtitles || targetSubtitles };
-    await playerMessage({ type: 'player:mix', sessionId: session.id, languageVersion: session.languageVersion ?? 0,
-      originalVolume: 0, dubVolume: 1, ...choices });
+  for (const [sourceSubtitles, targetSubtitles] of [
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ]) {
+    const choices = {
+      sourceSubtitles,
+      targetSubtitles,
+      subtitles: sourceSubtitles || targetSubtitles,
+    };
+    await playerMessage({
+      type: 'player:mix',
+      sessionId: session.id,
+      languageVersion: session.languageVersion ?? 0,
+      originalVolume: 0,
+      dubVolume: 1,
+      ...choices,
+    });
     const visible = { source: sourceSubtitles, target: targetSubtitles };
     assert.deepEqual(await captionLines(), visible);
-    await playerMessage({ type: 'player:segment', epoch: session.epoch, segment: {
-      ...session.segments[0], id: `caption-choice-${sourceSubtitles}-${targetSubtitles}`,
-      mediaId: candidate.mediaId, language: 'zh', voice: 'original-auto-v1', sourceText: 'Original fixture',
-      text: '翻译内容', audio: wav, audioDuration: 3.84 } });
+    await playerMessage({
+      type: 'player:segment',
+      epoch: session.epoch,
+      segment: {
+        ...session.segments[0],
+        id: `caption-choice-${sourceSubtitles}-${targetSubtitles}`,
+        mediaId: candidate.mediaId,
+        language: 'zh',
+        voice: 'original-auto-v1',
+        sourceText: 'Original fixture',
+        text: '翻译内容',
+        audio: wav,
+        audioDuration: 3.84,
+      },
+    });
     await playerMessage({ type: 'player:state', session: { ...playing, ...choices } });
     assert.deepEqual(await captionLines(), visible);
     await video.locator('video').evaluate((v) => v.parentElement.requestFullscreen());
     assert.deepEqual(await captionLines(), visible);
     await video.evaluate(() => document.exitFullscreen());
   }
-  result.checks.push('Both independent subtitle switches cover all four rendered combinations and remain effective after new segments, progress states and container fullscreen');
+  result.checks.push(
+    'Both independent subtitle switches cover all four rendered combinations and remain effective after new segments, progress states and container fullscreen',
+  );
   await playerMessage({
     type: 'player:mix',
     originalVolume: 0,
@@ -508,9 +495,7 @@ try {
     display: 'none',
     height: 0,
   });
-  await video
-    .locator('video')
-    .evaluate((v) => v.parentElement.requestFullscreen());
+  await video.locator('video').evaluate((v) => v.parentElement.requestFullscreen());
   assert.equal(await video.evaluate(() => !!document.fullscreenElement), true);
   assert.equal((await captionDisplay()).display, 'none');
   await playerMessage({
@@ -580,10 +565,7 @@ try {
     mutationDenied: true,
     storageBlocked: true,
   });
-  await panel.evaluate(
-    (tabId) => chrome.tabs.sendMessage(tabId, { type: 'player:stop' }),
-    tabId,
-  );
+  await panel.evaluate((tabId) => chrome.tabs.sendMessage(tabId, { type: 'player:stop' }), tabId);
   result.checks.push(
     'Built player overlay updates live and restores locale after navigation; content script can read only locale and cannot change it or access credentials',
   );
@@ -608,10 +590,7 @@ try {
   await waitLocale('zh');
   await panel.getByRole('button', { name: '打开设置', exact: true }).click();
   await panel.getByRole('button', { name: '移除凭据', exact: true }).click();
-  await panel
-    .getByRole('status')
-    .filter({ hasText: '本机凭据已移除' })
-    .waitFor();
+  await panel.getByRole('status').filter({ hasText: '本机凭据已移除' }).waitFor();
   assert.equal((await call('settings:get')).hasKey, false);
   assert.equal((await call('settings:get')).language, 'ja');
   await panel.reload();
@@ -641,10 +620,7 @@ try {
   result.failure = String(error);
   throw error;
 } finally {
-  await fs.writeFile(
-    'outputs/ui-verification.json',
-    JSON.stringify(result, null, 2) + '\n',
-  );
+  await fs.writeFile('outputs/ui-verification.json', JSON.stringify(result, null, 2) + '\n');
   await context.close();
   await fs.rm(profile, { recursive: true, force: true });
   await fs.rm(extension, { recursive: true, force: true });

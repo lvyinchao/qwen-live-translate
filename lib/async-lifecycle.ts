@@ -3,8 +3,12 @@
 export class SessionTransitions {
   private tail: Promise<unknown> = Promise.resolve();
   private revision = 0;
-  invalidate() { return ++this.revision; }
-  current(revision: number) { return revision === this.revision; }
+  invalidate() {
+    return ++this.revision;
+  }
+  current(revision: number) {
+    return revision === this.revision;
+  }
   run<T>(operation: () => Promise<T>): Promise<T> {
     const next = this.tail.then(operation);
     this.tail = next.catch(() => {});

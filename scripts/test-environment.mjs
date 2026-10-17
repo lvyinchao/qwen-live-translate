@@ -31,8 +31,7 @@ export function isolatedTestEnv(overrides = {}, source = process.env) {
     'NODE_EXTRA_CA_CERTS',
   ];
   const clean = {};
-  for (const name of allowed)
-    if (source[name] !== undefined) clean[name] = source[name];
+  for (const name of allowed) if (source[name] !== undefined) clean[name] = source[name];
   if (clean.PATH)
     clean.PATH = clean.PATH.split(path.delimiter)
       .filter((part) => !/[\\/]node_modules[\\/]\.bin[\\/]?$/.test(part))

@@ -64,15 +64,12 @@ export function preserveSabrContext(
     fresh = fields(generated);
   const originalContext = original.find((f) => f.number === 19)?.payload,
     freshContext = fresh.find((f) => f.number === 19)?.payload;
-  if (!originalContext || !freshContext)
-    throw new Error('SABR 请求缺少播放器上下文');
+  if (!originalContext || !freshContext) throw new Error('SABR 请求缺少播放器上下文');
   const oldFields = fields(originalContext),
     newFields = fields(freshContext);
   // Preserve client info and attestation bytes, including fields not described
   // by the public schema. Only update continuation cookies and SABR contexts.
-  const replace = new Set(
-    [3, 5, 6].filter((n) => newFields.some((f) => f.number === n)),
-  );
+  const replace = new Set([3, 5, 6].filter((n) => newFields.some((f) => f.number === n)));
   const context = join([
     ...oldFields.filter((f) => !replace.has(f.number)).map((f) => f.raw),
     ...newFields.filter((f) => replace.has(f.number)).map((f) => f.raw),
@@ -82,10 +79,7 @@ export function preserveSabrContext(
     message(19, context),
     ...original
       .filter(
-        (f) =>
-          f.number > 25 &&
-          f.number !== 1000 &&
-          !fresh.some((g) => g.number === f.number),
+        (f) => f.number > 25 && f.number !== 1000 && !fresh.some((g) => g.number === f.number),
       )
       .map((f) => f.raw),
   ]);

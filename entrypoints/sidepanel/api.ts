@@ -1,9 +1,4 @@
-import type {
-  BackgroundResponse,
-  BackgroundType,
-  RequestArgs,
-  Result,
-} from '../../lib/messages';
+import type { BackgroundResponse, BackgroundType, RequestArgs, Result } from '../../lib/messages';
 import { AppError } from '../../lib/errors';
 
 export type { PublicSettings, StorageSummary } from '../../lib/messages';
@@ -18,6 +13,7 @@ export async function call<K extends BackgroundType>(
     type,
     ...parameters,
   })) as Result<BackgroundResponse<K>>;
-  if (!result.ok) throw result.code ? new AppError(result.code, result.error) : new Error(result.error);
+  if (!result.ok)
+    throw result.code ? new AppError(result.code, result.error) : new Error(result.error);
   return result.value;
 }

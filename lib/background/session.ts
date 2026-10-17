@@ -54,8 +54,7 @@ export async function stopOwned(
 ) {
   if (previous && ctx.session?.id === previous.id) ctx.session = null;
   await (detached ?? (previous ? toPlayer(ctx, 'player:stop', {}, previous) : Promise.resolve()));
-  if (previous)
-    await ctx.toOffscreen('engine:stop', { sessionId: previous.id }).catch(() => {});
+  if (previous) await ctx.toOffscreen('engine:stop', { sessionId: previous.id }).catch(() => {});
   if (previous && !ctx.panelWatches(previous.candidate.tabId))
     ctx.releaseObservation(previous.candidate.tabId);
   // A new start cannot overtake this cleanup: all lifecycle work shares a queue.

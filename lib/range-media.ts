@@ -38,9 +38,9 @@ async function mediaDirectoryLock<T>(operation: () => Promise<T>): Promise<T> {
     : operation();
 }
 async function mediaDirectory(create = false) {
-  return (await (await navigator.storage.getDirectory()).getDirectoryHandle(
-    'qwen-video-dub-media-tmp', { create },
-  )) as MediaDirectory;
+  return (await (
+    await navigator.storage.getDirectory()
+  ).getDirectoryHandle('qwen-video-dub-media-tmp', { create })) as MediaDirectory;
 }
 async function inspectMediaTemps(remove: boolean): Promise<MediaTempCleanup> {
   let directory: MediaDirectory;
@@ -63,7 +63,11 @@ async function inspectMediaTemps(remove: boolean): Promise<MediaTempCleanup> {
       } catch (error) {
         // Locked by a live decoder: preserve it. Other errors should be visible
         // to an explicit cleanup request instead of claiming that bytes vanished.
-        if (!['NoModificationAllowedError', 'InvalidStateError'].includes((error as DOMException).name))
+        if (
+          !['NoModificationAllowedError', 'InvalidStateError'].includes(
+            (error as DOMException).name,
+          )
+        )
           throw error;
       }
     }
@@ -95,7 +99,7 @@ export async function privateMediaDisk(): Promise<MediaDisk> {
       try {
         handle = await file.createSyncAccessHandle();
       } catch (error) {
-        await directory.removeEntry(name).catch(() => { });
+        await directory.removeEntry(name).catch(() => {});
         throw error;
       }
       let removed = false;
@@ -179,8 +183,7 @@ class SequentialFile {
         if (this.length !== undefined && this.position > this.length)
           throw new Error(MEDIA_RANGE_ERRORS.truncated);
       }
-      if (this.position < end && end !== Infinity)
-        throw new Error(MEDIA_RANGE_ERRORS.truncated);
+      if (this.position < end && end !== Infinity) throw new Error(MEDIA_RANGE_ERRORS.truncated);
     });
     this.queue = operation.catch((error) => {
       this.failure = error;
@@ -189,11 +192,7 @@ class SequentialFile {
     });
     return operation;
   }
-  async response(
-    start: number,
-    requestedEnd: number | undefined,
-    signal?: AbortSignal | null,
-  ) {
+  async response(start: number, requestedEnd: number | undefined, signal?: AbortSignal | null) {
     signal?.throwIfAborted();
     if (this.length === undefined) await this.ensure(Infinity);
     const length = this.length!;
@@ -243,7 +242,7 @@ class SequentialFile {
     if (this.closed) return;
     this.closed = true;
     this.controller.abort();
-    await this.reader.cancel().catch(() => { });
+    await this.reader.cancel().catch(() => {});
     await this.queue;
     await this.disk.remove();
   }
@@ -253,11 +252,10 @@ export class RangeMediaCache {
   private cleaning = new Set<Promise<unknown>>();
   private closed = false;
   constructor(
-    private network: typeof fetch = (input, init) =>
-      globalThis.fetch(input, init),
+    private network: typeof fetch = (input, init) => globalThis.fetch(input, init),
     private createDisk: () => Promise<MediaDisk> = privateMediaDisk,
     private idleMs = 20000,
-  ) { }
+  ) {}
   fetch: typeof fetch = async (input, init) => {
     if (this.closed) throw new DOMException('Cancelled', 'AbortError');
     const request = input instanceof Request ? input : undefined;
@@ -293,33 +291,26 @@ export class RangeMediaCache {
     } finally {
       clearTimeout(timer);
     }
-    if (!validRange || response.status !== 200 || !response.body)
-      return response;
+    if (!validRange || response.status !== 200 || !response.body) return response;
     // A 200 response starts at byte zero. Hand ownership to the disk cache so
     // cancelling a virtual range response does not destroy the reusable origin stream.
     signal?.removeEventListener('abort', abort);
     let file = this.files.get(url);
     if (file) {
       controller.abort();
-      await response.body.cancel().catch(() => { });
+      await response.body.cancel().catch(() => {});
     } else {
       const body = response.body;
       file = (async () => {
         const disk = await this.createDisk();
-        const stored = new SequentialFile(
-          response,
-          disk,
-          controller,
-          this.idleMs,
-          () => {
-            if (this.files.get(url) === file) this.files.delete(url);
-            // Release the failed origin body and disk file before a retry makes
-            // a new source; do not keep returning the poisoned cached response.
-            const cleanup = stored.close().catch(() => { });
-            this.cleaning.add(cleanup);
-            void cleanup.finally(() => this.cleaning.delete(cleanup));
-          },
-        );
+        const stored = new SequentialFile(response, disk, controller, this.idleMs, () => {
+          if (this.files.get(url) === file) this.files.delete(url);
+          // Release the failed origin body and disk file before a retry makes
+          // a new source; do not keep returning the poisoned cached response.
+          const cleanup = stored.close().catch(() => {});
+          this.cleaning.add(cleanup);
+          void cleanup.finally(() => this.cleaning.delete(cleanup));
+        });
         if (this.closed) {
           await stored.close();
           throw new DOMException('Cancelled', 'AbortError');
@@ -329,7 +320,7 @@ export class RangeMediaCache {
       this.files.set(url, file);
       file.catch(() => {
         controller.abort();
-        void body.cancel().catch(() => { });
+        void body.cancel().catch(() => {});
         if (this.files.get(url) === file) this.files.delete(url);
       });
       // Worker inputs use one URL at a time. Keep at most two disk-backed resources
@@ -337,7 +328,7 @@ export class RangeMediaCache {
       while (this.files.size > 2) {
         const [oldUrl, old] = this.files.entries().next().value!;
         this.files.delete(oldUrl);
-        void old.then((f) => f.close()).catch(() => { });
+        void old.then((f) => f.close()).catch(() => {});
       }
     }
     return (await file).response(from, to, signal);

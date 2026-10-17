@@ -15,10 +15,17 @@ export function captionPreferences(value: Partial<CaptionPreferences> = {}): Cap
 /** Legacy callers can still toggle both lines; partial new changes preserve the other line. */
 export function mergeCaptionPreferences(current: Partial<CaptionPreferences>, changes: unknown) {
   const previous = captionPreferences(current);
-  const input = changes && typeof changes === 'object' ? changes as Partial<CaptionPreferences> : {};
+  const input =
+    changes && typeof changes === 'object' ? (changes as Partial<CaptionPreferences>) : {};
   const legacy = typeof input.subtitles === 'boolean' ? input.subtitles : undefined;
   return captionPreferences({
-    sourceSubtitles: (typeof input.sourceSubtitles === 'boolean' ? input.sourceSubtitles : undefined) ?? legacy ?? previous.sourceSubtitles,
-    targetSubtitles: (typeof input.targetSubtitles === 'boolean' ? input.targetSubtitles : undefined) ?? legacy ?? previous.targetSubtitles,
+    sourceSubtitles:
+      (typeof input.sourceSubtitles === 'boolean' ? input.sourceSubtitles : undefined) ??
+      legacy ??
+      previous.sourceSubtitles,
+    targetSubtitles:
+      (typeof input.targetSubtitles === 'boolean' ? input.targetSubtitles : undefined) ??
+      legacy ??
+      previous.targetSubtitles,
   });
 }
