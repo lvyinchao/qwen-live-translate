@@ -6,15 +6,12 @@ const directory = await fs.mkdtemp(path.resolve('work/store-assets-'));
 await fs.cp('.output/chrome-mv3', path.join(directory, 'extension'), {
   recursive: true,
 });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: ['--enable-unsafe-extension-debugging'],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -29,18 +26,13 @@ try {
   const page = await context.newPage();
   await page.setViewportSize({ width: 400, height: 680 });
   await page.goto(`chrome-extension://${id}/sidepanel.html`);
-  await page
-    .getByRole('heading', { name: 'Choose a video', exact: true })
-    .waitFor();
+  await page.getByRole('heading', { name: 'Choose a video', exact: true }).waitFor();
   const logo = (await fs.readFile('public/brand/logo.svg')).toString('base64');
   const shots = [
     {
       name: 'screenshot-en-videos',
       title: ['The same voice.', 'A new language.'],
-      sub: [
-        'Speech translation in the original player.',
-        'Your language. The same timeline.',
-      ],
+      sub: ['Speech translation in the original player.', 'Your language. The same timeline.'],
       tag: 'ORIGINAL-VOICE MODE · BILINGUAL SUBTITLES',
     },
     {
@@ -65,24 +57,13 @@ try {
     },
   ];
   for (const s of shots) {
-    if (s.settings)
-      await page
-        .getByRole('button', { name: 'Open settings', exact: true })
-        .click();
+    if (s.settings) await page.getByRole('button', { name: 'Open settings', exact: true }).click();
     if (s.chinese) {
-      await page
-        .getByRole('button', { name: 'Back to videos', exact: true })
-        .click();
+      await page.getByRole('button', { name: 'Back to videos', exact: true }).click();
       await page.locator('.locale-select').selectOption('zh');
-      await page
-        .getByRole('heading', { name: '选择要观看的视频', exact: true })
-        .waitFor();
+      await page.getByRole('heading', { name: '选择要观看的视频', exact: true }).waitFor();
     }
-    if (
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      )
-    )
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
       throw Error('Panel overflow');
     await page.evaluate(() => document.fonts.ready);
     const screenshot = (await page.screenshot()).toString('base64');
@@ -99,10 +80,7 @@ try {
   }
   report.passed = true;
 } finally {
-  await fs.writeFile(
-    'outputs/store-assets-verification.json',
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile('outputs/store-assets-verification.json', JSON.stringify(report, null, 2));
   await context.close();
   await fs.rm(directory, { recursive: true, force: true });
 }

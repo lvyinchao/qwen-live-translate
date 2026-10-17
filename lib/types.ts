@@ -1,10 +1,4 @@
-export type Site =
-  | 'youtube'
-  | 'bilibili'
-  | 'youku'
-  | 'iqiyi'
-  | 'tencent'
-  | 'generic';
+export type Site = 'youtube' | 'bilibili' | 'youku' | 'iqiyi' | 'tencent' | 'generic';
 export interface AudioSource {
   url: string;
   mime?: string;
@@ -68,14 +62,7 @@ export interface TranslationSegment {
   audioDuration: number;
   skipped?: boolean;
 }
-export type Phase =
-  | 'idle'
-  | 'preparing'
-  | 'playing'
-  | 'paused'
-  | 'buffering'
-  | 'error'
-  | 'ended';
+export type Phase = 'idle' | 'preparing' | 'playing' | 'paused' | 'buffering' | 'error' | 'ended';
 export interface PreparationStatus {
   videoRate: number;
   startupTargetSeconds: number;
@@ -172,7 +159,7 @@ export type Envelope = {
   type: string;
   [key: string]: unknown;
 };
-export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+export type { Result } from './messages';
 export function messageError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   return raw

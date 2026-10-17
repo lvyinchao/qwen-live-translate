@@ -10,10 +10,7 @@ export default defineContentScript({
     const publish = () => {
       for (const info of latest.values())
         if (location.pathname.endsWith(`/${info.videoId}.html`))
-          window.postMessage(
-            { type: 'qvd:tencent-media', media: info },
-            location.origin,
-          );
+          window.postMessage({ type: 'qvd:tencent-media', media: info }, location.origin);
     };
     const inspect = (text: string) => {
       const info = parseTencentMedia(text, location.href);
@@ -66,10 +63,7 @@ export default defineContentScript({
     };
     const nativeOpen = XMLHttpRequest.prototype.open;
     // Keep the native overload semantics; observe only the returned media-info response.
-    XMLHttpRequest.prototype.open = function (
-      this: XMLHttpRequest,
-      ...args: any[]
-    ) {
+    XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, ...args: unknown[]) {
       const requested = new URL(String(args[1]), location.href).href;
       if (tencentInfoEndpoint(requested))
         this.addEventListener(
@@ -77,8 +71,7 @@ export default defineContentScript({
           () => {
             try {
               if (this.status < 200 || this.status >= 300) return;
-              if (this.responseType === 'json')
-                inspect(JSON.stringify(this.response));
+              if (this.responseType === 'json') inspect(JSON.stringify(this.response));
               else if (!this.responseType || this.responseType === 'text')
                 inspect(this.responseText);
             } catch {
@@ -87,11 +80,7 @@ export default defineContentScript({
           },
           { once: true },
         );
-      return Reflect.apply(
-        nativeOpen,
-        this,
-        args as Parameters<typeof nativeOpen>,
-      );
+      return Reflect.apply(nativeOpen, this, args as Parameters<typeof nativeOpen>);
     } as typeof nativeOpen;
   },
 });

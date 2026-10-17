@@ -4,15 +4,12 @@ import path from 'node:path';
 const directory = await fs.mkdtemp(path.resolve('work/generic-live-'));
 const extension = path.join(directory, 'extension');
 await fs.cp('.output/chrome-mv3', extension, { recursive: true });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: ['--enable-unsafe-extension-debugging'],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -57,10 +54,7 @@ try {
       r.httpStatus = response?.status();
       await page.waitForTimeout(4000);
       if (!requested) {
-        const href = await page
-          .locator(selector)
-          .first()
-          .getAttribute('href', { timeout: 8000 });
+        const href = await page.locator(selector).first().getAttribute('href', { timeout: 8000 });
         if (!href) throw Error('No public video link found');
         const target = new URL(href, page.url()).href;
         await page.goto(target, {
@@ -72,8 +66,7 @@ try {
       r.page = new URL(page.url()).origin + new URL(page.url()).pathname;
       r.title = await page.title();
       const tabId = await panel.evaluate(
-        async (url) =>
-          (await chrome.tabs.query({})).find((t) => t.url === url)?.id,
+        async (url) => (await chrome.tabs.query({})).find((t) => t.url === url)?.id,
         page.url(),
       );
       const found = await call('media:discover', { tabId });
@@ -89,26 +82,18 @@ try {
       }));
       r.detected = found.length > 0;
       r.prefetchable = found.some((c) => !!c.source);
-      if (
-        process.env.DECODE_AHEAD &&
-        found.some((c) => !!c.source && c.duration > 10)
-      ) {
+      if (process.env.DECODE_AHEAD && found.some((c) => !!c.source && c.duration > 10)) {
         const c = found.find((c) => !!c.source && c.duration > 10);
-        await page
-          .locator('video')
-          .evaluateAll((vs) => vs.forEach((v) => v.pause()));
+        await page.locator('video').evaluateAll((vs) => vs.forEach((v) => v.pause()));
         await call('media:headers', { source: c.source });
-        const asset = (await fs.readdir(path.join(extension, 'assets'))).find(
-          (f) => /^decode-.*\.js$/.test(f),
+        const asset = (await fs.readdir(path.join(extension, 'assets'))).find((f) =>
+          /^decode-.*\.js$/.test(f),
         );
         const start = Math.min(Math.max(3, c.currentTime + 10), c.duration - 3),
           end = start + 2;
         r.prefetch = await panel.evaluate(
           async ({ asset, source, start, end }) => {
-            const worker = new Worker(
-              chrome.runtime.getURL('assets/' + asset),
-              { type: 'module' },
-            );
+            const worker = new Worker(chrome.runtime.getURL('assets/' + asset), { type: 'module' });
             try {
               return await new Promise((resolve) => {
                 const timer = setTimeout(
@@ -156,9 +141,7 @@ try {
       }
 
       if (!found.length)
-        r.note = (await page.locator('body').innerText())
-          .replace(/\s+/g, ' ')
-          .slice(0, 180);
+        r.note = (await page.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 180);
     } catch (e) {
       r.error = e.message;
     } finally {
@@ -166,10 +149,7 @@ try {
     }
   }
 } finally {
-  await fs.writeFile(
-    'outputs/generic-live-verification.json',
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile('outputs/generic-live-verification.json', JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
   await context.close();
   await fs.rm(directory, { recursive: true, force: true });

@@ -40,12 +40,7 @@ export interface ArchiveStorageSummary {
   orphanBytes: number;
 }
 const jobKey = (context: ArchiveContext) =>
-  JSON.stringify([
-    context.mediaId,
-    context.trackId,
-    context.language,
-    context.voice,
-  ]);
+  JSON.stringify([context.mediaId, context.trackId, context.language, context.voice]);
 export class LocalFiles {
   private dbPromise?: Promise<IDBDatabase>;
   private initialized?: Promise<void>;
@@ -72,10 +67,10 @@ export class LocalFiles {
   }
   constructor(
     private download: (url: string, filename: string) => Promise<number>,
-    private notify: (status: LocalFileStatus) => void = () => { },
+    private notify: (status: LocalFileStatus) => void = () => {},
     private name = 'qwen-video-dub-files',
     private disk: FileStore = new PrivateFiles(),
-  ) { }
+  ) {}
   private db() {
     return (this.dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(this.name, 2);
@@ -85,13 +80,9 @@ export class LocalFiles {
           db.createObjectStore('pending', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('saved'))
           db.createObjectStore('saved', { keyPath: 'key' });
-        if (!db.objectStoreNames.contains('jobs'))
-          db.createObjectStore('jobs', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('jobs')) db.createObjectStore('jobs', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('parts'))
-          db.createObjectStore('parts', { keyPath: 'key' }).createIndex(
-            'job',
-            'job',
-          );
+          db.createObjectStore('parts', { keyPath: 'key' }).createIndex('job', 'job');
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -101,16 +92,12 @@ export class LocalFiles {
     const db = await this.db();
     return new Promise((resolve, reject) => {
       const target = db.transaction(store).objectStore(store);
-      const request =
-        key === undefined ? target.getAll() : target.index('job').getAll(key);
+      const request = key === undefined ? target.getAll() : target.index('job').getAll(key);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
-  private async get<T>(
-    store: string,
-    key: IDBValidKey,
-  ): Promise<T | undefined> {
+  private async get<T>(store: string, key: IDBValidKey): Promise<T | undefined> {
     const db = await this.db();
     return new Promise((resolve, reject) => {
       const r = db.transaction(store).objectStore(store).get(key);
@@ -130,7 +117,7 @@ export class LocalFiles {
   }
   private serialize<T>(fn: () => Promise<T>): Promise<T> {
     const next = this.writes.then(fn);
-    this.writes = next.catch(() => { });
+    this.writes = next.catch(() => {});
     return next;
   }
   private initialize() {
@@ -145,19 +132,23 @@ export class LocalFiles {
       });
       for (const key of keys) {
         const batch = await this.get<ArchiveBatch>('pending', key);
-        if (batch) await this.saveParts(batch.context, batch.segments,
-          batch.ready ? { start: batch.start, end: batch.end } : undefined);
-        await this.mutate(['pending'], (tx) =>
-          tx.objectStore('pending').delete(key),
-        );
+        if (batch)
+          await this.saveParts(
+            batch.context,
+            batch.segments,
+            batch.ready ? { start: batch.start, end: batch.end } : undefined,
+          );
+        await this.mutate(['pending'], (tx) => tx.objectStore('pending').delete(key));
       }
       // A previously failed final download is retried only on an explicit user
       // retry. Merely opening the extension must never start a download burst.
       const jobs = await this.all<Job>('jobs');
       for (const job of jobs) {
-        const kept: StoredPart[] = [], removed: string[] = [];
-        const parts = (await this.all<StoredPart>('parts', job.key))
-          .sort((a, b) => (a.storedAt ?? 0) - (b.storedAt ?? 0));
+        const kept: StoredPart[] = [],
+          removed: string[] = [];
+        const parts = (await this.all<StoredPart>('parts', job.key)).sort(
+          (a, b) => (a.storedAt ?? 0) - (b.storedAt ?? 0),
+        );
         for (const part of parts) {
           const duplicate = kept.findIndex((old) => sameArchiveUtterance(old, part));
           if (duplicate < 0) kept.push(part);
@@ -225,24 +216,20 @@ export class LocalFiles {
         // Keep the old stable key when a retried utterance shifts slightly. Speaker
         // IDs are included for new parts so simultaneous speakers do not overwrite.
         const old = existing.find((part) => sameArchiveUtterance(part, segment));
-        const partKey = old?.key ?? JSON.stringify([
-          key, segment.start, segment.end, segment.speaker ?? null,
-        ]);
+        const partKey =
+          old?.key ?? JSON.stringify([key, segment.start, segment.end, segment.speaker ?? null]);
         keep.add(partKey);
         const bytes = decode64(segment.audio),
           audioHash = await digest(bytes);
         const fingerprint = await textDigest(
-          JSON.stringify([
-            audioHash,
-            segment.sourceText,
-            segment.text,
-            segment.speaker ?? null,
-          ]),
+          JSON.stringify([audioHash, segment.sourceText, segment.text, segment.speaker ?? null]),
         );
         if (
           old?.fingerprint === fingerprint &&
-          old.start === segment.start && old.end === segment.end
-        ) continue;
+          old.start === segment.start &&
+          old.end === segment.end
+        )
+          continue;
         const file = new Blob([bytes], { type: 'audio/wav' }),
           size = await pcmSize(file);
         const path = `${folder}/parts/${Math.round(segment.start * 1000)}-${Math.round(segment.end * 1000)}-${audioHash.slice(0, 24)}.wav`;
@@ -273,8 +260,11 @@ export class LocalFiles {
       // cache hits may contain a subset of speakers/utterances, so never prune then.
       if (completedWindow)
         for (const old of existing)
-          if (!keep.has(old.key) && old.start >= completedWindow.start - 0.03 &&
-            old.end <= completedWindow.end + 0.03) {
+          if (
+            !keep.has(old.key) &&
+            old.start >= completedWindow.start - 0.03 &&
+            old.end <= completedWindow.end + 0.03
+          ) {
             if (!removed.has(old.key)) job.count--;
             removed.set(old.key, old);
           }
@@ -290,13 +280,13 @@ export class LocalFiles {
       const retained = new Set((await this.all<StoredPart>('parts', key)).map((part) => part.path));
       for (const old of removed.values())
         if (!retained.has(old.path) && !this.pinnedPaths.has(old.path))
-          await this.disk.remove(old.path).catch(() => { });
+          await this.disk.remove(old.path).catch(() => {});
     } catch (error) {
       // A failed metadata transaction must not leave freshly written WAVs behind.
       const referenced = new Set((await this.all<StoredPart>('parts')).map((p) => p.path));
       for (const path of created)
         if (!referenced.has(path) && !this.pinnedPaths.has(path))
-          await this.disk.remove(path).catch(() => { });
+          await this.disk.remove(path).catch(() => {});
       throw error;
     }
   }
@@ -312,20 +302,27 @@ export class LocalFiles {
     await this.initialize();
     return this.serialize(async () => {
       const [parts, jobs] = await Promise.all([
-        this.all<StoredPart>('parts'), this.all<Job>('jobs'),
+        this.all<StoredPart>('parts'),
+        this.all<Job>('jobs'),
       ]);
       const physical = this.disk.list
         ? await this.disk.list()
-        : await Promise.all(parts.map(async (p) => ({
-          path: p.path, size: (await this.disk.get(p.path)).size,
-        })));
+        : await Promise.all(
+            parts.map(async (p) => ({
+              path: p.path,
+              size: (await this.disk.get(p.path)).size,
+            })),
+          );
       const references = new Set([...parts.map((p) => p.path), ...this.pinnedPaths]);
       return {
         bytes: physical.reduce((sum, file) => sum + file.size, 0),
         files: physical.length,
         parts: parts.length,
         jobs: jobs.length,
-        orphanBytes: physical.reduce((sum, file) => sum + (references.has(file.path) ? 0 : file.size), 0),
+        orphanBytes: physical.reduce(
+          (sum, file) => sum + (references.has(file.path) ? 0 : file.size),
+          0,
+        ),
       };
     });
   }
@@ -367,10 +364,7 @@ export class LocalFiles {
   async status(): Promise<LocalFileStatus> {
     await this.initialize();
     await this.writes;
-    const [jobs, saved] = await Promise.all([
-      this.all<Job>('jobs'),
-      this.all<Saved>('saved'),
-    ]);
+    const [jobs, saved] = await Promise.all([this.all<Job>('jobs'), this.all<Saved>('saved')]);
     const last = saved.sort((a, b) => b.at - a.at)[0];
     return {
       pending: jobs.filter((j) => j.revision > j.savedRevision).length,
@@ -397,8 +391,10 @@ export class LocalFiles {
     const storageVersion = this.storageVersion;
     await this.initialize();
     await this.serialize(() =>
-      !this.clearing && storageVersion === this.storageVersion &&
-        this.autoSave && version === this.preferenceVersion
+      !this.clearing &&
+      storageVersion === this.storageVersion &&
+      this.autoSave &&
+      version === this.preferenceVersion
         ? this.saveParts(context, segments, ready ? { start, end } : undefined)
         : Promise.resolve(),
     );
@@ -417,8 +413,11 @@ export class LocalFiles {
     const storageVersion = this.storageVersion;
     await this.initialize();
     await this.serialize(async () => {
-      if (this.clearing || storageVersion !== this.storageVersion ||
-        (automatic && (!this.autoSave || version !== this.preferenceVersion)))
+      if (
+        this.clearing ||
+        storageVersion !== this.storageVersion ||
+        (automatic && (!this.autoSave || version !== this.preferenceVersion))
+      )
         return;
       const jobs = context
         ? [await this.get<Job>('jobs', jobKey(context))]
@@ -458,10 +457,7 @@ export class LocalFiles {
       .finally(async () => {
         this.draining = undefined;
         await this.publish();
-        if (
-          !this.error &&
-          (await this.all<Job>('jobs')).some((j) => this.canDownload(j))
-        )
+        if (!this.error && (await this.all<Job>('jobs')).some((j) => this.canDownload(j)))
           void this.drain();
       });
     return this.draining;
@@ -469,9 +465,7 @@ export class LocalFiles {
   private async run() {
     while (!this.error) {
       await this.writes;
-      const job = (await this.all<Job>('jobs')).find((j) =>
-        this.canDownload(j),
-      );
+      const job = (await this.all<Job>('jobs')).find((j) => this.canDownload(j));
       if (!job) return;
       // Snapshot metadata under the same queue as capture. WAV filenames are
       // content addressed, so later captures cannot mutate an in-progress merge.
@@ -490,10 +484,7 @@ export class LocalFiles {
       if (!parts.length) return;
       try {
         const fingerprint = await textDigest(
-          JSON.stringify([
-            snapshot.job.context,
-            parts.map((p) => [p.start, p.end, p.fingerprint]),
-          ]),
+          JSON.stringify([snapshot.job.context, parts.map((p) => [p.start, p.end, p.fingerprint])]),
         );
         const savedKey = JSON.stringify([job.key, fingerprint]);
         const old = await this.get<Saved>('saved', savedKey);
@@ -510,8 +501,7 @@ export class LocalFiles {
           ready: true,
         });
         const filename = (
-          old?.filename ??
-          base.replace(/\.zip$/, `-merged-${fingerprint.slice(0, 12)}.zip`)
+          old?.filename ?? base.replace(/\.zip$/, `-merged-${fingerprint.slice(0, 12)}.zip`)
         ).replace(/^Qwen Video Dub\//, 'TimbraDub/');
         let id = old?.downloadId;
         try {
@@ -549,8 +539,8 @@ export class LocalFiles {
           });
         } finally {
           // Source chunks remain durable. Temporary merged files are reproducible.
-          await this.disk.remove(mergedPath).catch(() => { });
-          await this.disk.remove(zipPath).catch(() => { });
+          await this.disk.remove(mergedPath).catch(() => {});
+          await this.disk.remove(zipPath).catch(() => {});
           this.pinnedPaths.delete(mergedPath);
           this.pinnedPaths.delete(zipPath);
         }

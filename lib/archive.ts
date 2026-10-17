@@ -39,11 +39,7 @@ export function archiveContext(session: PlaybackSession): ArchiveContext {
     trackId: session.candidate.source?.trackId ?? 'default',
   };
 }
-export function archiveKey(
-  context: ArchiveContext,
-  start: number,
-  end: number,
-) {
+export function archiveKey(context: ArchiveContext, start: number, end: number) {
   return JSON.stringify([
     context.mediaId,
     context.trackId,
@@ -57,8 +53,7 @@ export function subtitleTime(seconds: number): string {
   const ms = Math.max(0, Math.round(seconds * 1000));
   return `${String(Math.floor(ms / 3600000)).padStart(2, '0')}:${String(Math.floor(ms / 60000) % 60).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`;
 }
-const stamp = (value: number) =>
-  String(Math.round(value * 1000)).padStart(10, '0');
+const stamp = (value: number) => String(Math.round(value * 1000)).padStart(10, '0');
 const audioName = (segment: TranslationSegment, index: number) =>
   `audio/${stamp(segment.start)}-${stamp(segment.end)}-${index}.wav`;
 /** A retried sentence can move by a few samples; simultaneous speakers must survive. */
@@ -77,13 +72,10 @@ export function sameArchiveUtterance(
     Math.abs(a.start - b.start) <= 0.050001 &&
     Math.abs(a.end - b.end) <= 0.050001 &&
     Math.min(a.end, b.end) - Math.max(a.start, b.start) >=
-    Math.max(a.end - a.start, b.end - b.start) * 0.8
+      Math.max(a.end - a.start, b.end - b.start) * 0.8
   );
 }
-export function mergeArchiveSegments(
-  old: TranslationSegment[],
-  incoming: TranslationSegment[],
-) {
+export function mergeArchiveSegments(old: TranslationSegment[], incoming: TranslationSegment[]) {
   const merged: TranslationSegment[] = [];
   for (const segment of [...old, ...incoming]) {
     const duplicate = merged.findIndex((s) => sameArchiveUtterance(s, segment));
@@ -152,9 +144,7 @@ export function archiveEntries(
 
 // Standard ZIP (stored entries). Each bundle is bounded to a single input
 // window, so no entire-video PCM allocation or third-party ZIP runtime is needed.
-export function zipEntries(
-  entries: ReturnType<typeof archiveEntries>,
-): Uint8Array<ArrayBuffer> {
+export function zipEntries(entries: ReturnType<typeof archiveEntries>): Uint8Array<ArrayBuffer> {
   const encoder = new TextEncoder(),
     local: Uint8Array[] = [],
     central: Uint8Array[] = [];
@@ -165,8 +155,7 @@ export function zipEntries(
     let crc = 0xffffffff;
     for (const byte of bytes) {
       crc ^= byte;
-      for (let bit = 0; bit < 8; bit++)
-        crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
     }
     crc = (crc ^ 0xffffffff) >>> 0;
     const header = new Uint8Array(30 + filename.length),
@@ -214,14 +203,9 @@ export function zipEntries(
   return out;
 }
 export async function archiveFilename(batch: ArchiveBatch): Promise<string> {
-  const identity = JSON.stringify([
-    batch.context.mediaId,
-    batch.context.trackId,
-  ]);
+  const identity = JSON.stringify([batch.context.mediaId, batch.context.trackId]);
   const hash = [
-    ...new Uint8Array(
-      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity)),
-    ),
+    ...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity))),
   ]
     .slice(0, 8)
     .map((n) => n.toString(16).padStart(2, '0'))

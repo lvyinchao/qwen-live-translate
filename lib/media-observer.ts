@@ -1,17 +1,32 @@
 import { mediaKind, type ObservedMedia } from './discovery';
-import { inspectPlayerMain, mediaIdentity, normalizeAudioRequest, observedAudio, youtubeDirectTrackId } from './adapters';
+import {
+  inspectPlayerMain,
+  mediaIdentity,
+  normalizeAudioRequest,
+  observedAudio,
+  youtubeDirectTrackId,
+} from './adapters';
 import { candidatePageId } from './media-identity';
 import { encode64, decode64 } from './audio';
 import { messageError, type AudioSource, type PlaybackSession } from './types';
 import { VideoPlaybackAbrRequest } from 'googlevideo/protos';
 import type { ObservationScope } from './observation-scope';
+/** How long discovered media URLs and their request headers stay usable. */
+export const OBSERVATION_TTL_MS = 60000;
 export type SourceRecord = { identity: string; source: AudioSource; expiresAt?: number };
 export type DiscoveryRecord = { identity: string; items: ObservedMedia[]; expiresAt?: number };
-export function registerMediaObserver({ scope, sources, detected, captureStats, getSession, stop }: {
+export function registerMediaObserver({
+  scope,
+  sources,
+  detected,
+  captureStats,
+  getSession,
+  stop,
+}: {
   scope: ObservationScope;
   sources: Map<number, SourceRecord>;
   detected: Map<number, DiscoveryRecord>;
-  captureStats: {responses: number; accepted: number; lastError: string};
+  captureStats: { responses: number; accepted: number; lastError: string };
   getSession: () => PlaybackSession | null;
   stop: () => Promise<void>;
 }) {
@@ -19,7 +34,7 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
   let responseSequence = 0;
   const nativeSequence = new Map<number, number>();
   const bodies = new Map<string, string>();
-  const scopes = new Map<string, {revision: number; page: Promise<string | undefined>}>();
+  const scopes = new Map<string, { revision: number; page: Promise<string | undefined> }>();
   chrome.webRequest.onBeforeRequest.addListener(
     (details) => {
       if (
@@ -27,21 +42,18 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
         details.initiator?.startsWith('chrome-extension:')
       )
         return undefined;
-      scopes.set(
-        details.requestId,
-        { revision: scope.revision(details.tabId), page: chrome.tabs
+      scopes.set(details.requestId, {
+        revision: scope.revision(details.tabId),
+        page: chrome.tabs
           .get(details.tabId)
           .then((tab) => {
             const url = tab.pendingUrl ?? tab.url;
             return url ? mediaIdentity(url) : undefined;
           })
-          .catch(() => undefined) },
-      );
+          .catch(() => undefined),
+      });
       if (scopes.size > 500) scopes.delete(scopes.keys().next().value!);
-      if (
-        details.method !== 'POST' ||
-        !new URL(details.url).hostname.endsWith('.googlevideo.com')
-      )
+      if (details.method !== 'POST' || !new URL(details.url).hostname.endsWith('.googlevideo.com'))
         return undefined;
       const raw = details.requestBody?.raw;
       if (!raw?.length) return undefined;
@@ -101,18 +113,14 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
       const requestScope = scopes.get(details.requestId);
       scopes.delete(details.requestId);
       const mime =
-        details.responseHeaders?.find(
-          (h) => h.name.toLowerCase() === 'content-type',
-        )?.value ?? '';
+        details.responseHeaders?.find((h) => h.name.toLowerCase() === 'content-type')?.value ?? '';
       const sabr = !!sabrRequest && mime.includes('yt-ump');
       if (
         !scope.allows(details.tabId, getSession()?.candidate.tabId) ||
         details.initiator?.startsWith('chrome-extension:') ||
         details.statusCode < 200 ||
         details.statusCode >= 300 ||
-        (!sabr &&
-          !observedAudio(details.url, mime) &&
-          !mediaKind(details.url, mime))
+        (!sabr && !observedAudio(details.url, mime) && !mediaKind(details.url, mime))
       )
         return;
       captureStats.accepted++;
@@ -123,7 +131,9 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
           if (!tab.url || !scope.allows(details.tabId, getSession()?.candidate.tabId)) return;
           const identity = mediaIdentity(tab.url);
           if ((await requestScope?.page) !== identity) return;
-          const current = () => !!requestScope && scope.allows(details.tabId, getSession()?.candidate.tabId) &&
+          const current = () =>
+            !!requestScope &&
+            scope.allows(details.tabId, getSession()?.candidate.tabId) &&
             scope.revision(details.tabId) === requestScope.revision;
           if (!current()) return;
           const host = new URL(tab.url).hostname;
@@ -136,13 +146,12 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
                 `detected:${details.tabId}`
               ] as DiscoveryRecord | undefined);
             const previous = detected.get(details.tabId) ?? persisted;
-            const items = previous?.identity === identity && (previous.expiresAt ?? 0) > Date.now()
-              ? previous.items.filter((item) => item.at > Date.now() - 60000) : [];
+            const items =
+              previous?.identity === identity && (previous.expiresAt ?? 0) > Date.now()
+                ? previous.items.filter((item) => item.at > Date.now() - OBSERVATION_TTL_MS)
+                : [];
             const updated = [
-              ...items.filter(
-                (r) =>
-                  !(r.url === details.url && r.frameId === details.frameId),
-              ),
+              ...items.filter((r) => !(r.url === details.url && r.frameId === details.frameId)),
               {
                 url: details.url,
                 mime,
@@ -154,9 +163,9 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
             ];
             const state = {
               identity,
-              expiresAt: Date.now() + 60000,
-              items: (['file', 'hls', 'dash', 'fragment'] as const).flatMap(
-                (k) => updated.filter((r) => r.kind === k).slice(-10),
+              expiresAt: Date.now() + OBSERVATION_TTL_MS,
+              items: (['file', 'hls', 'dash', 'fragment'] as const).flatMap((k) =>
+                updated.filter((r) => r.kind === k).slice(-10),
               ),
             };
             if (!current()) return;
@@ -186,13 +195,17 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
           if (!sabr && !observedAudio(details.url, mime)) return;
           if (sequence < (nativeSequence.get(details.tabId) ?? 0)) return;
           let trackId = sabr
-            ? VideoPlaybackAbrRequest.decode(decode64(sabrRequest!))
-                .clientAbrState?.audioTrackId || 'default'
+            ? VideoPlaybackAbrRequest.decode(decode64(sabrRequest!)).clientAbrState?.audioTrackId ||
+              'default'
             : 'default';
           if (!sabr && /(?:^|\.)youtube\.com$/.test(host)) {
-            const metadata = (await chrome.scripting.executeScript({
-              target: { tabId: details.tabId }, world: 'MAIN', func: inspectPlayerMain,
-            }))[0]?.result;
+            const metadata = (
+              await chrome.scripting.executeScript({
+                target: { tabId: details.tabId },
+                world: 'MAIN',
+                func: inspectPlayerMain,
+              })
+            )[0]?.result;
             if (!current() || metadata?.identity !== identity) return;
             const resolved = youtubeDirectTrackId(details.url, metadata);
             if (!resolved) return;
@@ -210,7 +223,7 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
           }
           const saved = {
             identity,
-            expiresAt: Date.now() + 60000,
+            expiresAt: Date.now() + OBSERVATION_TTL_MS,
             source: {
               url: sabr ? details.url : normalizeAudioRequest(details.url),
               mime,

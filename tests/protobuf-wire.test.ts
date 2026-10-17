@@ -18,14 +18,7 @@ it('retains opaque native client attestation while updating continuation fields'
     field1000: [],
   }).finish();
   // Unknown field 42 inside the context: schema re-encoding would discard it.
-  const raw = Uint8Array.from([
-    ...base.slice(0, 2),
-    base[2]! + 3,
-    ...base.slice(3),
-    0xd0,
-    2,
-    9,
-  ]);
+  const raw = Uint8Array.from([...base.slice(0, 2), base[2]! + 3, ...base.slice(3), 0xd0, 2, 9]);
   const fresh = VideoPlaybackAbrRequest.encode({
     clientAbrState: { playerTimeMs: '90000' },
     streamerContext: {
@@ -52,10 +45,6 @@ it('retains opaque native client attestation while updating continuation fields'
   expect(Array.from(result)).toContain(0xd0);
 });
 it('rejects invalid native framing before any network request', () => {
-  expect(() =>
-    preserveSabrContext(new Uint8Array([0x9a, 1, 255]), new Uint8Array()),
-  ).toThrow();
-  expect(() => preserveSabrContext(new Uint8Array(), new Uint8Array())).toThrow(
-    '上下文',
-  );
+  expect(() => preserveSabrContext(new Uint8Array([0x9a, 1, 255]), new Uint8Array())).toThrow();
+  expect(() => preserveSabrContext(new Uint8Array(), new Uint8Array())).toThrow('上下文');
 });

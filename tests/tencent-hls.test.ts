@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { observeTencentHls } from '../lib/tencent-hls';
+
+type Listener = (...args: unknown[]) => void;
 import type { TencentMediaInfo } from '../lib/tencent-media';
 const url = 'https://ltscsy.qq.com/video/index.m3u8';
 const playlist = '#EXTM3U\n#EXTINF:30,\nsegment.ts\n#EXT-X-ENDLIST';
@@ -14,17 +16,17 @@ function setup() {
     media = new Video();
     config: any = {};
     currentLevel = 0;
-    handlers = new Map<string, Set<Function>>();
+    handlers = new Map<string, Set<Listener>>();
     received: unknown[] = [];
     loadSource(...args: unknown[]) {
       this.received = args;
       return 'native-result';
     }
-    on(event: string, fn: Function) {
+    on(event: string, fn: Listener) {
       if (!this.handlers.has(event)) this.handlers.set(event, new Set());
       this.handlers.get(event)!.add(fn);
     }
-    off(event: string, fn: Function) {
+    off(event: string, fn: Listener) {
       this.handlers.get(event)?.delete(fn);
     }
     emit(event: string, data: unknown) {

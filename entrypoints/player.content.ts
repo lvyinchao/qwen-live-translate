@@ -9,8 +9,16 @@ import { isOlderStateVersion } from '../lib/session';
 import { captionPreferences, mergeCaptionPreferences } from '../lib/captions';
 import type { UILanguage } from '../lib/types';
 
-type TerminalReason = 'natural' | 'timeline-cut' | 'overlap-cut' | 'seek-stop' |
-  'language-switch' | 'stop' | 'error' | 'video-ended' | 'player-lost';
+type TerminalReason =
+  | 'natural'
+  | 'timeline-cut'
+  | 'overlap-cut'
+  | 'seek-stop'
+  | 'language-switch'
+  | 'stop'
+  | 'error'
+  | 'video-ended'
+  | 'player-lost';
 
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
@@ -24,8 +32,7 @@ export default defineContentScript({
     void chrome.runtime
       .sendMessage({ target: 'background', type: 'ui:get' })
       .then((result) => {
-        if (result?.ok && localeVersion === 0)
-          locale = normalizeUILanguage(result.value);
+        if (result?.ok && localeVersion === 0) locale = normalizeUILanguage(result.value);
       })
       .catch(() => {});
     window.addEventListener(
@@ -51,8 +58,12 @@ export default defineContentScript({
             type: 'media:tencent-info',
             media,
           })
-          .then(() => { for (const complete of [...mediaRescans]) complete(); })
-          .catch(() => { for (const complete of [...mediaRescans]) complete(); });
+          .then(() => {
+            for (const complete of [...mediaRescans]) complete();
+          })
+          .catch(() => {
+            for (const complete of [...mediaRescans]) complete();
+          });
       },
       { signal: ctx.signal },
     );
@@ -89,6 +100,8 @@ export default defineContentScript({
       currentPreloadHit = false;
       previousTickAt?: number;
       tickGapMs = 0;
+      /** Upper bound between sync ticks when no video frame callback arrives. */
+      tickMs = 50;
       maxTickGapMs = 0;
       pendingTerminals: Record<string, unknown>[] = [];
       timer: ReturnType<typeof setInterval>;
@@ -113,7 +126,13 @@ export default defineContentScript({
         this.caption.className = 'caption';
         shadow.append(style, this.caption, this.audio);
         this.placeOverlay();
-        this.mix(session.originalVolume, session.dubVolume, session.subtitles, session.sourceSubtitles, session.targetSubtitles);
+        this.mix(
+          session.originalVolume,
+          session.dubVolume,
+          session.subtitles,
+          session.sourceSubtitles,
+          session.targetSubtitles,
+        );
         const listen = (name: string, fn: () => void) =>
           video.addEventListener(name, fn, { signal: this.abort.signal });
         listen('pause', () => {
@@ -172,11 +191,9 @@ export default defineContentScript({
           this.clearAudio(true, 'video-ended');
           this.clock();
         });
-        document.addEventListener(
-          'fullscreenchange',
-          () => this.placeOverlay(),
-          { signal: this.abort.signal },
-        );
+        document.addEventListener('fullscreenchange', () => this.placeOverlay(), {
+          signal: this.abort.signal,
+        });
         document.addEventListener(
           'pointerdown',
           () => {
@@ -202,8 +219,15 @@ export default defineContentScript({
           },
           { signal: this.abort.signal },
         );
-        this.tickTimer = setInterval(() => this.tick(), 50);
+        // Video frame callbacks drive ticks during playback. The interval only
+        // covers paused, frameless or unsupported periods, so it skips any
+        // 50 ms slot in which a frame (or event) has already ticked.
+        this.tickTimer = setInterval(() => this.tickIfIdle(), this.tickMs);
+        let checks = 0;
         this.timer = setInterval(() => {
+          // A full YouTube player scan walks the page; once a second is enough
+          // to notice a replaced player, while cheap checks stay at 250 ms.
+          const scanYoutube = session.candidate.site === 'youtube' && checks++ % 4 === 0;
           if (
             !video.isConnected ||
             (!['youtube', 'bilibili'].includes(session.candidate.site) &&
@@ -211,8 +235,7 @@ export default defineContentScript({
             mediaIdentity(location.href) !==
               (session.candidate.frameMediaId ?? session.candidate.mediaId) ||
             document.querySelector('#movie_player.ad-showing') ||
-            (session.candidate.site === 'youtube' &&
-              youtubePlayer(inspectVideos(true))[0]?.id !== video.dataset.qvdId)
+            (scanYoutube && youtubePlayer(inspectVideos(true))[0]?.id !== video.dataset.qvdId)
           ) {
             this.destroy('player-lost');
             this.send('player:lost', { terminals: this.takeTerminals() });
@@ -220,7 +243,7 @@ export default defineContentScript({
             return;
           }
           this.clock();
-          this.tick();
+          this.tickIfIdle();
         }, 250);
         const frame = () => {
           if (this.abort.signal.aborted) return;
@@ -238,8 +261,12 @@ export default defineContentScript({
         audio.addEventListener(
           'loadedmetadata',
           () => {
-            const segment = audio === this.audio ? this.current :
-              this.preloaded?.audio === audio ? this.preloaded.segment : undefined;
+            const segment =
+              audio === this.audio
+                ? this.current
+                : this.preloaded?.audio === audio
+                  ? this.preloaded.segment
+                  : undefined;
             if (segment) this.audioStage('metadata', audio, segment);
             if (audio !== this.audio || audio.currentSrc !== this.blob) return;
             this.loaded = true;
@@ -296,7 +323,8 @@ export default defineContentScript({
           sourceStart: segment?.start,
           sourceEnd: segment?.end,
           readyState: audio.readyState,
-          preloadHit: audio === this.audio ? this.currentPreloadHit : this.preloaded?.audio === audio,
+          preloadHit:
+            audio === this.audio ? this.currentPreloadHit : this.preloaded?.audio === audio,
           readyThrough: this.session.readyThrough,
           stateVersion: this.session.stateVersion ?? 0,
           tickGapMs: this.tickGapMs,
@@ -310,8 +338,12 @@ export default defineContentScript({
       }
       audioStage(stage: string, audio = this.audio, segment = this.current) {
         if (!segment) return;
-        this.send('player:metric', { kind: 'audio-stage', stage, segmentId: segment.id,
-          ...this.audioSnapshot(audio, segment) });
+        this.send('player:metric', {
+          kind: 'audio-stage',
+          stage,
+          segmentId: segment.id,
+          ...this.audioSnapshot(audio, segment),
+        });
       }
       finishCurrent(reason: TerminalReason) {
         const segment = this.current;
@@ -319,15 +351,30 @@ export default defineContentScript({
         this.terminated.add(segment.id);
         const remaining = Math.max(0, segment.audioDuration - this.audio.currentTime);
         const actualReason = this.audio.ended || remaining === 0 ? 'natural' : reason;
-        const event = { kind: 'terminal', reason: actualReason, segmentId: segment.id,
-          ...this.audioSnapshot(), sourceTime: this.video.currentTime,
-          remaining, error: this.video.currentTime - segment.end };
-        const message = { type: 'player:metric', sessionId: this.session.id,
-          epoch: this.session.epoch, languageVersion: this.session.languageVersion ?? 0, ...event };
+        const event = {
+          kind: 'terminal',
+          reason: actualReason,
+          segmentId: segment.id,
+          ...this.audioSnapshot(),
+          sourceTime: this.video.currentTime,
+          remaining,
+          error: this.video.currentTime - segment.end,
+        };
+        const message = {
+          type: 'player:metric',
+          sessionId: this.session.id,
+          epoch: this.session.epoch,
+          languageVersion: this.session.languageVersion ?? 0,
+          ...event,
+        };
         this.pendingTerminals.push(message);
         this.send('player:metric', event);
-        if (remaining > 0 && actualReason !== 'natural' &&
-            ['timeline-cut', 'overlap-cut'].includes(actualReason) && !this.skipped.has(segment.id)) {
+        if (
+          remaining > 0 &&
+          actualReason !== 'natural' &&
+          ['timeline-cut', 'overlap-cut'].includes(actualReason) &&
+          !this.skipped.has(segment.id)
+        ) {
           this.skipped.add(segment.id);
           this.send('player:skip', { segmentId: segment.id, remaining, reason: actualReason });
         }
@@ -354,12 +401,16 @@ export default defineContentScript({
         const position = this.video.currentTime;
         const candidate = [
           activeSegment(this.segments, position),
-          ...this.segments.filter((segment) => segment.start > position).sort((a, b) => a.start - b.start),
+          ...this.segments
+            .filter((segment) => segment.start > position)
+            .sort((a, b) => a.start - b.start),
         ].find((segment) => segment && segment.id !== this.current?.id);
         if (!candidate || candidate.id === this.preloaded?.segment.id) return;
         this.clearPreload();
         const audio = new Audio();
-        const blob = URL.createObjectURL(new Blob([decode64(candidate.audio)], { type: 'audio/wav' }));
+        const blob = URL.createObjectURL(
+          new Blob([decode64(candidate.audio)], { type: 'audio/wav' }),
+        );
         this.configureAudio(audio);
         this.preloaded = { segment: candidate, audio, blob };
         this.audio.parentNode?.appendChild(audio);
@@ -423,10 +474,7 @@ export default defineContentScript({
             await this.video.play();
           } catch {
             this.expectedPlay = false;
-            this.caption.textContent = t(
-              locale,
-              '请点击视频播放按钮，继续观看',
-            );
+            this.caption.textContent = t(locale, '请点击视频播放按钮，继续观看');
           }
         }
       }
@@ -453,7 +501,13 @@ export default defineContentScript({
           this.endedMetrics.clear();
         }
         this.session = { ...next, ...captionPreferences(next) };
-        this.mix(next.originalVolume, next.dubVolume, next.subtitles, next.sourceSubtitles, next.targetSubtitles);
+        this.mix(
+          next.originalVolume,
+          next.dubVolume,
+          next.subtitles,
+          next.sourceSubtitles,
+          next.targetSubtitles,
+        );
         if (next.phase === 'error') {
           this.video.muted = this.original.muted;
           this.video.volume = this.original.volume;
@@ -474,21 +528,27 @@ export default defineContentScript({
         )
           return false;
         this.segments = this.segments.filter(
-          (s) =>
-            s.id !== segment.id &&
-            !sameArchiveUtterance(s, segment),
+          (s) => s.id !== segment.id && !sameArchiveUtterance(s, segment),
         );
         this.segments.push(segment);
-        this.segments = this.segments.filter(
-          (s) => s.end > this.video.currentTime - 300,
-        );
+        this.segments = this.segments.filter((s) => s.end > this.video.currentTime - 300);
         this.tick();
         return true;
       }
-      mix(original: number, dub: number, subtitles?: boolean, sourceSubtitles?: boolean, targetSubtitles?: boolean) {
+      mix(
+        original: number,
+        dub: number,
+        subtitles?: boolean,
+        sourceSubtitles?: boolean,
+        targetSubtitles?: boolean,
+      ) {
         this.session.originalVolume = original;
         this.session.dubVolume = dub;
-        const captions = mergeCaptionPreferences(this.session, { subtitles, sourceSubtitles, targetSubtitles });
+        const captions = mergeCaptionPreferences(this.session, {
+          subtitles,
+          sourceSubtitles,
+          targetSubtitles,
+        });
         Object.assign(this.session, captions);
         this.video.muted = original === 0;
         this.video.volume = original;
@@ -510,10 +570,8 @@ export default defineContentScript({
         const parent =
           fullscreen && ancestor === fullscreen
             ? fullscreen
-            : (this.video.parentElement ??
-              (root instanceof ShadowRoot ? root : null));
-        if (parent && !(parent instanceof HTMLVideoElement))
-          parent.append(this.host);
+            : (this.video.parentElement ?? (root instanceof ShadowRoot ? root : null));
+        if (parent && !(parent instanceof HTMLVideoElement)) parent.append(this.host);
       }
 
       clearAudio(clearPreload = false, reason: TerminalReason = 'timeline-cut') {
@@ -528,10 +586,14 @@ export default defineContentScript({
         this.playPending = false;
         this.currentPreloadHit = false;
       }
+      tickIfIdle() {
+        if (performance.now() - (this.previousTickAt ?? -Infinity) >= this.tickMs - 5) this.tick();
+      }
       tick() {
         if (this.abort.signal.aborted) return;
         const now = performance.now();
-        this.tickGapMs = this.previousTickAt === undefined ? 0 : Math.max(0, now - this.previousTickAt);
+        this.tickGapMs =
+          this.previousTickAt === undefined ? 0 : Math.max(0, now - this.previousTickAt);
         this.previousTickAt = now;
         this.maxTickGapMs = Math.max(this.maxTickGapMs, this.tickGapMs);
         const position = this.video.currentTime;
@@ -539,9 +601,12 @@ export default defineContentScript({
         const segment = activeSegment(this.segments, position);
         // Enforce the last acknowledged boundary locally; a delayed round trip
         // must not let the picture run through an untranslated interval.
-        if (!this.buffering() && !this.video.paused &&
-            position >= this.session.readyThrough - 0.02 &&
-            position < this.session.candidate.duration - 0.02) {
+        if (
+          !this.buffering() &&
+          !this.video.paused &&
+          position >= this.session.readyThrough - 0.02 &&
+          position < this.session.candidate.duration - 0.02
+        ) {
           this.session.phase = 'buffering';
           this.pauseVideo();
           this.clock();
@@ -552,10 +617,7 @@ export default defineContentScript({
             this.session.phase === 'error'
               ? t(locale, '翻译已停止，请查看侧边栏')
               : t(locale, '正在准备译音 · 已准备 {seconds} 秒', {
-                  seconds: Math.max(
-                    0,
-                    this.session.readyThrough - position,
-                  ).toFixed(0),
+                  seconds: Math.max(0, this.session.readyThrough - position).toFixed(0),
                 });
           return;
         }
@@ -579,7 +641,9 @@ export default defineContentScript({
             this.preloaded = undefined;
             this.loaded = this.audio.readyState >= HTMLMediaElement.HAVE_METADATA;
           } else {
-            this.blob = URL.createObjectURL(new Blob([decode64(segment.audio)], { type: 'audio/wav' }));
+            this.blob = URL.createObjectURL(
+              new Blob([decode64(segment.audio)], { type: 'audio/wav' }),
+            );
             this.audio.src = this.blob;
           }
           this.audioStage('activate');
@@ -590,10 +654,7 @@ export default defineContentScript({
           source.textContent = segment.sourceText;
           translated.className = 'line target';
           translated.textContent = segment.text;
-          this.caption.replaceChildren(
-            ...(segment.sourceText ? [source] : []),
-            translated,
-          );
+          this.caption.replaceChildren(...(segment.sourceText ? [source] : []), translated);
         }
         if (this.video.paused || this.waiting || !this.loaded) {
           this.audio.pause();
@@ -602,8 +663,7 @@ export default defineContentScript({
         const plan = planDub(segment, position, this.video.playbackRate);
         const offset =
           this.anchor.audio +
-          ((position - this.anchor.media) / this.video.playbackRate) *
-            plan.rate;
+          ((position - this.anchor.media) / this.video.playbackRate) * plan.rate;
         if (position >= segment.end) {
           this.finishCurrent('timeline-cut');
           this.audio.pause();
@@ -619,10 +679,7 @@ export default defineContentScript({
         // tens of milliseconds. Let its real tail finish before the source turn
         // ends; seeking/pausing at the predicted end silently cuts that tail.
         if (offset < segment.audioDuration && Math.abs(this.audio.currentTime - offset) > 0.12)
-          this.audio.currentTime = Math.max(
-            0,
-            Math.min(offset, segment.audioDuration),
-          );
+          this.audio.currentTime = Math.max(0, Math.min(offset, segment.audioDuration));
         if (this.audio.paused && !this.playPending && !this.audioBlocked) {
           this.playPending = true;
           const audio = this.audio;
@@ -630,18 +687,26 @@ export default defineContentScript({
           void audio
             .play()
             .then(() => {
-              if (this.abort.signal.aborted || audio !== this.audio || this.current?.id !== segment.id) return;
+              if (
+                this.abort.signal.aborted ||
+                audio !== this.audio ||
+                this.current?.id !== segment.id
+              )
+                return;
               this.audioStage('play-resolved');
             })
             .catch(() => {
-              if (this.abort.signal.aborted || audio !== this.audio || !this.current || this.current.id !== segment.id) return;
+              if (
+                this.abort.signal.aborted ||
+                audio !== this.audio ||
+                !this.current ||
+                this.current.id !== segment.id
+              )
+                return;
               this.audioBlocked = true;
               this.userPaused = true;
               this.pauseVideo();
-              this.caption.textContent = t(
-                locale,
-                '请点击视频一次，允许播放译音',
-              );
+              this.caption.textContent = t(locale, '请点击视频一次，允许播放译音');
               this.clock();
             })
             .finally(() => {
@@ -654,8 +719,7 @@ export default defineContentScript({
         this.abort.abort();
         clearInterval(this.timer);
         clearInterval(this.tickTimer);
-        if (this.frame !== undefined)
-          this.video.cancelVideoFrameCallback?.(this.frame);
+        if (this.frame !== undefined) this.video.cancelVideoFrameCallback?.(this.frame);
         this.clearAudio(true, reason);
         this.releaseAudio(this.audio);
         this.host.remove();
@@ -692,8 +756,7 @@ export default defineContentScript({
         const allowed =
           !/(^|\.)youtube\.com$/.test(location.hostname) ||
           youtubePlayer(inspectVideos(true))[0]?.id === message.id;
-        const v =
-          allowed && pageVideos().find((v) => v.dataset.qvdId === message.id);
+        const v = allowed && pageVideos().find((v) => v.dataset.qvdId === message.id);
         if (v) {
           v.scrollIntoView({ behavior: 'smooth', block: 'center' });
           const outline = v.style.outline;
@@ -716,7 +779,12 @@ export default defineContentScript({
           (v) => selected === s.candidate.id && v.dataset.qvdId === selected,
         );
         if (video) player = new Player(video, s);
-        respond({ ok: Boolean(video), position: video?.currentTime, rate: video?.playbackRate, userPaused: player?.userPaused });
+        respond({
+          ok: Boolean(video),
+          position: video?.currentTime,
+          rate: video?.playbackRate,
+          userPaused: player?.userPaused,
+        });
         return;
       }
       if (message.type === 'player:language') {
@@ -766,14 +834,17 @@ export default defineContentScript({
         return;
       }
       if (message.type === 'player:segment') {
-        const accepted = player?.add(message.segment, message.epoch, message.languageVersion) ?? false;
+        const accepted =
+          player?.add(message.segment, message.epoch, message.languageVersion) ?? false;
         respond({ ok: accepted, terminals: accepted ? player?.takeTerminals() : [] });
         return;
       }
       if (message.type === 'player:mix') {
-        if ((message.sessionId && player?.session.id !== message.sessionId) ||
-            (message.languageVersion !== undefined &&
-              (player?.session.languageVersion ?? 0) !== message.languageVersion)) {
+        if (
+          (message.sessionId && player?.session.id !== message.sessionId) ||
+          (message.languageVersion !== undefined &&
+            (player?.session.languageVersion ?? 0) !== message.languageVersion)
+        ) {
           respond({ ok: false });
           return;
         }

@@ -18,9 +18,7 @@ it('keeps language/voice isolated, persists silent coverage and clears data', as
   const cache = new SegmentCache(10000, crypto.randomUUID());
   await cache.put('v', 'zh', 'Tina', { start: 0, end: 30 }, [segment('a')]);
   await cache.put('v', 'en', 'Tina', { start: 30, end: 60 }, []);
-  expect((await cache.load('v', 'zh', 'Tina')).ranges).toEqual([
-    { start: 0, end: 30 },
-  ]);
+  expect((await cache.load('v', 'zh', 'Tina')).ranges).toEqual([{ start: 0, end: 30 }]);
   expect((await cache.load('v', 'en', 'Tina')).segments).toEqual([]);
   await cache.clear();
   expect(await cache.size()).toBe(0);
@@ -30,9 +28,7 @@ it('evicts least-recently-used windows rather than growing without a bound', asy
   await cache.put('v', 'zh', 'Tina', { start: 0, end: 30 }, [segment('a')]);
   await cache.put('v', 'zh', 'Tina', { start: 30, end: 60 }, [segment('b')]);
   expect(await cache.size()).toBeLessThanOrEqual(1700);
-  expect((await cache.load('v', 'zh', 'Tina')).ranges).toEqual([
-    { start: 30, end: 60 },
-  ]);
+  expect((await cache.load('v', 'zh', 'Tina')).ranges).toEqual([{ start: 30, end: 60 }]);
 });
 it('keeps the byte budget when two translation lanes commit concurrently', async () => {
   const cache = new SegmentCache(6000, crypto.randomUUID());

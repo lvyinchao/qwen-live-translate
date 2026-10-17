@@ -18,7 +18,4 @@ for (const file of ['bufbuild-Apache-2.0.txt', 'wxt-MIT.txt'])
   await fs.access('public/licenses/' + file);
 await fs.copyFile('LICENSE', 'public/LICENSE');
 await fs.copyFile('PRIVACY.md', 'public/PRIVACY.md');
-await fs.copyFile(
-  mediaSource.archive,
-  `public/licenses/${mediaSource.filename}`,
-);
+await fs.copyFile(mediaSource.archive, `public/licenses/${mediaSource.filename}`);

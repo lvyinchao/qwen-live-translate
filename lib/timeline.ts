@@ -7,24 +7,18 @@ export interface Coverage {
 export function mergeCoverage(ranges: Coverage[]): Coverage[] {
   const out: Coverage[] = [];
   for (const range of [...ranges].sort((a, b) => a.start - b.start)) {
-    if (
-      !Number.isFinite(range.start) ||
-      !Number.isFinite(range.end) ||
-      range.end <= range.start
-    )
+    if (!Number.isFinite(range.start) || !Number.isFinite(range.end) || range.end <= range.start)
       continue;
     const last = out.at(-1);
-    if (last && range.start <= last.end + 0.02)
-      last.end = Math.max(last.end, range.end);
+    if (last && range.start <= last.end + 0.02) last.end = Math.max(last.end, range.end);
     else out.push({ ...range });
   }
   return out;
 }
 export function coverageEnd(ranges: Coverage[], position: number): number {
   return (
-    mergeCoverage(ranges).find(
-      (r) => r.start <= position + 0.03 && r.end > position,
-    )?.end ?? position
+    mergeCoverage(ranges).find((r) => r.start <= position + 0.03 && r.end > position)?.end ??
+    position
   );
 }
 export function planDub(
@@ -62,7 +56,6 @@ export function clockDiscontinuity(
 ): boolean {
   return (
     current < previous - 0.3 ||
-    current - previous >
-      Math.max(2, Math.max(0, elapsedSeconds) * Math.max(1, rate) + 0.5)
+    current - previous > Math.max(2, Math.max(0, elapsedSeconds) * Math.max(1, rate) + 0.5)
   );
 }

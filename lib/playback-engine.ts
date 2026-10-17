@@ -5,11 +5,12 @@ import { silenceBoundary } from './audio';
 import { coverageEnd, mergeCoverage, type Coverage } from './timeline';
 import { abortError, delay, translateWindow } from './qwen';
 import { endpoint } from './security';
+import { isRetryableProviderError } from './errors';
+import type { BackgroundCall, DecodeRequest } from './messages';
 import { bufferPolicy, preparationStatus } from './preparation';
 import {
   messageError,
   VOICE,
-  type AudioSource,
   type Envelope,
   type PlaybackSession,
   type Settings,
@@ -19,7 +20,7 @@ import {
 export interface EngineDependencies {
   cache: Pick<SegmentCache, 'load' | 'put'>;
   files: Pick<LocalFiles, 'capture' | 'flush' | 'finish' | 'failed'>;
-  background: <T = unknown>(type: string, parameters?: Record<string, unknown>) => Promise<T>;
+  background: BackgroundCall;
   createWorker: () => Worker;
   closeWorker?: (worker: Worker) => Promise<void>;
   translate?: typeof translateWindow;
@@ -78,13 +79,19 @@ export class PlaybackEngine {
   private lastVideoRate = 1;
   private stage?: { stats: ReturnType<typeof diagnosticsFor>; startedAt: number };
   constructor(private readonly dependencies: EngineDependencies) {}
-  private get now() { return this.dependencies.now ?? Date.now; }
-  private get sleep() { return this.dependencies.sleep ?? delay; }
-  private get files() { return this.dependencies.files; }
-  private get cache() { return this.dependencies.cache; }
-  private bg<T = unknown>(type: string, parameters: Record<string, unknown> = {}) {
-    return this.dependencies.background<T>(type, parameters);
+  private get now() {
+    return this.dependencies.now ?? Date.now;
   }
+  private get sleep() {
+    return this.dependencies.sleep ?? delay;
+  }
+  private get files() {
+    return this.dependencies.files;
+  }
+  private get cache() {
+    return this.dependencies.cache;
+  }
+  private bg: BackgroundCall = (type, ...args) => this.dependencies.background(type, ...args);
   private auth<T>(operation: () => Promise<T>): Promise<T> {
     const next = this.authQueue.then(operation);
     this.authQueue = next.catch(() => {});
@@ -96,7 +103,11 @@ export class PlaybackEngine {
     return next;
   }
   private active(epoch: Epoch) {
-    return !epoch.signal.aborted && this.generation === epoch.generation && this.session === epoch.session;
+    return (
+      !epoch.signal.aborted &&
+      this.generation === epoch.generation &&
+      this.session === epoch.session
+    );
   }
   private cancel() {
     this.generation++;
@@ -118,8 +129,9 @@ export class PlaybackEngine {
   }
   private checkpoint(context?: ArchiveContext) {
     // LocalFiles owns its IO queue. A slow export must never hold the next task open.
-    void this.files.flush()
-      .then(() => context ? this.files.finish(context) : undefined)
+    void this.files
+      .flush()
+      .then(() => (context ? this.files.finish(context) : undefined))
       .catch((error) => this.files.failed(error));
   }
   private resetPlayback() {
@@ -166,8 +178,12 @@ export class PlaybackEngine {
     return this.initializeEpoch(session, session.position, true);
   }
   async switchLanguage(next: PlaybackSession, userPaused: boolean) {
-    if (!this.session || this.session.id !== next.id ||
-        (next.languageVersion ?? 0) <= (this.session.languageVersion ?? 0)) return;
+    if (
+      !this.session ||
+      this.session.id !== next.id ||
+      (next.languageVersion ?? 0) <= (this.session.languageVersion ?? 0)
+    )
+      return;
     const previous = archiveContext(this.session);
     this.cancel();
     this.resetPlayback();
@@ -199,7 +215,12 @@ export class PlaybackEngine {
     this.knownRevisions.add(`${session.languageVersion ?? 0}:${session.epoch}`);
     this.startPosition = session.position;
     this.abort = new AbortController();
-    const epoch: Epoch = { generation: this.generation, session, settings: this.settings!, signal: this.abort.signal };
+    const epoch: Epoch = {
+      generation: this.generation,
+      session,
+      settings: this.settings!,
+      signal: this.abort.signal,
+    };
     this.updatePreparation();
     return this.queue(async () => {
       if (!this.active(epoch)) return;
@@ -219,8 +240,14 @@ export class PlaybackEngine {
       await this.deliverAvailable(epoch);
       if (!this.active(epoch)) return;
       // Cache hits can also be exported, without making disk IO part of readiness.
-      void this.files.capture(archiveContext(session), session.position,
-        coverageEnd(this.ranges, session.position), cached.segments, false)
+      void this.files
+        .capture(
+          archiveContext(session),
+          session.position,
+          coverageEnd(this.ranges, session.position),
+          cached.segments,
+          false,
+        )
         .catch((error) => this.files.failed(error));
       void this.produce(epoch).catch((error) => this.fail(epoch, error));
     }).catch(async (error) => {
@@ -231,7 +258,12 @@ export class PlaybackEngine {
   }
   private currentEpoch(): Epoch | undefined {
     return this.session && this.settings && this.abort
-      ? { generation: this.generation, session: this.session, settings: this.settings, signal: this.abort.signal }
+      ? {
+          generation: this.generation,
+          session: this.session,
+          settings: this.settings,
+          signal: this.abort.signal,
+        }
       : undefined;
   }
   private async publish(force = false) {
@@ -242,25 +274,41 @@ export class PlaybackEngine {
     this.lastPublish = now;
     this.updatePreparation();
     session.stateVersion = (session.stateVersion ?? 0) + 1;
-    session.segments = this.segments.map(({ audio: _, audioDuration: __, mediaId: ___,
-      language: ____, voice: _____, ...text }) => text);
+    session.segments = this.segments.map(
+      ({ audio: _, audioDuration: __, mediaId: ___, language: ____, voice: _____, ...text }) =>
+        text,
+    );
     await this.bg('engine:state', { session: { ...session, segments: [...session.segments] } });
   }
   private updatePreparation() {
     if (!this.session) return;
     this.lastVideoRate = this.session.rate;
-    const wall = this.diagnostics.preparationWallSeconds +
-      (this.stage?.stats === this.diagnostics ? Math.max(0, this.now() - this.stage.startedAt) / 1000 : 0);
-    this.session.preparation = preparationStatus(this.session.rate, this.diagnostics.inputSeconds,
-      this.diagnostics.preparedSeconds, wall);
+    const wall =
+      this.diagnostics.preparationWallSeconds +
+      (this.stage?.stats === this.diagnostics
+        ? Math.max(0, this.now() - this.stage.startedAt) / 1000
+        : 0);
+    this.session.preparation = preparationStatus(
+      this.session.rate,
+      this.diagnostics.inputSeconds,
+      this.diagnostics.preparedSeconds,
+      wall,
+    );
   }
   preparation() {
     this.updatePreparation();
     if (this.session?.preparation) return this.session.preparation;
-    const wall = this.diagnostics.preparationWallSeconds +
-      (this.stage?.stats === this.diagnostics ? Math.max(0, this.now() - this.stage.startedAt) / 1000 : 0);
-    return preparationStatus(this.lastVideoRate, this.diagnostics.inputSeconds,
-      this.diagnostics.preparedSeconds, wall);
+    const wall =
+      this.diagnostics.preparationWallSeconds +
+      (this.stage?.stats === this.diagnostics
+        ? Math.max(0, this.now() - this.stage.startedAt) / 1000
+        : 0);
+    return preparationStatus(
+      this.lastVideoRate,
+      this.diagnostics.inputSeconds,
+      this.diagnostics.preparedSeconds,
+      wall,
+    );
   }
   private async fail(epoch: Epoch, error: unknown) {
     if (!this.active(epoch)) return;
@@ -273,7 +321,7 @@ export class PlaybackEngine {
   }
   private async sendSegment(epoch: Epoch, segment: TranslationSegment) {
     if (!this.active(epoch)) return false;
-    const accepted = await this.bg<boolean>('engine:segment', {
+    const accepted = await this.bg('engine:segment', {
       sessionId: epoch.session.id,
       epoch: epoch.session.epoch,
       languageVersion: epoch.session.languageVersion ?? 0,
@@ -296,24 +344,31 @@ export class PlaybackEngine {
       while (delivery.dirty && this.active(epoch)) {
         delivery.dirty = false;
         const position = epoch.session.position;
-        const end = Math.min(coverageEnd(this.ranges, position),
+        const end = Math.min(
+          coverageEnd(this.ranges, position),
           position + bufferPolicy(epoch.session.rate).maxAheadSeconds,
-          epoch.session.candidate.duration);
-        const needed = this.segments.filter((segment) =>
-          segment.end > position && segment.start < end && !this.delivered.has(segment.id));
+          epoch.session.candidate.duration,
+        );
+        const needed = this.segments.filter(
+          (segment) =>
+            segment.end > position && segment.start < end && !this.delivered.has(segment.id),
+        );
         for (const segment of needed) {
-          if (!await this.sendSegment(epoch, segment)) return;
+          if (!(await this.sendSegment(epoch, segment))) return;
         }
         if (!this.active(epoch)) return;
         // A progress callback may have added another utterance while an ACK was pending.
-        if (this.segments.some((segment) => segment.end > position && segment.start < end &&
-            !this.delivered.has(segment.id))) {
+        if (
+          this.segments.some(
+            (segment) =>
+              segment.end > position && segment.start < end && !this.delivered.has(segment.id),
+          )
+        ) {
           delivery.dirty = true;
           continue;
         }
-        if (end > position) this.deliveredRanges = mergeCoverage([
-          ...this.deliveredRanges, { start: position, end },
-        ]);
+        if (end > position)
+          this.deliveredRanges = mergeCoverage([...this.deliveredRanges, { start: position, end }]);
         const previousPhase = epoch.session.phase;
         this.updateReadiness();
         await this.publish(previousPhase !== epoch.session.phase);
@@ -338,7 +393,11 @@ export class PlaybackEngine {
       session.phase = this.userPaused ? 'paused' : 'playing';
       if (!this.diagnostics.firstReadyMs)
         this.diagnostics.firstReadyMs = Math.max(1, this.now() - this.diagnostics.startedAt);
-    } else if (!this.rebuffering && ready < Math.max(0.25, policy.videoRate * 0.35) && tail > 0.15) {
+    } else if (
+      !this.rebuffering &&
+      ready < Math.max(0.25, policy.videoRate * 0.35) &&
+      tail > 0.15
+    ) {
       this.rebuffering = true;
       session.phase = 'buffering';
       this.diagnostics.bufferCount++;
@@ -346,7 +405,7 @@ export class PlaybackEngine {
     this.updatePreparation();
   }
   private async decode(start: number, end: number, epoch: Epoch): Promise<Float32Array> {
-    const source = await this.bg<AudioSource | undefined>('media:refresh', {
+    const source = await this.bg('media:refresh', {
       sessionId: epoch.session.id,
       epoch: epoch.session.epoch,
       languageVersion: epoch.session.languageVersion ?? 0,
@@ -355,11 +414,15 @@ export class PlaybackEngine {
     if (!this.active(epoch)) throw abortError();
     if (source) epoch.session.candidate.source = source;
     if (!source) throw new Error('没有可预取的音轨');
-    await this.bg('media:headers', { source, sessionId: epoch.session.id, epoch: epoch.session.epoch,
-      languageVersion: epoch.session.languageVersion ?? 0 });
+    await this.bg('media:headers', {
+      source,
+      sessionId: epoch.session.id,
+      epoch: epoch.session.epoch,
+      languageVersion: epoch.session.languageVersion ?? 0,
+    });
     epoch.signal.throwIfAborted();
     if (!this.active(epoch)) throw abortError();
-    const worker = this.worker ??= this.dependencies.createWorker();
+    const worker = (this.worker ??= this.dependencies.createWorker());
     const id = String(++this.decodeSerial);
     return new Promise((resolve, reject) => {
       const cleanup = () => {
@@ -367,25 +430,41 @@ export class PlaybackEngine {
         epoch.signal.removeEventListener('abort', abort);
         clearTimeout(timer);
       };
-      const abort = () => { cleanup(); reject(abortError()); };
+      const abort = () => {
+        cleanup();
+        reject(abortError());
+      };
       const listener = (event: MessageEvent) => {
         if (event.data.id !== id) return;
         cleanup();
         if (!this.active(epoch)) return reject(abortError());
         if (event.data.ok) resolve(new Float32Array(event.data.samples));
         else {
-          if (event.data.diagnostics) this.diagnostics.events.push({
-            type: 'decode-error', at: this.now(), windows: event.data.diagnostics,
-          });
+          if (event.data.diagnostics)
+            this.diagnostics.events.push({
+              type: 'decode-error',
+              at: this.now(),
+              windows: event.data.diagnostics,
+            });
           reject(new Error(event.data.error));
         }
       };
-      const timer = setTimeout(() => { cleanup(); reject(new Error('音轨读取超时，请刷新视频后重新扫描')); }, 60000);
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error('音轨读取超时，请刷新视频后重新扫描'));
+      }, 60000);
       worker.addEventListener('message', listener);
       epoch.signal.addEventListener('abort', abort, { once: true });
       if (epoch.signal.aborted) return abort();
-      worker.postMessage({ id, type: 'decode', source, start, end,
-        expectedDuration: epoch.session.candidate.duration });
+      const request: DecodeRequest = {
+        id,
+        type: 'decode',
+        source,
+        start,
+        end,
+        expectedDuration: epoch.session.candidate.duration,
+      };
+      worker.postMessage(request);
     });
   }
   private addCoverage(range: Coverage) {
@@ -402,21 +481,33 @@ export class PlaybackEngine {
         return;
       }
       const existing = coverageEnd(this.ranges, cursor);
-      if (existing > cursor + 0.02) { cursor = existing; continue; }
-      while (this.active(epoch) && cursor - session.position >= bufferPolicy(session.rate).maintainTargetSeconds)
+      if (existing > cursor + 0.02) {
+        cursor = existing;
+        continue;
+      }
+      while (
+        this.active(epoch) &&
+        cursor - session.position >= bufferPolicy(session.rate).maintainTargetSeconds
+      )
         await this.sleep(250, epoch.signal);
       if (!this.active(epoch)) return;
       const first = cursor === this.startPosition;
       const size = first ? bufferPolicy(session.rate).startupTargetSeconds : 60;
-      const nextCachedStart = this.ranges.find((range) => range.start > cursor + 0.02)?.start ?? Infinity;
-      const maximumEnd = Math.min(cursor + size, session.position + 90,
-        session.candidate.duration, nextCachedStart);
+      const nextCachedStart =
+        this.ranges.find((range) => range.start > cursor + 0.02)?.start ?? Infinity;
+      const maximumEnd = Math.min(
+        cursor + size,
+        session.position + 90,
+        session.candidate.duration,
+        nextCachedStart,
+      );
       const stage = { stats: this.diagnostics, startedAt: this.now() };
       this.stage = stage;
       try {
         const decoded = await this.decode(cursor, maximumEnd, epoch);
         if (!this.active(epoch)) return;
-        const cut = maximumEnd < session.candidate.duration ? silenceBoundary(decoded, size) : decoded.length;
+        const cut =
+          maximumEnd < session.candidate.duration ? silenceBoundary(decoded, size) : decoded.length;
         const samples = first ? decoded : decoded.slice(0, Math.max(16000, cut));
         const end = cursor + samples.length / 16000;
         if (end <= cursor) throw new Error('音轨解码没有取得有效音频');
@@ -431,7 +522,12 @@ export class PlaybackEngine {
       }
     }
   }
-  private async translatePart(epoch: Epoch, samples: Float32Array, windowStart: number, windowEnd: number) {
+  private async translatePart(
+    epoch: Epoch,
+    samples: Float32Array,
+    windowStart: number,
+    windowEnd: number,
+  ) {
     const session = epoch.session;
     const context = archiveContext(session);
     let lastInput = windowStart;
@@ -441,36 +537,51 @@ export class PlaybackEngine {
       const connection = crypto.randomUUID();
       let providerSession = connection;
       const task = (this.dependencies.translate ?? translateWindow)({
-        url: endpoint(epoch.settings), mediaId: session.candidate.mediaId, language: session.language,
-        start: attemptStart, samples: samples.subarray(Math.round((attemptStart - windowStart) * 16000)),
+        url: endpoint(epoch.settings),
+        mediaId: session.candidate.mediaId,
+        language: session.language,
+        start: attemptStart,
+        samples: samples.subarray(Math.round((attemptStart - windowStart) * 16000)),
         signal: epoch.signal,
-        beforeConnect: () => this.auth(async () => {
-          epoch.signal.throwIfAborted();
-          this.connections.add(connection);
-          try {
-            await this.bg('auth:install', { sessionId: session.id, epoch: session.epoch,
-              languageVersion: session.languageVersion ?? 0 });
-          } catch (error) { this.connections.delete(connection); throw error; }
-        }),
-        afterClose: () => this.auth(async () => {
-          this.connections.delete(connection);
-          if (!this.connections.size) await this.bg('auth:remove');
-        }),
+        beforeConnect: () =>
+          this.auth(async () => {
+            epoch.signal.throwIfAborted();
+            this.connections.add(connection);
+            try {
+              await this.bg('auth:install', {
+                sessionId: session.id,
+                epoch: session.epoch,
+                languageVersion: session.languageVersion ?? 0,
+              });
+            } catch (error) {
+              this.connections.delete(connection);
+              throw error;
+            }
+          }),
+        afterClose: () =>
+          this.auth(async () => {
+            this.connections.delete(connection);
+            if (!this.connections.size) await this.bg('auth:remove');
+          }),
         onSegment: (segment) => {
           if (!this.active(epoch)) return;
           this.segments = this.segments.filter((old) => !sameArchiveUtterance(old, segment));
           this.segments.push(segment);
           this.segments.sort((a, b) => a.start - b.start);
           this.diagnostics.outputSeconds += segment.audioDuration;
-          void this.files.capture(context, windowStart, windowEnd, [segment])
+          void this.files
+            .capture(context, windowStart, windowEnd, [segment])
             .catch((error) => this.files.failed(error));
         },
         onEvent: (event) => {
           if (!this.active(epoch)) return;
           if (event.type === 'session.created') providerSession = event.session?.id ?? connection;
           if (event.type === 'session.updated' && event.session?.enable_voice_clone === true)
-            this.recordDiagnostic({ type: 'provider:voice-confirmed', providerSession,
-              frequency: event.session.voice_clone_options?.frequency });
+            this.recordDiagnostic({
+              type: 'provider:voice-confirmed',
+              providerSession,
+              frequency: event.session.voice_clone_options?.frequency,
+            });
           if (event.type === 'response.done' && event.response?.usage)
             this.diagnostics.usage.push({ ...event.response.usage, providerSession });
         },
@@ -494,24 +605,39 @@ export class PlaybackEngine {
         await task;
         break;
       } catch (error) {
-        if (!this.active(epoch) || attempt >= 2 || !/提前断开|连接失败|限流|超时/.test(messageError(error))) throw error;
-        this.recordDiagnostic({ type: 'retry', at: this.now(), windowStart,
-          attempt: attempt + 1, error: messageError(error) });
+        if (!this.active(epoch) || attempt >= 2 || !isRetryableProviderError(error)) throw error;
+        this.recordDiagnostic({
+          type: 'retry',
+          at: this.now(),
+          windowStart,
+          attempt: attempt + 1,
+          error: messageError(error),
+        });
         attemptStart = coverageEnd(this.ranges, windowStart);
         lastInput = attemptStart;
         if (attemptStart >= windowEnd - 0.02) break;
         await this.sleep(1000 * 2 ** attempt, epoch.signal);
-      } finally { this.providers.delete(task); }
+      } finally {
+        this.providers.delete(task);
+      }
     }
     if (!this.active(epoch)) return;
     this.addCoverage({ start: windowStart, end: windowEnd });
-    const completed = this.segments.filter((segment) => segment.start >= windowStart - 0.03 && segment.end <= windowEnd + 0.03);
+    const completed = this.segments.filter(
+      (segment) => segment.start >= windowStart - 0.03 && segment.end <= windowEnd + 0.03,
+    );
     await this.deliverAvailable(epoch);
     if (!this.active(epoch)) return;
-    await this.cache.put(this.cacheIdentity(session), session.language, VOICE,
-      { start: windowStart, end: windowEnd }, completed);
+    await this.cache.put(
+      this.cacheIdentity(session),
+      session.language,
+      VOICE,
+      { start: windowStart, end: windowEnd },
+      completed,
+    );
     if (!this.active(epoch)) return;
-    void this.files.capture(context, windowStart, windowEnd, completed, true)
+    void this.files
+      .capture(context, windowStart, windowEnd, completed, true)
       .catch((error) => this.files.failed(error));
     await this.publish(true);
   }
@@ -526,13 +652,32 @@ export class PlaybackEngine {
     }
   }
   recordTerminals(message: Envelope) {
-    if (!this.session || message.sessionId !== this.session.id || !Array.isArray(message.events)) return false;
+    if (!this.session || message.sessionId !== this.session.id || !Array.isArray(message.events))
+      return false;
     for (const entry of message.events as Envelope[]) {
-      if (entry?.sessionId !== this.session.id || entry.type !== 'player:metric' || entry.kind !== 'terminal' ||
-          !this.knownRevisions.has(`${entry.languageVersion ?? 0}:${entry.epoch}`) ||
-          typeof entry.segmentId !== 'string' || !Number.isFinite(entry.remaining) || Number(entry.remaining) < 0 ||
-          !Number.isFinite(entry.sourceTime) || !Number.isFinite(entry.audioTime) ||
-          !['natural', 'timeline-cut', 'overlap-cut', 'seek-stop', 'language-switch', 'stop', 'error', 'video-ended', 'player-lost'].includes(String(entry.reason))) continue;
+      if (
+        entry?.sessionId !== this.session.id ||
+        entry.type !== 'player:metric' ||
+        entry.kind !== 'terminal' ||
+        !this.knownRevisions.has(`${entry.languageVersion ?? 0}:${entry.epoch}`) ||
+        typeof entry.segmentId !== 'string' ||
+        !Number.isFinite(entry.remaining) ||
+        Number(entry.remaining) < 0 ||
+        !Number.isFinite(entry.sourceTime) ||
+        !Number.isFinite(entry.audioTime) ||
+        ![
+          'natural',
+          'timeline-cut',
+          'overlap-cut',
+          'seek-stop',
+          'language-switch',
+          'stop',
+          'error',
+          'video-ended',
+          'player-lost',
+        ].includes(String(entry.reason))
+      )
+        continue;
       const key = `${entry.languageVersion ?? 0}:${entry.epoch}:${entry.segmentId}`;
       if (this.terminalKeys.has(key)) continue;
       this.terminalKeys.add(key);
@@ -544,13 +689,22 @@ export class PlaybackEngine {
   async clock(message: Envelope) {
     const session = this.session;
     if (message.type === 'player:metric' && message.kind === 'terminal') {
-      this.recordTerminals({ type: 'engine:terminals', sessionId: message.sessionId, events: [message] });
+      this.recordTerminals({
+        type: 'engine:terminals',
+        sessionId: message.sessionId,
+        events: [message],
+      });
       return;
     }
-    if (!session || message.sessionId !== session.id ||
-        (message.languageVersion ?? 0) !== (session.languageVersion ?? 0)) return;
+    if (
+      !session ||
+      message.sessionId !== session.id ||
+      (message.languageVersion ?? 0) !== (session.languageVersion ?? 0)
+    )
+      return;
     if (message.type === 'player:seek') {
-      if (Number(message.epoch) < this.languageEpoch || Number(message.epoch) > session.epoch) return;
+      if (Number(message.epoch) < this.languageEpoch || Number(message.epoch) > session.epoch)
+        return;
       const position = Number(message.position);
       if (!Number.isFinite(position)) return;
       this.userPaused = Boolean(message.paused);
@@ -583,9 +737,11 @@ export class PlaybackEngine {
       await this.publish(true);
       return;
     }
-    if (!this.rebuffering && session.phase !== 'error') session.phase = this.userPaused ? 'paused' : 'playing';
+    if (!this.rebuffering && session.phase !== 'error')
+      session.phase = this.userPaused ? 'paused' : 'playing';
     const epoch = this.currentEpoch();
-    if (epoch && this.active(epoch)) await this.deliverAvailable(epoch).catch((error) => this.fail(epoch, error));
+    if (epoch && this.active(epoch))
+      await this.deliverAvailable(epoch).catch((error) => this.fail(epoch, error));
     this.updateReadiness();
     await this.publish();
   }

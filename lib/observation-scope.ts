@@ -3,9 +3,16 @@
 export class ObservationScope {
   private leases = new Map<number, number>();
   private revisions = new Map<number, number>();
-  revision(tabId: number) { return this.revisions.get(tabId) ?? 0; }
-  invalidate(tabId: number) { this.revisions.set(tabId, this.revision(tabId) + 1); }
-  constructor(private now = () => Date.now(), private ttl = 15000) {}
+  revision(tabId: number) {
+    return this.revisions.get(tabId) ?? 0;
+  }
+  invalidate(tabId: number) {
+    this.revisions.set(tabId, this.revision(tabId) + 1);
+  }
+  constructor(
+    private now = () => Date.now(),
+    private ttl = 15000,
+  ) {}
   watch(tabId: number) {
     if (Number.isInteger(tabId) && tabId >= 0) {
       const expiry = this.leases.get(tabId);
@@ -20,7 +27,10 @@ export class ObservationScope {
     if (this.leases.delete(tabId)) this.invalidate(tabId);
     return false;
   }
-  release(tabId: number) { this.leases.delete(tabId); this.invalidate(tabId); }
+  release(tabId: number) {
+    this.leases.delete(tabId);
+    this.invalidate(tabId);
+  }
   expired(): number[] {
     const ids = [...this.leases].filter(([, expiry]) => expiry <= this.now()).map(([id]) => id);
     for (const id of ids) this.release(id);

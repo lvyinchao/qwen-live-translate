@@ -33,19 +33,13 @@ execFileSync('ffmpeg', [
   media,
 ]);
 const bytes = await fs.readFile(media);
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: [
-      '--enable-unsafe-extension-debugging',
-      '--autoplay-policy=no-user-gesture-required',
-    ],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging', '--autoplay-policy=no-user-gesture-required'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -114,9 +108,7 @@ try {
       contentType: 'video/mp4',
       headers: {
         'accept-ranges': 'bytes',
-        ...(match
-          ? { 'content-range': `bytes ${start}-${end}/${bytes.length}` }
-          : {}),
+        ...(match ? { 'content-range': `bytes ${start}-${end}/${bytes.length}` } : {}),
       },
       body: bytes.subarray(start, end + 1),
     });
@@ -127,9 +119,7 @@ try {
   );
   const page = await context.newPage();
   await page.goto(fixture);
-  await page.waitForFunction(
-    () => Math.abs(document.querySelector('video').duration - 90) < 0.1,
-  );
+  await page.waitForFunction(() => Math.abs(document.querySelector('video').duration - 90) < 0.1);
   const tabId = await panel.evaluate(
     async (url) => (await chrome.tabs.query({ url }))[0].id,
     fixture,
@@ -203,30 +193,38 @@ try {
     dubVolume: 0.7,
     subtitles: false,
   });
-  const sourceClock = () => page.locator('video').evaluate((v) => ({
-    position: v.currentTime, at: performance.now(), rate: v.playbackRate,
-  }));
+  const sourceClock = () =>
+    page.locator('video').evaluate((v) => ({
+      position: v.currentTime,
+      at: performance.now(),
+      rate: v.playbackRate,
+    }));
   const before = await sourceClock();
   await panel.locator('#language').selectOption('en');
   const afterAction = await sourceClock();
-  let active = await poll(async () => {
+  const active = await poll(async () => {
     const s = await call('session:get');
-    return (
-      s?.language === 'en' && s.phase === 'playing' && s.segments.length && s
-    );
+    return s?.language === 'en' && s.phase === 'playing' && s.segments.length && s;
   }, 'English cache playback');
   const afterReady = await sourceClock();
   // A playing 1.5x source can legitimately advance while UI and cache messages
   // are processed. Bound real media-clock progress by elapsed time rather than
   // misclassifying a slow browser action as a seek after a fixed one-second gap.
-  for (const [previous, next] of [[before, afterAction], [afterAction, afterReady]]) {
+  for (const [previous, next] of [
+    [before, afterAction],
+    [afterAction, afterReady],
+  ]) {
     const elapsed = (next.at - previous.at) / 1000;
     const advance = next.position - previous.position;
-    assert.ok(advance >= -0.05 && advance <= elapsed * Math.max(previous.rate, next.rate) + 0.05,
-      `source clock jumped ${advance}s over ${elapsed}s at ${previous.rate}x/${next.rate}x`);
+    assert.ok(
+      advance >= -0.05 && advance <= elapsed * Math.max(previous.rate, next.rate) + 0.05,
+      `source clock jumped ${advance}s over ${elapsed}s at ${previous.rate}x/${next.rate}x`,
+    );
   }
-  assert.ok(active.position >= before.position - 0.05 && active.position <= afterReady.position + 0.05,
-    `switch position ${active.position} outside observed source interval ${before.position}–${afterReady.position}`);
+  assert.ok(
+    active.position >= before.position - 0.05 && active.position <= afterReady.position + 0.05,
+    `switch position ${active.position} outside observed source interval ${before.position}–${afterReady.position}`,
+  );
   report.activeSwitchClock = { before, afterAction, afterReady, readyPosition: active.position };
   assert.equal(active.rate, 1.5);
   assert.equal(active.originalVolume, 0.12);
@@ -245,8 +243,7 @@ try {
     let host;
     const walk = (n) => {
       if ((n.attributes ?? []).includes('data-qvd-overlay')) host = n;
-      for (const c of [...(n.children ?? []), ...(n.shadowRoots ?? [])])
-        walk(c);
+      for (const c of [...(n.children ?? []), ...(n.shadowRoots ?? [])]) walk(c);
     };
     walk(root);
     assert.ok(host);
@@ -277,16 +274,28 @@ try {
   assert.equal((await playerSnapshot()).hidden, true);
   const originalSwitch = panel.getByLabel('Show original-language subtitles', { exact: true });
   const targetSwitch = panel.getByLabel('Show target-language subtitles', { exact: true });
-  for (const [sourceSubtitles, targetSubtitles] of [[true,true],[false,true],[false,false],[true,false]]) {
+  for (const [sourceSubtitles, targetSubtitles] of [
+    [true, true],
+    [false, true],
+    [false, false],
+    [true, false],
+  ]) {
     await originalSwitch.setChecked(sourceSubtitles);
     await targetSwitch.setChecked(targetSubtitles);
     await poll(async () => {
-      const s = await call('session:get'), v = await playerSnapshot();
-      return s.sourceSubtitles === sourceSubtitles && s.targetSubtitles === targetSubtitles &&
-        v.sourceVisible === sourceSubtitles && v.targetVisible === targetSubtitles;
+      const s = await call('session:get'),
+        v = await playerSnapshot();
+      return (
+        s.sourceSubtitles === sourceSubtitles &&
+        s.targetSubtitles === targetSubtitles &&
+        v.sourceVisible === sourceSubtitles &&
+        v.targetVisible === targetSubtitles
+      );
     }, `subtitle switches ${sourceSubtitles}/${targetSubtitles}`);
   }
-  report.checks.push('Actual sidepanel switches immediately select original only, target only, both or neither in the running webpage, and engine progress preserves each choice');
+  report.checks.push(
+    'Actual sidepanel switches immediately select original only, target only, both or neither in the running webpage, and engine progress preserves each choice',
+  );
   // A response from the old language must fail both progress and audio checks.
   const old = { ...active, language: 'zh', epoch: active.epoch + 50 };
   await call('engine:state', { session: old });
@@ -310,10 +319,7 @@ try {
     'Delayed old-language state and segments are rejected, even with a misleading newer epoch; actual closed-shadow player stays on the selected language',
   );
   await page.locator('video').evaluate((v) => v.pause());
-  await poll(
-    async () => (await call('session:get')).phase === 'paused',
-    'user pause',
-  );
+  await poll(async () => (await call('session:get')).phase === 'paused', 'user pause');
   const pausedAt = await page.locator('video').evaluate((v) => v.currentTime);
   await panel.locator('#language').selectOption('ja');
   await poll(async () => {
@@ -323,14 +329,15 @@ try {
   await new Promise((r) => setTimeout(r, 400));
   assert.equal(await page.locator('video').evaluate((v) => v.paused), true);
   assert.ok(
-    Math.abs(
-      (await page.locator('video').evaluate((v) => v.currentTime)) - pausedAt,
-    ) < 0.05,
+    Math.abs((await page.locator('video').evaluate((v) => v.currentTime)) - pausedAt) < 0.05,
   );
   const captionChoice = await call('session:get');
   assert.equal(captionChoice.sourceSubtitles, true);
   assert.equal(captionChoice.targetSubtitles, false);
-  await poll(async () => { const v = await playerSnapshot(); return v.sourceVisible && !v.targetVisible; }, 'caption choice after target language switch');
+  await poll(async () => {
+    const v = await playerSnapshot();
+    return v.sourceVisible && !v.targetVisible;
+  }, 'caption choice after target language switch');
   const pausedSession = await call('session:get');
   await panel.evaluate(async (s) => {
     const replies = await Promise.all([
@@ -354,9 +361,7 @@ try {
   }, pausedSession);
   const afterSeekSwitch = await poll(async () => {
     const s = await call('session:get');
-    return (
-      s.language === 'zh' && s.phase === 'paused' && s.segments.length && s
-    );
+    return s.language === 'zh' && s.phase === 'paused' && s.segments.length && s;
   }, 'seek and language change collision');
   assert.ok(afterSeekSwitch.languageVersion > pausedSession.languageVersion);
   await call('engine:state', {
@@ -366,10 +371,7 @@ try {
       languageVersion: pausedSession.languageVersion,
     },
   });
-  assert.equal(
-    (await call('session:get')).languageVersion,
-    afterSeekSwitch.languageVersion,
-  );
+  assert.equal((await call('session:get')).languageVersion, afterSeekSwitch.languageVersion);
   report.checks.push(
     'A simultaneous seek and language switch accepts the new language revision even when a seek epoch is not yet published; older revisions cannot return after selecting the same language again',
   );
@@ -395,12 +397,20 @@ try {
   assert.equal(latest.sourceSubtitles, true);
   assert.equal(latest.targetSubtitles, false);
   await page.locator('video').evaluate((v) => v.parentElement.requestFullscreen());
-  await poll(async () => { const v = await playerSnapshot(); return v.sourceVisible && !v.targetVisible; }, 'independent captions in fullscreen');
+  await poll(async () => {
+    const v = await playerSnapshot();
+    return v.sourceVisible && !v.targetVisible;
+  }, 'independent captions in fullscreen');
   await originalSwitch.setChecked(false);
   await targetSwitch.setChecked(true);
-  await poll(async () => { const v = await playerSnapshot(); return !v.sourceVisible && v.targetVisible; }, 'change caption choice during fullscreen');
+  await poll(async () => {
+    const v = await playerSnapshot();
+    return !v.sourceVisible && v.targetVisible;
+  }, 'change caption choice during fullscreen');
   await page.evaluate(() => document.exitFullscreen());
-  report.checks.push('Original-only captions survive cached and rapid target-language changes; fullscreen keeps the choice and accepts an immediate change to target-only');
+  report.checks.push(
+    'Original-only captions survive cached and rapid target-language changes; fullscreen keeps the choice and accepts an immediate change to target-only',
+  );
   await panel.evaluate(
     (s) =>
       chrome.runtime.sendMessage({
@@ -431,7 +441,12 @@ try {
     if (s.language !== 'fr' || s.phase !== 'buffering' || s.segments.length) return false;
     const snapshot = await playerSnapshot();
     const nativePaused = await page.locator('video').evaluate((v) => v.paused);
-    return snapshot.src === null && snapshot.paused && !snapshot.caption.includes('TARGET-') && nativePaused;
+    return (
+      snapshot.src === null &&
+      snapshot.paused &&
+      !snapshot.caption.includes('TARGET-') &&
+      nativePaused
+    );
   }, 'uncached language clears the actual audio/captions and pauses the native video');
   const buffering = await playerSnapshot();
   assert.equal(buffering.src, null);
@@ -454,15 +469,10 @@ try {
   const second = await context.newPage();
   await second.goto(`chrome-extension://${id}/sidepanel.html`);
   await second.locator('#language:enabled').waitFor();
-  await second.waitForFunction(
-    () => document.querySelector('#language')?.value === 'en',
-  );
+  await second.waitForFunction(() => document.querySelector('#language')?.value === 'en');
   assert.equal(await second.locator('#language').isEnabled(), true);
   assert.equal((await call('settings:get')).autoSaveFiles, false);
-  assert.equal(
-    (await panel.evaluate(() => chrome.downloads.search({}))).length,
-    0,
-  );
+  assert.equal((await panel.evaluate(() => chrome.downloads.search({}))).length, 0);
   const stopping = await call('session:get');
   await panel.evaluate(async (s) => {
     const requests = [
@@ -482,8 +492,7 @@ try {
   assert.equal(await call('session:get'), null);
   assert.equal(await page.locator('[data-qvd-overlay]').count(), 0);
   assert.equal(
-    (await panel.evaluate(() => chrome.declarativeNetRequest.getSessionRules()))
-      .length,
+    (await panel.evaluate(() => chrome.declarativeNetRequest.getSessionRules())).length,
     0,
   );
   report.checks.push(
@@ -498,10 +507,8 @@ try {
     'Reopened panels show the active language; default file saving remains off with zero downloads; stop restores the pre-translation original sound settings',
   );
   const nativeUrl = 'https://www.bilibili.com/video/BV1QvdFixture/';
-  const audioUrl =
-    'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/1-1-30216.m4s';
-  const videoUrl =
-    'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/1_x1-1-100022.m4s';
+  const audioUrl = 'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/1-1-30216.m4s';
+  const videoUrl = 'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/1_x1-1-100022.m4s';
   await context.route(nativeUrl, (r) =>
     r.fulfill({
       contentType: 'text/html',
@@ -540,10 +547,7 @@ try {
     { audioUrl, videoUrl },
   );
   await new Promise((r) => setTimeout(r, 150));
-  assert.equal(
-    (await call('media:discover', { tabId: nativeId }))[0].source.url,
-    audioUrl,
-  );
+  assert.equal((await call('media:discover', { tabId: nativeId }))[0].source.url, audioUrl);
   report.checks.push(
     'Bilibili metadata/audio requests remain selected after a later video-only response; a legacy persisted video-only URL is ignored',
   );

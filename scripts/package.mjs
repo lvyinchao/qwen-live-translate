@@ -13,23 +13,17 @@ const zip = async (archive, cwd, entries) => {
   const walk = async (relative) => {
     const absolute = path.join(cwd, relative);
     const stat = await fs.lstat(absolute);
-    if (stat.isSymbolicLink())
-      throw new Error('Release archives must not contain symbolic links');
+    if (stat.isSymbolicLink()) throw new Error('Release archives must not contain symbolic links');
     if (stat.isDirectory()) {
-      if (relative)
-        files[relative.replaceAll(path.sep, '/') + '/'] = new Uint8Array();
-      for (const name of (await fs.readdir(absolute)).sort())
-        await walk(path.join(relative, name));
+      if (relative) files[relative.replaceAll(path.sep, '/') + '/'] = new Uint8Array();
+      for (const name of (await fs.readdir(absolute)).sort()) await walk(path.join(relative, name));
     } else {
       files[relative.replaceAll(path.sep, '/')] = await fs.readFile(absolute);
     }
   };
   for (const entry of entries) await walk(entry === '.' ? '' : entry);
   // The explicit ZIP implementation sets UTF-8 flags for Chinese names on every OS.
-  await fs.writeFile(
-    archive,
-    zipSync(files, { level: 6, mtime: new Date(1980, 0, 1) }),
-  );
+  await fs.writeFile(archive, zipSync(files, { level: 6, mtime: new Date(1980, 0, 1) }));
 };
 try {
   await fs.mkdir(output, { recursive: true });
@@ -43,10 +37,7 @@ try {
   // The installation ZIP is itself loadable after extraction. No nested root.
   await fs.cp(extension, install, { recursive: true });
   await fs.copyFile('docs/INSTALL.en.md', path.join(install, 'README.md'));
-  await fs.copyFile(
-    'docs/INSTALL.zh-CN.md',
-    path.join(install, 'README.zh-CN.md'),
-  );
+  await fs.copyFile('docs/INSTALL.zh-CN.md', path.join(install, 'README.zh-CN.md'));
   const chrome = path.join(output, `${name}-chrome.zip`);
   await zip(chrome, install, ['.']);
   const source = path.join(stage, name);
@@ -66,6 +57,9 @@ try {
     'tsconfig.json',
     'vitest.config.ts',
     'wxt.config.ts',
+    'eslint.config.js',
+    '.prettierrc.json',
+    '.prettierignore',
     '.gitignore',
     '.gitattributes',
     '.editorconfig',
@@ -87,12 +81,11 @@ try {
   // The smoke receipt is generated after packaging and published separately;
   // including an older receipt here would attest to a different source ZIP.
   for (const file of await fs.readdir(output))
-    if (file !== 'release-smoke-verification.json' &&
-      (file.endsWith('.json') || file === '真实验收记录.md'))
-      await fs.copyFile(
-        path.join(output, file),
-        path.join(source, 'outputs', file),
-      );
+    if (
+      file !== 'release-smoke-verification.json' &&
+      (file.endsWith('.json') || file === '真实验收记录.md')
+    )
+      await fs.copyFile(path.join(output, file), path.join(source, 'outputs', file));
   const sourceArchive = path.join(output, `${name}-source.zip`);
   await zip(sourceArchive, stage, [name]);
   const hashes = [];
@@ -103,10 +96,7 @@ try {
         .update(await fs.readFile(file))
         .digest('hex')}  ${path.basename(file)}`,
     );
-  await fs.writeFile(
-    path.join(output, 'SHA256SUMS.txt'),
-    hashes.join('\n') + '\n',
-  );
+  await fs.writeFile(path.join(output, 'SHA256SUMS.txt'), hashes.join('\n') + '\n');
   console.log(
     JSON.stringify({
       version,

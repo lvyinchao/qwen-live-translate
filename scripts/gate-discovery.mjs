@@ -6,16 +6,13 @@ import assert from 'node:assert/strict';
 const directory = await fs.mkdtemp(path.resolve('work/discovery-gate-'));
 const extension = path.join(directory, 'extension');
 await fs.cp('.output/chrome-mv3', extension, { recursive: true });
-const context = await chromium.launchPersistentContext(
-  path.join(directory, 'profile'),
-  {
-    env: isolatedTestEnv(),
-    channel: 'chromium',
-    headless: true,
-    ignoreDefaultArgs: ['--disable-extensions'],
-    args: ['--enable-unsafe-extension-debugging'],
-  },
-);
+const context = await chromium.launchPersistentContext(path.join(directory, 'profile'), {
+  env: isolatedTestEnv(),
+  channel: 'chromium',
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: ['--enable-unsafe-extension-debugging'],
+});
 const report = {
   at: new Date().toISOString(),
   scope:
@@ -66,8 +63,7 @@ try {
 
     'https://v.youku.com/v_show/id_qvd_fixture.html':
       '<video width="640" height="360" src="https://cdn.youku.com/movie.mp4?signature=retain"></video>',
-    'https://v.youku.com/v_show/id_qvd_late.html':
-      '<div>Delayed player fixture</div>',
+    'https://v.youku.com/v_show/id_qvd_late.html': '<div>Delayed player fixture</div>',
     'https://www.iqiyi.com/v_qvd_fixture.html':
       '<video width="640" height="360"></video><script>fetch("https://cdn.iqiyi.com/audio.m4a")</script>',
     'https://v.qq.com/x/cover/qvd-fixture.html':
@@ -141,18 +137,12 @@ try {
     assert.equal(attached.ok, true);
     await page.waitForTimeout(400);
     const overlays = (
-      await Promise.all(
-        page.frames().map((f) => f.locator('[data-qvd-overlay]').count()),
-      )
+      await Promise.all(page.frames().map((f) => f.locator('[data-qvd-overlay]').count()))
     ).reduce((a, b) => a + b, 0);
     assert.equal(overlays, 1);
     await panel.evaluate(
       async ({ tabId, c }) =>
-        chrome.tabs.sendMessage(
-          tabId,
-          { type: 'player:stop' },
-          { frameId: c.frameId },
-        ),
+        chrome.tabs.sendMessage(tabId, { type: 'player:stop' }, { frameId: c.frameId }),
       { tabId, c },
     );
     report.cases.push({
@@ -172,18 +162,13 @@ try {
   );
   await page.goto('https://v.youku.com/v_show/id_qvd_fixture.html');
   await page.evaluate(async () => {
-    const access = await navigator.requestMediaKeySystemAccess(
-      'org.w3.clearkey',
-      [
-        {
-          initDataTypes: ['keyids'],
-          audioCapabilities: [{ contentType: 'audio/mp4; codecs="mp4a.40.2"' }],
-        },
-      ],
-    );
-    await document
-      .querySelector('video')
-      .setMediaKeys(await access.createMediaKeys());
+    const access = await navigator.requestMediaKeySystemAccess('org.w3.clearkey', [
+      {
+        initDataTypes: ['keyids'],
+        audioCapabilities: [{ contentType: 'audio/mp4; codecs="mp4a.40.2"' }],
+      },
+    ]);
+    await document.querySelector('video').setMediaKeys(await access.createMediaKeys());
   });
   const tabId = await panel.evaluate(
     async () =>
@@ -212,14 +197,8 @@ try {
       )[0].id,
   );
   const streams = await call('media:discover', { tabId: streamTab });
-  assert.ok(
-    streams.some(
-      (c) => c.detectionOnly && c.detectedMedia?.[0]?.kind === 'file',
-    ),
-  );
-  assert.ok(
-    streams.every((c) => !c.source && c.sourceStatus === 'unsupported'),
-  );
+  assert.ok(streams.some((c) => c.detectionOnly && c.detectedMedia?.[0]?.kind === 'file'));
+  assert.ok(streams.every((c) => !c.source && c.sourceStatus === 'unsupported'));
   report.checks.push(
     'Network media remains discoverable without a DOM player, with an explicit unavailable-control status',
   );
@@ -258,10 +237,7 @@ try {
     document.body.append(v);
   });
   await panel.locator('.video-choice').waitFor({ timeout: 6500 });
-  assert.equal(
-    await panel.getByRole('button', { name: /compatib/i }).count(),
-    0,
-  );
+  assert.equal(await panel.getByRole('button', { name: /compatib/i }).count(), 0);
   report.checks.push(
     'An open panel discovers a delayed player automatically without a new network event or a manual rescan; no compatibility player entry remains',
   );
@@ -271,10 +247,7 @@ try {
   report.error = e.stack;
   throw e;
 } finally {
-  await fs.writeFile(
-    'outputs/discovery-verification.json',
-    JSON.stringify(report, null, 2),
-  );
+  await fs.writeFile('outputs/discovery-verification.json', JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
   await context.close();
   await fs.rm(directory, { recursive: true, force: true });

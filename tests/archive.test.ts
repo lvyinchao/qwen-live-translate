@@ -84,12 +84,12 @@ it('writes a standard ZIP with exact WAV bytes, source-timed bilingual scripts a
       speaker: 0,
       audioDuration: 0.01,
     });
-    expect(
-      execFileSync('unzip', ['-p', file, 'subtitles.srt']).toString(),
-    ).toContain('00:01:00,124 --> 00:01:03,456\n你好\nHello');
-    expect(
-      execFileSync('unzip', ['-p', file, transcript.segments[0].audioFile]),
-    ).toEqual(Buffer.from(wav([new Uint8Array(480)])));
+    expect(execFileSync('unzip', ['-p', file, 'subtitles.srt']).toString()).toContain(
+      '00:01:00,124 --> 00:01:03,456\n你好\nHello',
+    );
+    expect(execFileSync('unzip', ['-p', file, transcript.segments[0].audioFile])).toEqual(
+      Buffer.from(wav([new Uint8Array(480)])),
+    );
     const filename = await archiveFilename(batch);
     expect(filename.split('/')).toHaveLength(4);
     expect(filename.split('/').some((p) => p === '..')).toBe(false);
@@ -124,17 +124,13 @@ it('retains failed downloads across restart and deduplicates successful retries'
   expect(download).not.toHaveBeenCalled();
   await restarted.retry();
   await wait(
-    async () =>
-      (await restarted.status()).saved === 1 &&
-      !(await restarted.status()).saving,
+    async () => (await restarted.status()).saved === 1 && !(await restarted.status()).saving,
   );
   expect((await restarted.status()).pending).toBe(0);
   await restarted.capture(context, 60, 90, [segment], true);
   await restarted.finish(context);
   await wait(
-    async () =>
-      (await restarted.status()).pending === 0 &&
-      !(await restarted.status()).saving,
+    async () => (await restarted.status()).pending === 0 && !(await restarted.status()).saving,
   );
   expect(download).toHaveBeenCalledTimes(1);
 });
@@ -156,21 +152,13 @@ it('defaults to no file writes, stops new captures when disabled, and preserves 
   expect(disk.files.size).toBe(1);
   expect(download).not.toHaveBeenCalled();
   await files.finish(context, false);
-  await wait(
-    async () =>
-      (await files.status()).saved === 1 && !(await files.status()).saving,
-  );
+  await wait(async () => (await files.status()).saved === 1 && !(await files.status()).saving);
   expect(download).toHaveBeenCalledTimes(1);
   expect((await files.status()).staged).toBe(1);
 });
 it('does not revive queued capture or automatic merge work after an off/on toggle', async () => {
   const download = vi.fn(async () => 102);
-  const files = new LocalFiles(
-    download,
-    () => {},
-    crypto.randomUUID(),
-    new MemoryFiles(),
-  );
+  const files = new LocalFiles(download, () => {}, crypto.randomUUID(), new MemoryFiles());
   files.setAutoSave(true);
   const pending = files.capture(context, 60, 90, [segment]);
   files.setAutoSave(false);
@@ -212,10 +200,7 @@ it('cancels an automatic merge before download dispatch when saving is disabled 
   expect((await files.status()).error).toBeUndefined();
   expect((await files.status()).staged).toBe(1);
   await files.finish(context, false);
-  await wait(
-    async () =>
-      (await files.status()).saved === 1 && !(await files.status()).saving,
-  );
+  await wait(async () => (await files.status()).saved === 1 && !(await files.status()).saving);
   expect(download).toHaveBeenCalledTimes(1);
 });
 it('flushes completed utterances from unfinished windows and keeps updates arriving during a download', async () => {
@@ -227,12 +212,7 @@ it('flushes completed utterances from unfinished windows and keeps updates arriv
       });
     return 10;
   });
-  const files = new LocalFiles(
-    download,
-    () => {},
-    crypto.randomUUID(),
-    new MemoryFiles(),
-  );
+  const files = new LocalFiles(download, () => {}, crypto.randomUUID(), new MemoryFiles());
   files.setAutoSave(true);
   await files.capture(context, 60, 90, [segment]);
   expect(download).not.toHaveBeenCalled();
@@ -249,10 +229,7 @@ it('flushes completed utterances from unfinished windows and keeps updates arriv
   );
   await files.finish(context);
   release();
-  await wait(
-    async () =>
-      (await files.status()).pending === 0 && !(await files.status()).saving,
-  );
+  await wait(async () => (await files.status()).pending === 0 && !(await files.status()).saving);
   expect(download).toHaveBeenCalledTimes(2);
   expect(new Set(download.mock.calls.map((args) => args[1])).size).toBe(2);
 });

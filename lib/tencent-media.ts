@@ -21,14 +21,9 @@ export function tencentInfoEndpoint(value: string): boolean {
 export function tencentCdn(value: string): boolean {
   if (!safeMediaUrl(value, true)) return false;
   const host = new URL(value).hostname;
-  return ['qq.com', 'smtcdns.com'].some(
-    (d) => host === d || host.endsWith('.' + d),
-  );
+  return ['qq.com', 'smtcdns.com'].some((d) => host === d || host.endsWith('.' + d));
 }
-export function parseTencentMedia(
-  text: string,
-  pageUrl: string,
-): TencentMediaInfo | undefined {
+export function parseTencentMedia(text: string, pageUrl: string): TencentMediaInfo | undefined {
   if (text.length > 2 * 1024 ** 2) return;
   try {
     const page = new URL(pageUrl);
@@ -57,9 +52,7 @@ export function parseTencentMedia(
       playlist
         .split(/\r?\n/)
         .some(
-          (line) =>
-            line.startsWith('#EXT-X-KEY:') &&
-            !/^#EXT-X-KEY:METHOD=NONE(?:,|$)/.test(line),
+          (line) => line.startsWith('#EXT-X-KEY:') && !/^#EXT-X-KEY:METHOD=NONE(?:,|$)/.test(line),
         );
     for (const line of playlist.split(/\r?\n/)) {
       if (!line.trim() || line.startsWith('#')) continue;

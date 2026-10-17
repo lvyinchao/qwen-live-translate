@@ -43,13 +43,9 @@ it('stream-merges PCM once in source order without headers in the audio, truncat
   disk.files.set(parts[0]!.path, new Blob([new Uint8Array(wav([first]))]));
   disk.files.set(parts[1]!.path, new Blob([new Uint8Array(wav([second]))]));
   await mergeAudio(disk, 'merged.wav', parts);
-  const out = new Uint8Array(
-    await (await disk.get('merged.wav')).arrayBuffer(),
-  );
+  const out = new Uint8Array(await (await disk.get('merged.wav')).arrayBuffer());
   expect(out.length).toBe(44 + first.length + second.length);
-  expect(new DataView(out.buffer).getUint32(40, true)).toBe(
-    first.length + second.length,
-  );
+  expect(new DataView(out.buffer).getUint32(40, true)).toBe(first.length + second.length);
   expect(out.slice(44, 44 + first.length)).toEqual(first);
   expect(out.slice(44 + first.length)).toEqual(second);
   const scripts = mergedScripts(context, parts),
@@ -68,20 +64,15 @@ it('stream-merges PCM once in source order without headers in the audio, truncat
   const folder = mkdtempSync(join(tmpdir(), 'qvd-merge-'));
   try {
     const file = join(folder, 'result.zip');
-    writeFileSync(
-      file,
-      new Uint8Array(await (await disk.get('result.zip')).arrayBuffer()),
-    );
+    writeFileSync(file, new Uint8Array(await (await disk.get('result.zip')).arrayBuffer()));
     execFileSync('unzip', ['-t', file]);
-    expect(execFileSync('unzip', ['-p', file, 'combined.wav'])).toEqual(
-      Buffer.from(out),
+    expect(execFileSync('unzip', ['-p', file, 'combined.wav'])).toEqual(Buffer.from(out));
+    expect(execFileSync('unzip', ['-p', file, 'combined.srt']).toString()).toContain(
+      '00:00:00,020 --> 00:00:00,060',
     );
-    expect(
-      execFileSync('unzip', ['-p', file, 'combined.srt']).toString(),
-    ).toContain('00:00:00,020 --> 00:00:00,060');
-    expect(
-      execFileSync('unzip', ['-p', file, 'source-subtitles.srt']).toString(),
-    ).toContain('00:01:00,000 --> 00:01:01,000');
+    expect(execFileSync('unzip', ['-p', file, 'source-subtitles.srt']).toString()).toContain(
+      '00:01:00,000 --> 00:01:01,000',
+    );
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }
@@ -90,7 +81,5 @@ it('rejects truncated and mismatched WAV chunks rather than silently producing d
   const good = wav([new Uint8Array(100)]);
   await expect(pcmSize(new Blob([good.slice(0, -1)]))).rejects.toThrow('WAV');
   const other = wav([new Uint8Array(100)], 16000);
-  await expect(pcmSize(new Blob([new Uint8Array(other)]))).rejects.toThrow(
-    'WAV',
-  );
+  await expect(pcmSize(new Blob([new Uint8Array(other)]))).rejects.toThrow('WAV');
 });

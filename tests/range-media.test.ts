@@ -51,8 +51,7 @@ function sequential(
 }
 it('retains bytes on disk across backward seeks beyond the 8 MiB reader cache and reuses the origin body', async () => {
   const bytes = new Uint8Array(10 * 1024 ** 2);
-  for (let at = 0; at < bytes.length; at += 65536)
-    bytes.fill((at / 65536) % 251, at, at + 65536);
+  for (let at = 0; at < bytes.length; at += 65536) bytes.fill((at / 65536) % 251, at, at + 65536);
   const backing = disk();
   let requests = 0;
   const cache = new RangeMediaCache(
@@ -72,17 +71,11 @@ it('retains bytes on disk across backward seeks beyond the 8 MiB reader cache an
   );
   expect(new Uint8Array(await tail.arrayBuffer())).toEqual(bytes.slice(-1000));
   const head = await cache.fetch('https://example.test/audio', request(0, 999));
-  expect(new Uint8Array(await head.arrayBuffer())).toEqual(
-    bytes.slice(0, 1000),
-  );
+  expect(new Uint8Array(await head.arrayBuffer())).toEqual(bytes.slice(0, 1000));
   expect(requests).toBe(1);
   expect(
-    (
-      await cache.fetch(
-        'https://example.test/audio',
-        request(bytes.length, bytes.length + 10),
-      )
-    ).status,
+    (await cache.fetch('https://example.test/audio', request(bytes.length, bytes.length + 10)))
+      .status,
   ).toBe(416);
   await cache.close();
   expect(backing.removed).toBe(true);
@@ -100,9 +93,7 @@ it('keeps honest 206 responses on the normal fast path without allocating disk',
       return disk();
     },
   );
-  expect(await cache.fetch('https://example.test/audio', request(3, 4))).toBe(
-    response,
-  );
+  expect(await cache.fetch('https://example.test/audio', request(3, 4))).toBe(response);
   expect(created).toBe(false);
   await cache.close();
 });
@@ -130,9 +121,7 @@ it('cancelling one virtual range does not discard earlier bytes or destroy the r
     'https://example.test/audio',
     request(bytes.length - 2, bytes.length - 1),
   );
-  expect(new Uint8Array(await again.arrayBuffer())).toEqual(
-    new Uint8Array([87, 87]),
-  );
+  expect(new Uint8Array(await again.arrayBuffer())).toEqual(new Uint8Array([87, 87]));
   expect(requests).toBe(1);
   await cache.close();
 });
@@ -142,11 +131,7 @@ it('handles unknown lengths and reports truncated responses, disk exhaustion and
     async () => disk(),
   );
   expect(
-    new Uint8Array(
-      await (
-        await unknown.fetch('https://x.test/a', request(1, 2))
-      ).arrayBuffer(),
-    ),
+    new Uint8Array(await (await unknown.fetch('https://x.test/a', request(1, 2))).arrayBuffer()),
   ).toEqual(new Uint8Array([6, 7]));
   await unknown.close();
   const truncated = new RangeMediaCache(
@@ -165,9 +150,9 @@ it('handles unknown lengths and reports truncated responses, disk exhaustion and
     async () => sequential(new Uint8Array([1])),
     async () => backing,
   );
-  await expect(
-    (await full.fetch('https://x.test/a', request(0, 0))).arrayBuffer(),
-  ).rejects.toThrow(MEDIA_RANGE_ERRORS.quota);
+  await expect((await full.fetch('https://x.test/a', request(0, 0))).arrayBuffer()).rejects.toThrow(
+    MEDIA_RANGE_ERRORS.quota,
+  );
   await full.close();
   expect(backing.removed).toBe(true);
   const huge = new RangeMediaCache(
@@ -202,9 +187,7 @@ it('cleans temporary files after an interrupted origin stream and does not leave
     15,
   );
   const response = await cache.fetch('https://x.test/a', request(0, 99));
-  await expect(response.arrayBuffer()).rejects.toThrow(
-    MEDIA_RANGE_ERRORS.timeout,
-  );
+  await expect(response.arrayBuffer()).rejects.toThrow(MEDIA_RANGE_ERRORS.timeout);
   await cache.close();
   expect(backing.removed).toBe(true);
 });
@@ -215,13 +198,28 @@ it('evicts a failed sequential source so an automatic retry can open a healthy o
     async () => {
       requests++;
       return requests === 1
-        ? new Response(new ReadableStream({ start(c) { c.error(new Error('temporary outage')); } }), { headers: { 'Content-Length': '4' } })
+        ? new Response(
+            new ReadableStream({
+              start(c) {
+                c.error(new Error('temporary outage'));
+              },
+            }),
+            { headers: { 'Content-Length': '4' } },
+          )
         : sequential(new Uint8Array([1, 2, 3, 4]));
     },
-    async () => { const next = disk(); disks.push(next); return next; },
+    async () => {
+      const next = disk();
+      disks.push(next);
+      return next;
+    },
   );
-  await expect((await cache.fetch('https://x.test/retry', request(0, 3))).arrayBuffer()).rejects.toThrow('temporary outage');
-  expect(new Uint8Array(await (await cache.fetch('https://x.test/retry', request(0, 3))).arrayBuffer())).toEqual(new Uint8Array([1, 2, 3, 4]));
+  await expect(
+    (await cache.fetch('https://x.test/retry', request(0, 3))).arrayBuffer(),
+  ).rejects.toThrow('temporary outage');
+  expect(
+    new Uint8Array(await (await cache.fetch('https://x.test/retry', request(0, 3))).arrayBuffer()),
+  ).toEqual(new Uint8Array([1, 2, 3, 4]));
   expect(requests).toBe(2);
   await cache.close();
   expect(disks.every((backing) => backing.removed)).toBe(true);

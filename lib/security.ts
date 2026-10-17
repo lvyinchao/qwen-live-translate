@@ -1,5 +1,22 @@
 import { MODEL, type Settings } from './types';
+/** Session DNR rule ids owned by this extension: the model auth rule plus one
+ * Referer/Origin rule per media host, allocated upward from MEDIA_RULE_BASE. */
+export const RULE_ID_MIN = 910000;
 export const AUTH_RULE = 910001;
+export const MEDIA_RULE_BASE = 920000;
+export const RULE_ID_MAX = 930000;
+export const isOwnedRule = (id: number) => id >= RULE_ID_MIN && id < RULE_ID_MAX;
+export const isMediaRule = (id: number) => id >= MEDIA_RULE_BASE && id < RULE_ID_MAX;
+/** CDN domains whose subdomains share one media header rule. */
+export const MEDIA_CDN_DOMAINS = [
+  'googlevideo.com',
+  'bilivideo.com',
+  'bilivideo.cn',
+  'akamaized.net',
+] as const;
+const NATIVE_MEDIA_DOMAINS = [...MEDIA_CDN_DOMAINS, 'youtube.com', 'bilibili.com'];
+export const matchesDomain = (host: string, domain: string) =>
+  host === domain || host.endsWith(`.${domain}`);
 export function endpoint(settings: Settings): string {
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(settings.workspace))
     throw new Error('请填写有效的百炼 Workspace ID');
@@ -46,14 +63,7 @@ export function safeMediaUrl(value: string, otherPublicHosts = false): boolean {
         !host.includes(':') &&
         !/(?:^|\.)(?:localhost|local|internal|test|invalid|example)$/.test(host)
       );
-    return [
-      'googlevideo.com',
-      'bilivideo.com',
-      'bilivideo.cn',
-      'akamaized.net',
-      'youtube.com',
-      'bilibili.com',
-    ].some((d) => host === d || host.endsWith(`.${d}`));
+    return NATIVE_MEDIA_DOMAINS.some((d) => matchesDomain(host, d));
   } catch {
     return false;
   }

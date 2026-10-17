@@ -35,24 +35,20 @@ it('keeps user volume and caption choices when delayed progress arrives', () => 
 
 it('rejects stale language results even if their epoch looks newer', () => {
   for (const epoch of [2, 3, 4, 50])
-    expect(acceptEngineState(base, { ...base, epoch, language: 'zh' })).toBe(
-      null,
-    );
+    expect(acceptEngineState(base, { ...base, epoch, language: 'zh' })).toBe(null);
   const switching = { ...base, epoch: 4, language: 'ja', segments: [] };
   expect(acceptEngineState(switching, { ...base, epoch: 10 })).toBe(null);
-  expect(
-    acceptEngineState(switching, { ...switching, phase: 'playing' }),
-  ).toMatchObject({ language: 'ja', epoch: 4, subtitles: false });
+  expect(acceptEngineState(switching, { ...switching, phase: 'playing' })).toMatchObject({
+    language: 'ja',
+    epoch: 4,
+    subtitles: false,
+  });
 });
 
 it('isolates language revisions across seek epochs and round trips to the same language', () => {
   const next = { ...base, epoch: 5, languageVersion: 2 };
-  expect(
-    acceptEngineState(next, { ...next, epoch: 100, languageVersion: 0 }),
-  ).toBe(null);
-  expect(
-    acceptEngineState(next, { ...next, epoch: 5, languageVersion: 1 }),
-  ).toBe(null);
+  expect(acceptEngineState(next, { ...next, epoch: 100, languageVersion: 0 })).toBe(null);
+  expect(acceptEngineState(next, { ...next, epoch: 5, languageVersion: 1 })).toBe(null);
   expect(acceptEngineState(next, { ...next, epoch: 6 })).toMatchObject({
     languageVersion: 2,
   });
@@ -61,9 +57,14 @@ it('isolates language revisions across seek epochs and round trips to the same l
 it('rejects late retries that would revive a terminal task or rewind its progress', () => {
   const current = { ...base, phase: 'error' as const, position: 90, stateVersion: 8 };
   for (const stateVersion of [undefined, 6, 7]) {
-    expect(acceptEngineState(current, { ...current, phase: 'playing', position: 20, stateVersion })).toBe(null);
+    expect(
+      acceptEngineState(current, { ...current, phase: 'playing', position: 20, stateVersion }),
+    ).toBe(null);
   }
-  expect(acceptEngineState(current, { ...current, stateVersion: 8 })).toMatchObject({ phase: 'error' });
-  expect(acceptEngineState(current, { ...current, epoch: 4, phase: 'buffering', stateVersion: 1 }))
-    .toMatchObject({ epoch: 4, phase: 'buffering' });
+  expect(acceptEngineState(current, { ...current, stateVersion: 8 })).toMatchObject({
+    phase: 'error',
+  });
+  expect(
+    acceptEngineState(current, { ...current, epoch: 4, phase: 'buffering', stateVersion: 1 }),
+  ).toMatchObject({ epoch: 4, phase: 'buffering' });
 });

@@ -14,13 +14,8 @@ type RecordItem = {
   segments: TranslationSegment[];
 };
 type IndexItem = Omit<RecordItem, 'segments'>;
-const keyFor = (
-  mediaId: string,
-  language: string,
-  voice: string,
-  start: number,
-  end: number,
-) => JSON.stringify([mediaId, language, voice, start, end]);
+const keyFor = (mediaId: string, language: string, voice: string, start: number, end: number) =>
+  JSON.stringify([mediaId, language, voice, start, end]);
 export class SegmentCache {
   private dbPromise?: Promise<IDBDatabase>;
   private writes: Promise<unknown> = Promise.resolve();
@@ -58,9 +53,7 @@ export class SegmentCache {
       req.onerror = () => reject(req.error);
     });
   }
-  private async mutate(
-    callback: (windows: IDBObjectStore, index: IDBObjectStore) => void,
-  ) {
+  private async mutate(callback: (windows: IDBObjectStore, index: IDBObjectStore) => void) {
     const db = await this.db();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(['windows', 'metadata'], 'readwrite');
@@ -79,11 +72,7 @@ export class SegmentCache {
   ) {
     const operation = this.writes.then(async () => {
       const bytes = segments.reduce(
-        (sum, s) =>
-          sum +
-          s.audio.length +
-          (s.sourceText.length + s.text.length) * 2 +
-          512,
+        (sum, s) => sum + s.audio.length + (s.sourceText.length + s.text.length) * 2 + 512,
         256,
       );
       const record: RecordItem = {
@@ -127,8 +116,7 @@ export class SegmentCache {
   ): Promise<{ segments: TranslationSegment[]; ranges: Coverage[] }> {
     await this.writes;
     const records = (await this.metadata()).filter(
-      (r) =>
-        r.mediaId === mediaId && r.language === language && r.voice === voice,
+      (r) => r.mediaId === mediaId && r.language === language && r.voice === voice,
     );
     const db = await this.db();
     const windows = await new Promise<RecordItem[]>((resolve, reject) => {
@@ -154,13 +142,12 @@ export class SegmentCache {
         }),
       );
     const segments = mergeArchiveSegments(
-      [], windows.sort((a, b) => a.touched - b.touched).flatMap((r) => r.segments),
+      [],
+      windows.sort((a, b) => a.touched - b.touched).flatMap((r) => r.segments),
     );
     return {
       segments,
-      ranges: mergeCoverage(
-        windows.map((r) => ({ start: r.start, end: r.end })),
-      ),
+      ranges: mergeCoverage(windows.map((r) => ({ start: r.start, end: r.end }))),
     };
   }
   async clear() {

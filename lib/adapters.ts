@@ -38,9 +38,7 @@ export function observedAudio(url: string, mime: string): boolean {
         ].includes(u.searchParams.get('itag') ?? '')
       );
     if (/(?:bilivideo\.(?:com|cn)|akamaized\.net)$/.test(u.hostname))
-      return /(?:^|[-/])(30216|30232|30280|30250|30251)(?:[.\/-]|$)/.test(
-        u.pathname,
-      );
+      return /(?:^|[-/])(30216|30232|30280|30250|30251)(?:[./-]|$)/.test(u.pathname);
     return false;
   } catch {
     return false;
@@ -75,33 +73,76 @@ export function youtubeDirectTrackId(url: string, metadata: PlayerMetadata): str
   if (metadata.site !== 'youtube') return;
   const request = new URL(url);
   const explicit = ['audio_track_id', 'audioTrackId', 'trackId', 'track']
-    .map((key) => request.searchParams.get(key)).find(Boolean);
+    .map((key) => request.searchParams.get(key))
+    .find(Boolean);
   if (explicit && metadata.currentAudioTrackId)
     return explicit === metadata.currentAudioTrackId ? explicit : undefined;
   const resource = canonicalMediaResource(normalizeAudioRequest(url));
-  return metadata.audioSources?.find((source) =>
-    canonicalMediaResource(normalizeAudioRequest(source.url)) === resource)?.trackId;
+  return metadata.audioSources?.find(
+    (source) => canonicalMediaResource(normalizeAudioRequest(source.url)) === resource,
+  )?.trackId;
 }
 
 /** Discard legacy/default direct sources and sources from a formerly selected track. */
 export function youtubeSourceMatches(source: AudioSource, metadata: PlayerMetadata): boolean {
   if (metadata.site !== 'youtube') return true;
-  if (metadata.currentAudioTrackId)
-    return source.trackId === metadata.currentAudioTrackId;
+  if (metadata.currentAudioTrackId) return source.trackId === metadata.currentAudioTrackId;
   if (source.sabrRequest) return true;
-  return !!source.trackId && metadata.audioSources?.some((item) => item.trackId === source.trackId) === true;
+  return (
+    !!source.trackId &&
+    metadata.audioSources?.some((item) => item.trackId === source.trackId) === true
+  );
+}
+
+/** Shapes read from page globals. Every field is page-controlled and may be absent. */
+interface YoutubeFormat {
+  url?: unknown;
+  mimeType?: string;
+  bitrate?: number;
+  itag?: number;
+  lastModified?: string;
+  xtags?: string;
+  audioTrack?: { id?: unknown; audioIsDefault?: boolean };
+  isDrc?: boolean;
+  audioChannels?: number;
+  audioQuality?: string;
+  approxDurationMs?: string;
+}
+type DirectYoutubeFormat = YoutubeFormat & { url: string };
+interface YoutubePlayerResponse {
+  videoDetails?: { videoId?: string; title?: string };
+  streamingData?: { adaptiveFormats?: YoutubeFormat[] };
+}
+interface YoutubePlayerElement extends HTMLElement {
+  getPlayerResponse?(): YoutubePlayerResponse | undefined;
+  getAudioTrack?(): string | { id?: unknown } | undefined;
+}
+interface BilibiliAudio {
+  baseUrl?: string;
+  base_url?: string;
+  mimeType?: string;
+  mime_type?: string;
+  bandwidth?: number;
+}
+interface BilibiliPlayInfo {
+  dash?: { audio?: BilibiliAudio[] };
+}
+interface PageGlobals {
+  ytInitialPlayerResponse?: YoutubePlayerResponse;
+  __playinfo__?: { data?: BilibiliPlayInfo; result?: BilibiliPlayInfo };
+  guid?: unknown;
 }
 
 // This function is serialized by chrome.scripting into MAIN. It must not close
 // over extension data. In particular, credentials are never passed here.
 export async function inspectPlayerMain(): Promise<PlayerMetadata> {
-  const win = window as any;
+  const win = window as Window & PageGlobals;
   const u = new URL(location.href);
   const title = document.title;
   if (/(?:^|\.)youtube\.com$/.test(u.hostname)) {
     const id = u.searchParams.get('v') ?? u.pathname;
-    const player = document.querySelector('#movie_player') as any;
-    let response: any;
+    const player = document.querySelector<YoutubePlayerElement>('#movie_player');
+    let response: YoutubePlayerResponse | undefined;
     try {
       response = player?.getPlayerResponse?.() ?? win.ytInitialPlayerResponse;
     } catch {
@@ -109,58 +150,75 @@ export async function inspectPlayerMain(): Promise<PlayerMetadata> {
     }
     const identity = `youtube:${id}:${u.searchParams.get('list') ?? ''}`;
     const valid = response?.videoDetails?.videoId === id;
-    const tracks = valid
-      ? (response?.streamingData?.adaptiveFormats ?? [])
-      : [];
-    const direct = tracks.filter((t: any) => typeof t.url === 'string' && t.mimeType?.startsWith('audio/'));
+    const tracks = valid ? (response?.streamingData?.adaptiveFormats ?? []) : [];
+    const direct = tracks.filter(
+      (t): t is DirectYoutubeFormat =>
+        typeof t.url === 'string' && t.mimeType?.startsWith('audio/') === true,
+    );
     let currentAudioTrackId: string | undefined;
     try {
       const selected = player?.getAudioTrack?.();
       const id = typeof selected === 'string' ? selected : selected?.id;
-      if (typeof id === 'string' && id.length > 0 && id.length <= 256)
-        currentAudioTrackId = id;
-    } catch { /* Undocumented native APIs can be absent on some player variants. */ }
-    const audioId = (track: any): string | undefined => {
+      if (typeof id === 'string' && id.length > 0 && id.length <= 256) currentAudioTrackId = id;
+    } catch {
+      /* Undocumented native APIs can be absent on some player variants. */
+    }
+    const audioId = (track: DirectYoutubeFormat): string | undefined => {
       const id = track.audioTrack?.id;
       if (typeof id === 'string' && id.length > 0 && id.length <= 256) return id;
       try {
         const url = new URL(track.url);
         const id = ['audio_track_id', 'audioTrackId', 'trackId', 'track']
-          .map((key) => url.searchParams.get(key)).find(Boolean);
+          .map((key) => url.searchParams.get(key))
+          .find(Boolean);
         return id && id.length <= 256 ? id : undefined;
-      } catch { return; }
+      } catch {
+        return;
+      }
     };
     const known = new Set(direct.map(audioId).filter(Boolean));
     let selected = currentAudioTrackId
-      ? direct.filter((track: any) => audioId(track) === currentAudioTrackId)
-      : known.size === 1 && direct.every((track: any) => audioId(track)) ? direct : [];
-    const audioSources: AudioSource[] = selected.map((track: any) => ({
-      url: track.url, mime: track.mimeType, identity, trackId: audioId(track),
+      ? direct.filter((track) => audioId(track) === currentAudioTrackId)
+      : known.size === 1 && direct.every((track) => audioId(track))
+        ? direct
+        : [];
+    const audioSources: AudioSource[] = selected.map((track) => ({
+      url: track.url,
+      mime: track.mimeType,
+      identity,
+      trackId: audioId(track),
     }));
     // An anonymous single URL is usable, but it must not share the old `default`
     // cache namespace with another asset/voice. Multiple anonymous variants are
     // ambiguous: codec/bitrate alone cannot prove that their language is equal.
-    if (!currentAudioTrackId && direct.length === 1 && !audioId(direct[0])) {
-      const resource = new URL(direct[0].url);
+    if (!currentAudioTrackId && direct.length === 1 && !audioId(direct[0]!)) {
+      const resource = new URL(direct[0]!.url);
       resource.hash = '';
       for (const key of [...resource.searchParams.keys()])
-        if (/^(?:range|rn|rbuf|expires?|deadline|signature|sign|sig|wssecret|wstime|auth_key|authkey)$/i.test(key))
+        if (
+          /^(?:range|rn|rbuf|expires?|deadline|signature|sign|sig|wssecret|wstime|auth_key|authkey)$/i.test(
+            key,
+          )
+        )
           resource.searchParams.delete(key);
       resource.searchParams.sort();
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(resource.href));
       const trackId = `yt-direct:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
       selected = direct;
-      audioSources.push({ url: direct[0].url, mime: direct[0].mimeType, identity, trackId });
+      audioSources.push({ url: direct[0]!.url, mime: direct[0]!.mimeType, identity, trackId });
     }
-    const track = selected.sort((a: any, b: any) => (a.bitrate ?? Infinity) - (b.bitrate ?? Infinity))[0];
+    const track = selected.sort((a, b) => (a.bitrate ?? Infinity) - (b.bitrate ?? Infinity))[0];
     const source = track ? audioSources.find((item) => item.url === track.url) : undefined;
     const sabrFormats = tracks
-      .filter((t: any) => t.mimeType?.startsWith('audio/') && t.lastModified)
-      .map((t: any) => ({
+      .filter(
+        (t): t is YoutubeFormat & { itag: number; lastModified: string } =>
+          t.mimeType?.startsWith('audio/') === true && !!t.lastModified,
+      )
+      .map((t) => ({
         itag: t.itag,
         lastModified: t.lastModified,
         xtags: t.xtags,
-        audioTrackId: t.audioTrack?.id,
+        audioTrackId: t.audioTrack?.id as string | undefined,
         isDefault: t.audioTrack?.audioIsDefault,
         isDrc: t.isDrc,
         mimeType: t.mimeType,
@@ -176,9 +234,10 @@ export async function inspectPlayerMain(): Promise<PlayerMetadata> {
       title: response?.videoDetails?.title ?? title,
       currentAudioTrackId,
       audioSources,
-      sourceReason: !source && direct.length
-        ? '播放器未提供可确认当前音轨归属的信息，请先播放几秒或重新选择音轨后扫描'
-        : undefined,
+      sourceReason:
+        !source && direct.length
+          ? '播放器未提供可确认当前音轨归属的信息，请先播放几秒或重新选择音轨后扫描'
+          : undefined,
       ad: Boolean(player?.classList?.contains('ad-showing')),
       source,
     };
@@ -187,30 +246,23 @@ export async function inspectPlayerMain(): Promise<PlayerMetadata> {
     const data = win.__playinfo__?.data ?? win.__playinfo__?.result;
     const identity = `bilibili:${u.pathname}:${u.searchParams.get('p') ?? '1'}`;
     const navigation = performance.getEntriesByType('navigation')[0] as
-      | PerformanceNavigationTiming
-      | undefined;
+      PerformanceNavigationTiming | undefined;
     const original = navigation ? new URL(navigation.name) : undefined;
     const sameNavigation =
       original?.pathname === u.pathname &&
-      (original?.searchParams.get('p') ?? '1') ===
-        (u.searchParams.get('p') ?? '1');
+      (original?.searchParams.get('p') ?? '1') === (u.searchParams.get('p') ?? '1');
     const tracks = sameNavigation ? (data?.dash?.audio ?? []) : [];
     const track = tracks
-      .filter((t: any) => typeof (t.baseUrl ?? t.base_url) === 'string')
-      .sort(
-        (a: any, b: any) =>
-          (a.bandwidth ?? Infinity) - (b.bandwidth ?? Infinity),
-      )[0];
+      .filter((t) => typeof (t.baseUrl ?? t.base_url) === 'string')
+      .sort((a, b) => (a.bandwidth ?? Infinity) - (b.bandwidth ?? Infinity))[0];
     return {
       identity,
       site: 'bilibili',
       title,
-      ad: Boolean(
-        document.querySelector('.bpx-player-video-ad[data-show="true"]'),
-      ),
+      ad: Boolean(document.querySelector('.bpx-player-video-ad[data-show="true"]')),
       source: track
         ? {
-            url: track.baseUrl ?? track.base_url,
+            url: (track.baseUrl ?? track.base_url)!,
             mime: track.mimeType ?? track.mime_type,
             identity,
           }
@@ -231,7 +283,9 @@ export async function inspectPlayerMain(): Promise<PlayerMetadata> {
     cctvGuid:
       /^tv\.cctv\.(?:cn|com)$/.test(u.hostname) &&
       /^\/\d{4}\/\d{2}\/\d{2}\/VIDE[a-zA-Z0-9]+\.shtml$/.test(u.pathname) &&
-      typeof win.guid === 'string' && /^[a-fA-F0-9]{32}$/.test(win.guid)
-        ? win.guid.toLowerCase() : undefined,
+      typeof win.guid === 'string' &&
+      /^[a-fA-F0-9]{32}$/.test(win.guid)
+        ? win.guid.toLowerCase()
+        : undefined,
   };
 }
