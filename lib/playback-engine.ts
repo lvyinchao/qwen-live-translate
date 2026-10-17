@@ -5,11 +5,12 @@ import { silenceBoundary } from './audio';
 import { coverageEnd, mergeCoverage, type Coverage } from './timeline';
 import { abortError, delay, translateWindow } from './qwen';
 import { endpoint } from './security';
+import { isRetryableProviderError } from './errors';
+import type { BackgroundCall, DecodeRequest } from './messages';
 import { bufferPolicy, preparationStatus } from './preparation';
 import {
   messageError,
   VOICE,
-  type AudioSource,
   type Envelope,
   type PlaybackSession,
   type Settings,
@@ -19,7 +20,7 @@ import {
 export interface EngineDependencies {
   cache: Pick<SegmentCache, 'load' | 'put'>;
   files: Pick<LocalFiles, 'capture' | 'flush' | 'finish' | 'failed'>;
-  background: <T = unknown>(type: string, parameters?: Record<string, unknown>) => Promise<T>;
+  background: BackgroundCall;
   createWorker: () => Worker;
   closeWorker?: (worker: Worker) => Promise<void>;
   translate?: typeof translateWindow;
@@ -82,9 +83,7 @@ export class PlaybackEngine {
   private get sleep() { return this.dependencies.sleep ?? delay; }
   private get files() { return this.dependencies.files; }
   private get cache() { return this.dependencies.cache; }
-  private bg<T = unknown>(type: string, parameters: Record<string, unknown> = {}) {
-    return this.dependencies.background<T>(type, parameters);
-  }
+  private bg: BackgroundCall = (type, ...args) => this.dependencies.background(type, ...args);
   private auth<T>(operation: () => Promise<T>): Promise<T> {
     const next = this.authQueue.then(operation);
     this.authQueue = next.catch(() => {});
@@ -273,7 +272,7 @@ export class PlaybackEngine {
   }
   private async sendSegment(epoch: Epoch, segment: TranslationSegment) {
     if (!this.active(epoch)) return false;
-    const accepted = await this.bg<boolean>('engine:segment', {
+    const accepted = await this.bg('engine:segment', {
       sessionId: epoch.session.id,
       epoch: epoch.session.epoch,
       languageVersion: epoch.session.languageVersion ?? 0,
@@ -346,7 +345,7 @@ export class PlaybackEngine {
     this.updatePreparation();
   }
   private async decode(start: number, end: number, epoch: Epoch): Promise<Float32Array> {
-    const source = await this.bg<AudioSource | undefined>('media:refresh', {
+    const source = await this.bg('media:refresh', {
       sessionId: epoch.session.id,
       epoch: epoch.session.epoch,
       languageVersion: epoch.session.languageVersion ?? 0,
@@ -384,8 +383,9 @@ export class PlaybackEngine {
       worker.addEventListener('message', listener);
       epoch.signal.addEventListener('abort', abort, { once: true });
       if (epoch.signal.aborted) return abort();
-      worker.postMessage({ id, type: 'decode', source, start, end,
-        expectedDuration: epoch.session.candidate.duration });
+      const request: DecodeRequest = { id, type: 'decode', source, start, end,
+        expectedDuration: epoch.session.candidate.duration };
+      worker.postMessage(request);
     });
   }
   private addCoverage(range: Coverage) {
@@ -494,7 +494,7 @@ export class PlaybackEngine {
         await task;
         break;
       } catch (error) {
-        if (!this.active(epoch) || attempt >= 2 || !/提前断开|连接失败|限流|超时/.test(messageError(error))) throw error;
+        if (!this.active(epoch) || attempt >= 2 || !isRetryableProviderError(error)) throw error;
         this.recordDiagnostic({ type: 'retry', at: this.now(), windowStart,
           attempt: attempt + 1, error: messageError(error) });
         attemptStart = coverageEnd(this.ranges, windowStart);

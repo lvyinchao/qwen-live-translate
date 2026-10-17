@@ -5,6 +5,7 @@ import type { UILanguage } from './types';
 const english = {
   '扩展后台未返回有效响应，请重试': 'The extension background returned no valid response. Please retry.',
   '请先停止翻译，再修改服务凭据': 'Stop translation before changing service credentials.',
+  '视频或音轨已变化，请重新扫描': 'The video or audio track changed. Please rescan.',
   '播放器未接收译音，请重新扫描视频后重试': 'The player did not accept translated audio. Rescan the video and retry.',
   '播放器未提供可确认当前音轨归属的信息，请先播放几秒或重新选择音轨后扫描': 'The player has not identified its current audio track. Play briefly or select a track, then scan again.',
   '音轨解码没有取得有效音频': 'Audio decoding returned no usable samples.',

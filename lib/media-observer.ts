@@ -5,6 +5,8 @@ import { encode64, decode64 } from './audio';
 import { messageError, type AudioSource, type PlaybackSession } from './types';
 import { VideoPlaybackAbrRequest } from 'googlevideo/protos';
 import type { ObservationScope } from './observation-scope';
+/** How long discovered media URLs and their request headers stay usable. */
+export const OBSERVATION_TTL_MS = 60000;
 export type SourceRecord = { identity: string; source: AudioSource; expiresAt?: number };
 export type DiscoveryRecord = { identity: string; items: ObservedMedia[]; expiresAt?: number };
 export function registerMediaObserver({ scope, sources, detected, captureStats, getSession, stop }: {
@@ -137,7 +139,7 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
               ] as DiscoveryRecord | undefined);
             const previous = detected.get(details.tabId) ?? persisted;
             const items = previous?.identity === identity && (previous.expiresAt ?? 0) > Date.now()
-              ? previous.items.filter((item) => item.at > Date.now() - 60000) : [];
+              ? previous.items.filter((item) => item.at > Date.now() - OBSERVATION_TTL_MS) : [];
             const updated = [
               ...items.filter(
                 (r) =>
@@ -154,7 +156,7 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
             ];
             const state = {
               identity,
-              expiresAt: Date.now() + 60000,
+              expiresAt: Date.now() + OBSERVATION_TTL_MS,
               items: (['file', 'hls', 'dash', 'fragment'] as const).flatMap(
                 (k) => updated.filter((r) => r.kind === k).slice(-10),
               ),
@@ -210,7 +212,7 @@ export function registerMediaObserver({ scope, sources, detected, captureStats, 
           }
           const saved = {
             identity,
-            expiresAt: Date.now() + 60000,
+            expiresAt: Date.now() + OBSERVATION_TTL_MS,
             source: {
               url: sabr ? details.url : normalizeAudioRequest(details.url),
               mime,

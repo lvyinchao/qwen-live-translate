@@ -158,7 +158,13 @@ export function openSabrWindow(
           ),
         };
       }
-      const record: Record<string, any> = {
+      const record: {
+        host: string;
+        time?: unknown;
+        headers: { start?: unknown; duration?: unknown; itag?: unknown; init?: unknown }[];
+        policy?: { target?: unknown; backoff?: unknown };
+        protection?: unknown;
+      } = {
         host: new URL(String(url)).hostname,
         time: body?.clientAbrState?.playerTimeMs,
         headers: [],

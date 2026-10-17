@@ -68,7 +68,7 @@ export default defineContentScript({
     // Keep the native overload semantics; observe only the returned media-info response.
     XMLHttpRequest.prototype.open = function (
       this: XMLHttpRequest,
-      ...args: any[]
+      ...args: unknown[]
     ) {
       const requested = new URL(String(args[1]), location.href).href;
       if (tencentInfoEndpoint(requested))

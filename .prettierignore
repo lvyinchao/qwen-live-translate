@@ -1,0 +1,12 @@
+# Generated, vendored or evidence files are not hand-formatted.
+.output/
+.wxt/
+outputs/
+work/
+vendor/
+public/
+coverage/
+package-lock.json
+# Prose is reviewed as written.
+*.md
+docs/

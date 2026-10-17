@@ -1,3 +1,4 @@
+import { AppError } from './errors';
 import { decode64, encode64, pcm16, wav } from './audio';
 import {
   MODEL,
@@ -21,6 +22,8 @@ interface OutputTurn {
   done: boolean;
   emitted: boolean;
 }
+/** A Qwen realtime server event. Fields are provider-defined and read defensively. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped provider protocol
 export type ProviderEvent = Record<string, any>;
 export class TranslationAssembler {
   sources = new Map<string, SourceTurn>();
@@ -92,7 +95,7 @@ export class TranslationAssembler {
         break;
       case 'response.done':
         if (event.response?.status && event.response.status !== 'completed')
-          throw new Error('翻译响应未完整完成，请重试当前片段');
+          throw new AppError('provider-incomplete', '翻译响应未完整完成，请重试当前片段');
         for (const item of event.response?.output ?? [])
           if (item.id) this.output(item.id).done = true;
         break;
@@ -167,7 +170,8 @@ export class TranslationAssembler {
   finish() {
     this.commitReady();
     if ([...this.outputs.values()].some((o) => o.parts.length && !o.emitted))
-      throw new Error(
+      throw new AppError(
+        'provider-incomplete',
         '模型译音缺少可靠的源时间戳或消息关联，已停止本段以防音画错位',
       );
     for (const [id, source] of this.sources) {
@@ -176,7 +180,7 @@ export class TranslationAssembler {
         !(source.transcriptionDone && !source.text.trim()) &&
         ![...this.outputs.values()].some((o) => o.source === id && o.emitted)
       )
-        throw new Error('检测到人声但没有获得完整译音，请重试');
+        throw new AppError('provider-incomplete', '检测到人声但没有获得完整译音，请重试');
     }
     return this.segments;
   }
@@ -255,7 +259,7 @@ export async function translateWindow(
         clearTimeout(timer);
         timer = setTimeout(
           () =>
-            done(new Error('模型连接或响应超时，请检查地域、网络和模型权限')),
+            done(new AppError('provider-timeout', '模型连接或响应超时，请检查地域、网络和模型权限')),
           ms,
         );
       };
@@ -268,14 +272,15 @@ export async function translateWindow(
       };
       ws.onerror = () =>
         done(
-          new Error(
+          new AppError(
+            'provider-connect',
             '百炼 WebSocket 连接失败：请检查 Key、Workspace、地域和模型访问权限',
           ),
         );
       ws.onclose = (event) => {
         if (!settled)
           done(
-            new Error(`翻译连接提前断开（${event.code}），本段未标记为完成`),
+            new AppError('provider-disconnected', `翻译连接提前断开（${event.code}），本段未标记为完成`),
           );
       };
       ws.onmessage = (event) => {
@@ -287,16 +292,14 @@ export async function translateWindow(
           if (data.type === 'error') {
             const code = String(data.error?.code ?? 'unknown');
             return done(
-              new Error(
-                /limit|throttl|429/i.test(code)
-                  ? `百炼限流：${code}`
-                  : `百炼返回错误：${code}，请核对模型权限和配置`,
-              ),
+              /limit|throttl|429/i.test(code)
+                ? new AppError('provider-rate-limit', `百炼限流：${code}`)
+                : new AppError('provider-error', `百炼返回错误：${code}，请核对模型权限和配置`),
             );
           }
           if (data.type === 'session.created') {
             if (data.session?.model && data.session.model !== MODEL)
-              return done(new Error('连接返回了不同模型，已停止'));
+              return done(new AppError('provider-model-mismatch', '连接返回了不同模型，已停止'));
             send({
               type: 'session.update',
               session: {
@@ -325,7 +328,7 @@ export async function translateWindow(
             });
           } else if (data.type === 'session.updated' && !configured) {
             if (data.session?.enable_voice_clone !== true)
-              return done(new Error('模型未确认启用原音色复刻，已停止翻译'));
+              return done(new AppError('provider-voice-clone', '模型未确认启用原音色复刻，已停止翻译'));
             configured = true;
             sending = true;
             void (async () => {

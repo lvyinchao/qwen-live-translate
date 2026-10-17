@@ -1,15 +1,23 @@
-import type { Result, Settings } from '../../lib/types';
-import type { ArchiveStorageSummary } from '../../lib/local-files';
-import type { MediaTempSummary } from '../../lib/range-media';
+import type {
+  BackgroundResponse,
+  BackgroundType,
+  RequestArgs,
+  Result,
+} from '../../lib/messages';
+import { AppError } from '../../lib/errors';
 
-export type PublicSettings = Omit<Settings, 'apiKey'> & { hasKey: boolean };
-export interface StorageSummary {
-  playback: { bytes: number; limitBytes: number };
-  media: MediaTempSummary;
-  archives: ArchiveStorageSummary;
-}
-export async function call<T = unknown>(type: string, parameters: Record<string, unknown> = {}): Promise<T> {
-  const result = await chrome.runtime.sendMessage({ target: 'background', type, ...parameters }) as Result<T>;
-  if (!result.ok) throw new Error(result.error);
+export type { PublicSettings, StorageSummary } from '../../lib/messages';
+
+/** Typed side-panel call into the background message routes. */
+export async function call<K extends BackgroundType>(
+  type: K,
+  ...[parameters]: RequestArgs<K>
+): Promise<BackgroundResponse<K>> {
+  const result = (await chrome.runtime.sendMessage({
+    target: 'background',
+    type,
+    ...parameters,
+  })) as Result<BackgroundResponse<K>>;
+  if (!result.ok) throw result.code ? new AppError(result.code, result.error) : new Error(result.error);
   return result.value;
 }

@@ -209,7 +209,7 @@ try {
   const before = await sourceClock();
   await panel.locator('#language').selectOption('en');
   const afterAction = await sourceClock();
-  let active = await poll(async () => {
+  const active = await poll(async () => {
     const s = await call('session:get');
     return (
       s?.language === 'en' && s.phase === 'playing' && s.segments.length && s

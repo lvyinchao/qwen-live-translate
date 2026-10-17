@@ -1,13 +1,31 @@
 import { parseTencentMedia, type TencentMediaInfo } from './tencent-media';
 
+/** The subset of the page's hls.js build that observation touches. */
+interface HlsLevelDetails { m3u8?: unknown; url?: unknown; live?: boolean }
+interface HlsManifestData { levels?: { details?: HlsLevelDetails }[]; url?: unknown }
+interface HlsLevelData { details?: HlsLevelDetails }
+type HlsListener = (event: unknown, data: unknown) => void;
+interface HlsInstance {
+  media?: unknown;
+  config?: { chachaParam?: unknown };
+  currentLevel?: number;
+  on?(event: string, listener: HlsListener): void;
+  off?(event: string, listener: HlsListener): void;
+  once?(event: string, listener: HlsListener): void;
+}
+interface HlsPrototype extends HlsInstance {
+  loadSource(this: HlsInstance, ...args: unknown[]): unknown;
+}
+interface HlsModule { Hls?: { prototype?: HlsPrototype } }
+
 /** Observe the native player's clear HLS input; never alter its media or playback. */
 export function observeTencentHls(
   publish: (info: TencentMediaInfo) => void,
 ): void {
-  const win = window as Window & { ThumbPlayerKernelHlsjs?: any };
+  const win = window as Window & { ThumbPlayerKernelHlsjs?: unknown };
   const wrapped = new WeakSet<object>();
-  const attach = (exports: any) => {
-    const prototype = exports?.Hls?.prototype;
+  const attach = (exports: unknown) => {
+    const prototype = (exports as HlsModule | undefined)?.Hls?.prototype;
     if (
       !prototype ||
       typeof prototype.loadSource !== 'function' ||
@@ -18,9 +36,9 @@ export function observeTencentHls(
     const native = prototype.loadSource;
     const listeners = new WeakMap<
       object,
-      { manifest: (...args: any[]) => void; level: (...args: any[]) => void }
+      { manifest: HlsListener; level: HlsListener }
     >();
-    prototype.loadSource = function (...args: unknown[]) {
+    prototype.loadSource = function (this: HlsInstance, ...args: unknown[]) {
       const [url, manifest] = args;
       const pageUrl = location.href;
       const emit = (playlist: unknown = manifest, base: unknown = url) => {
@@ -66,12 +84,14 @@ export function observeTencentHls(
         this.off('hlsLevelLoaded', previous.level);
       }
       const next = {
-        manifest: (_event: unknown, data: any) => {
+        manifest: (_event: unknown, payload: unknown) => {
+          const data = payload as HlsManifestData | undefined;
           const level = data?.levels?.[Math.max(0, this.currentLevel ?? 0)];
           if (level?.details && !level.details.live)
-            emit(level.details.m3u8, level.details.url ?? data.url);
+            emit(level.details.m3u8, level.details.url ?? data?.url);
         },
-        level: (_event: unknown, data: any) => {
+        level: (_event: unknown, payload: unknown) => {
+          const data = payload as HlsLevelData | undefined;
           if (data?.details && !data.details.live)
             emit(data.details.m3u8, data.details.url ?? url);
         },

@@ -17,7 +17,7 @@ const checksums = new Map(
     .trim()
     .split('\n')
     .map((line) => {
-      const match = line.match(/^([a-f0-9]{64})  ([^\r\n]+)$/);
+      const match = line.match(/^([a-f0-9]{64}) {2}([^\r\n]+)$/);
       assert.ok(match, 'Malformed release checksum entry');
       return [match[2], match[1]];
     }),
@@ -128,6 +128,7 @@ for (const kind of ['chrome', 'webstore', 'source']) {
       'tests/fixtures/audio.mjs',
       'scripts/release-smoke.mjs',
       '.github/workflows/validate.yml',
+      'eslint.config.js',
     ])
       assert.ok(paths.includes(`${prefix}/${required}`), required);
     assert.equal(

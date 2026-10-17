@@ -1,6 +1,8 @@
-import type { Envelope, Result } from './types';
+import { AppError } from './errors';
+import type { BackgroundCall, BackgroundType, Result } from './messages';
+import type { Envelope } from './types';
 
-const IDEMPOTENT = new Set([
+const IDEMPOTENT = new Set<BackgroundType>([
   'settings:get', 'media:refresh', 'media:headers', 'auth:install', 'auth:remove',
   'engine:state', 'engine:segment',
 ]);
@@ -15,10 +17,7 @@ export function createBackgroundRpc(
   sleep: (milliseconds: number) => Promise<void> = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds)),
 ) {
-  return async function background<T = unknown>(
-    type: string,
-    parameters: Record<string, unknown> = {},
-  ): Promise<T> {
+  const background: BackgroundCall = async (type, ...[parameters]) => {
     let response: unknown;
     for (let attempt = 0; ; attempt++) {
       try {
@@ -30,9 +29,10 @@ export function createBackgroundRpc(
         await sleep(BACKOFF_MS[attempt]!);
       }
     }
-    const result = response as Result<T> | undefined;
+    const result = response as Result<never> | undefined;
     if (!result || typeof result.ok !== 'boolean') throw new Error('扩展后台未返回有效响应，请重试');
-    if (!result.ok) throw new Error(result.error);
+    if (!result.ok) throw result.code ? new AppError(result.code, result.error) : new Error(result.error);
     return result.value;
   };
+  return background;
 }

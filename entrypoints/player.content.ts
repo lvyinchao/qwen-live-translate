@@ -89,6 +89,8 @@ export default defineContentScript({
       currentPreloadHit = false;
       previousTickAt?: number;
       tickGapMs = 0;
+      /** Upper bound between sync ticks when no video frame callback arrives. */
+      tickMs = 50;
       maxTickGapMs = 0;
       pendingTerminals: Record<string, unknown>[] = [];
       timer: ReturnType<typeof setInterval>;
@@ -202,8 +204,15 @@ export default defineContentScript({
           },
           { signal: this.abort.signal },
         );
-        this.tickTimer = setInterval(() => this.tick(), 50);
+        // Video frame callbacks drive ticks during playback. The interval only
+        // covers paused, frameless or unsupported periods, so it skips any
+        // 50 ms slot in which a frame (or event) has already ticked.
+        this.tickTimer = setInterval(() => this.tickIfIdle(), this.tickMs);
+        let checks = 0;
         this.timer = setInterval(() => {
+          // A full YouTube player scan walks the page; once a second is enough
+          // to notice a replaced player, while cheap checks stay at 250 ms.
+          const scanYoutube = session.candidate.site === 'youtube' && checks++ % 4 === 0;
           if (
             !video.isConnected ||
             (!['youtube', 'bilibili'].includes(session.candidate.site) &&
@@ -211,8 +220,7 @@ export default defineContentScript({
             mediaIdentity(location.href) !==
               (session.candidate.frameMediaId ?? session.candidate.mediaId) ||
             document.querySelector('#movie_player.ad-showing') ||
-            (session.candidate.site === 'youtube' &&
-              youtubePlayer(inspectVideos(true))[0]?.id !== video.dataset.qvdId)
+            (scanYoutube && youtubePlayer(inspectVideos(true))[0]?.id !== video.dataset.qvdId)
           ) {
             this.destroy('player-lost');
             this.send('player:lost', { terminals: this.takeTerminals() });
@@ -220,7 +228,7 @@ export default defineContentScript({
             return;
           }
           this.clock();
-          this.tick();
+          this.tickIfIdle();
         }, 250);
         const frame = () => {
           if (this.abort.signal.aborted) return;
@@ -527,6 +535,9 @@ export default defineContentScript({
         this.loaded = false;
         this.playPending = false;
         this.currentPreloadHit = false;
+      }
+      tickIfIdle() {
+        if (performance.now() - (this.previousTickAt ?? -Infinity) >= this.tickMs - 5) this.tick();
       }
       tick() {
         if (this.abort.signal.aborted) return;

@@ -12,6 +12,8 @@ Use Node.js 22.12+ and run `npm ci`. The repository's `private: true` prevents a
 
 ```sh
 npm run check
+npm run lint
+npm run format:check
 npm test
 npm run build
 npx playwright install chromium
@@ -20,6 +22,8 @@ npm run package
 npm run verify:release
 npm run test:release
 ```
+
+`npm run format` applies Prettier; `npm run test:coverage` writes an HTML report to ignored `coverage/`.
 
 The browser gates use isolated profiles and deterministic pages, not your regular browser profile. Install FFmpeg, `zip`/`unzip` and `tar` as well as Playwright's Chromium. `test:browser` runs UI, discovery, YouTube-player selection, playback pause/wait state, audible playback, panel storage controls, language cancellation, range-source and local-file gates. WAV fixtures are generated from original tone code in `tests/fixtures/audio.mjs`; historical voice recordings are not required or included in source downloads. The fixture gates deny real provider traffic and never make paid model calls.
 

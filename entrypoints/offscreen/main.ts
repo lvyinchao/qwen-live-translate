@@ -20,7 +20,7 @@ import {
 const cache = new SegmentCache();
 const bg = createBackgroundRpc((message) => chrome.runtime.sendMessage(message));
 const files = new LocalFiles(
-  (url, filename) => bg<number>('files:download', { url, filename }),
+  (url, filename) => bg('files:download', { url, filename }),
   (status) => {
     void chrome.runtime
       .sendMessage({ type: 'files:updated', status })
@@ -32,7 +32,7 @@ async function configureFiles() {
   // Offscreen documents expose chrome.runtime, not chrome.storage. Settings
   // remain background-owned; ignore older replies when toggles race startup.
   const version = ++filePreferenceVersion;
-  const saved = await bg<Pick<Settings, 'autoSaveFiles'>>('settings:get');
+  const saved = await bg('settings:get');
   if (version === filePreferenceVersion)
     files.setAutoSave(saved?.autoSaveFiles === true);
 }

@@ -1,5 +1,8 @@
 import { expect, it, vi } from 'vitest';
-import { createBackgroundRpc } from '../lib/background-rpc';
+import { createBackgroundRpc as typedRpc } from '../lib/background-rpc';
+// These tests exercise transport behaviour with arbitrary route/payload pairs.
+const createBackgroundRpc = (...args: Parameters<typeof typedRpc>) =>
+  typedRpc(...args) as unknown as (type: string, parameters?: object) => Promise<unknown>;
 const interrupted = () => new Error('A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received');
 
 it.each(['settings:get', 'media:refresh', 'media:headers', 'auth:install', 'auth:remove', 'engine:state', 'engine:segment'])(

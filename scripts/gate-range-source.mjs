@@ -269,6 +269,7 @@ try {
               worker.postMessage({ type: 'shutdown', id: 'shutdown' });
             });
             worker.terminate();
+            // eslint-disable-next-line no-unsafe-finally -- a failed shutdown must fail the gate
             if (!shutdown.ok) throw new Error(shutdown.error);
           } else worker.terminate();
         }

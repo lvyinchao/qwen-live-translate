@@ -189,3 +189,15 @@ it('captures preload metadata and frontend play timing with a measurable schedul
     expect(stage(name).maxTickGapMs).toBeGreaterThanOrEqual(500);
   }
 });
+
+it('skips an idle tick slot that a frame callback already covered', () => {
+  const f = fixture();
+  const tick = vi.spyOn(f.player, 'tick').mockImplementation(() => {});
+  f.player.tickMs = 50;
+  f.player.previousTickAt = performance.now();
+  f.player.tickIfIdle();
+  expect(tick).not.toHaveBeenCalled();
+  f.player.previousTickAt = performance.now() - 60;
+  f.player.tickIfIdle();
+  expect(tick).toHaveBeenCalledOnce();
+});

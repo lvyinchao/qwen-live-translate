@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Split the service worker into `lib/background/` route modules with a declared access level per message, and type every background message's request and response in `lib/messages.ts`. Behaviour and rejection messages are unchanged.
+- Retry provider failures by error code instead of matching Chinese message text. Background responses carry the code to the side panel and offscreen engine. A unit test now fails when a literal user-facing error lacks an English translation.
+- Share media CDN domains, session-rule id ranges and the 60-second observation lifetime as single constants.
+- Skip redundant 50 ms sync ticks when a video frame callback already ran, scan the YouTube page for a replaced player once per second instead of every 250 ms, and pause the side panel's 3-second rescan while the panel is hidden (it rescans when shown).
+- Add ESLint, Prettier and V8 coverage (`npm run lint`, `format`, `format:check`, `test:coverage`); CI and the clean-source release check run lint and the format check. The codebase was reformatted once with Prettier.
+- Replace remaining `any` in page adapters, the Tencent HLS observer and the decode worker with explicit types.
+- Stop committing the generated `public/licenses/mediabunny-*-source.tgz` copy; `prepare:assets` now also runs before `npm run dev`. Document the vendored archives in `vendor/README.md`.
+
 ## 0.2.5 — 2026-10-16
 
 - Clarify the English and Chinese playback notices: the tail counter includes very small timeline trims, not only long speech. Label affected transcript entries as trimmed. Playback, source discovery, the 2× audio-rate limit and cut accounting are unchanged.

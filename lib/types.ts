@@ -172,7 +172,7 @@ export type Envelope = {
   type: string;
   [key: string]: unknown;
 };
-export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+export type { Result } from './messages';
 export function messageError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   return raw

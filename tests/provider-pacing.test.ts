@@ -10,6 +10,7 @@ class RealtimeFixture {
   onmessage?: (event: { data: string }) => void;
   onclose?: (event: { code: number }) => void;
   constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- exposes the fixture socket to the test
     socket = this;
     queueMicrotask(() => {
       this.onopen?.();

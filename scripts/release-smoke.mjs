@@ -200,7 +200,7 @@ try {
       .trim()
       .split('\n')
       .map((line) => {
-        const match = line.match(/^([a-f0-9]{64})  (.+)$/);
+        const match = line.match(/^([a-f0-9]{64}) {2}(.+)$/);
         assert.ok(match);
         return [match[2], match[1]];
       }),
@@ -269,13 +269,14 @@ try {
     ['ci', '--registry=https://registry.npmjs.org'],
     ['run', 'verify:media-source'],
     ['run', 'check'],
+    ['run', 'lint'],
     ['test'],
     ['run', 'build'],
     ['run', 'test:browser'],
   ])
     await command(args, source);
   report.checks.push(
-    'A clean source ZIP installs locked dependencies, verifies MPL source, typechecks, passes unit tests, builds and passes every offline browser gate without historical recordings',
+    'A clean source ZIP installs locked dependencies, verifies MPL source, typechecks, lints, passes unit tests, builds and passes every offline browser gate without historical recordings',
   );
   report.passed = true;
 } catch (error) {

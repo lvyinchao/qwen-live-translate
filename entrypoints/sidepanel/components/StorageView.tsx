@@ -21,13 +21,13 @@ export function StorageView(props: {
   const refresh = async () => {
     setLoading(true);
     setError('');
-    try { const next = await call<StorageSummary>('storage:summary'); if (mounted.current) setSummary(next); }
+    try { const next = await call('storage:summary'); if (mounted.current) setSummary(next); }
     catch (error) { if (mounted.current) setError(error instanceof Error ? error.message : String(error)); }
     finally { if (mounted.current) setLoading(false); }
   };
   useEffect(() => { mounted.current = true; void refresh(); return () => { mounted.current = false; }; }, []);
   const clear = (type: ClearOperation) => props.onAction(type, async () => {
-    const next = await call<StorageSummary>(type);
+    const next = await call(type);
     if (mounted.current) { setSummary(next); setError(''); }
     props.onNotice(type === 'media:clear' && next.media.files > 0
       ? '已清理可删除的临时文件；仍在使用的文件会在任务关闭后清理。'

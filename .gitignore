@@ -17,3 +17,6 @@ output/playwright/
 .store-local/
 *.crx
 *.key
+coverage/
+# Copied from vendor/ by scripts/prepare-assets.mjs
+public/licenses/mediabunny-*-source.tgz

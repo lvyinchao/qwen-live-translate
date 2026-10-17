@@ -17,7 +17,6 @@ import {
   LANGUAGES,
   type MediaCandidate,
   type PlaybackSession,
-  type Result,
   type Settings,
 } from '../../lib/types';
 import {
@@ -32,6 +31,7 @@ import { isOlderStateVersion } from '../../lib/session';
 import { captionPreferences, mergeCaptionPreferences } from '../../lib/captions';
 
 import { call, type PublicSettings } from './api';
+import type { Broadcast } from '../../lib/messages';
 import { phaseNames, candidateKey, translator } from './ui';
 import { ProviderNotice } from './components/ProviderNotice';
 import { SettingsView } from './components/SettingsView';
@@ -39,6 +39,9 @@ import { VideoList } from './components/VideoList';
 import { PlaybackView, type MixChanges } from './components/PlaybackView';
 import { LocalFilesView } from './components/LocalFilesView';
 import { usePanelWatch } from './use-panel-watch';
+
+/** Fallback rescan interval; also renews the 15-second observation lease. */
+const POLL_MS = 3000;
 
 export function App() {
   const [view, setView] = useState<'videos' | 'settings'>('videos');
@@ -88,7 +91,7 @@ export function App() {
     languagePending.current = true;
     setError('');
     try {
-      const next = await call<PlaybackSession | null>('session:language', {
+      const next = await call('session:language', {
         sessionId: current.id,
         language: value,
       });
@@ -100,16 +103,18 @@ export function App() {
       languagePending.current = false;
       setError(e instanceof Error ? e.message : '操作未完成，请重试');
       try {
-        const active = await call<PlaybackSession | null>('session:get');
+        const active = await call('session:get');
         if (request === languageRequest.current && mounted.current) receiveSession(active);
       } catch { /* Keep the actionable language error if state recovery also fails. */ }
     }
   };
   const scanning = useRef(false);
+  const lastScan = useRef(0);
   const mounted = useRef(true);
   const scan = async () => {
     if (scanning.current) return;
     scanning.current = true;
+    lastScan.current = Date.now();
     try {
       const [current] = await chrome.tabs.query({
         active: true,
@@ -121,7 +126,7 @@ export function App() {
         setVideos([]);
         return;
       }
-      const items = await call<MediaCandidate[]>('media:discover', {
+      const items = await call('media:discover', {
         tabId: current.id,
       });
       const [active] = await chrome.tabs.query({
@@ -157,7 +162,7 @@ export function App() {
   };
   useEffect(() => {
     mounted.current = true;
-    void call<PublicSettings>('settings:get')
+    void call('settings:get')
       .then((s) => {
         setSettings(s);
         if (!sessionRef.current && !languagePending.current)
@@ -166,15 +171,15 @@ export function App() {
       .catch((e) => setError(e.message))
       .finally(() => setLoaded(true));
     const hydration = sessionUpdates.current;
-    void call<PlaybackSession | null>('session:get').then((next) => {
+    void call('session:get').then((next) => {
       if (mounted.current && sessionUpdates.current === hydration) receiveSession(next);
     }).catch((error) => { if (mounted.current) setError(error.message); });
-    void call<LocalFileStatus>('files:status')
+    void call('files:status')
       .then(setFiles)
       .catch((e) => setFiles((old) => ({ ...old, error: e.message })));
     void scan().catch((e) => setError(e.message));
     let scanTimer: ReturnType<typeof setTimeout> | undefined;
-    const listener = (m: any) => {
+    const listener = (m: Broadcast) => {
       if (m.type === 'session:updated') receiveSession(m.session);
       if (m.type === 'files:updated') setFiles(m.status);
       if (m.type === 'sources:updated' && !scanTimer)
@@ -185,8 +190,13 @@ export function App() {
     };
     const activated = () => void scan().catch(() => {});
     // Network events cannot detect a newly replaced player or a delayed src
-    // assignment on their own. Keep watching while this panel is open.
-    const polling = setInterval(activated, 3000);
+    // assignment on their own. Keep watching while this panel is visible, but
+    // skip a poll when an event-driven scan just ran.
+    const polling = setInterval(() => {
+      if (!document.hidden && Date.now() - lastScan.current >= POLL_MS - 500) activated();
+    }, POLL_MS);
+    const visible = () => { if (!document.hidden) activated(); };
+    document.addEventListener('visibilitychange', visible);
     const updated = (
       _id: number,
       change: { url?: string; status?: string },
@@ -219,12 +229,15 @@ export function App() {
     return () => {
       mounted.current = false;
       clearInterval(polling);
+      document.removeEventListener('visibilitychange', visible);
       clearTimeout(scanTimer);
       chrome.runtime.onMessage.removeListener(listener);
       chrome.tabs.onActivated.removeListener(activated);
       chrome.tabs.onUpdated.removeListener(updated);
       chrome.storage.onChanged.removeListener(onSettings);
     };
+    // Browser listeners are registered once per panel lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
@@ -268,7 +281,7 @@ export function App() {
     setSettings((old) => ({ ...old, autoSaveFiles: enabled }));
     void act('files-toggle', async () => {
       try {
-        const next = await call<PublicSettings>('files:set-enabled', { enabled });
+        const next = await call('files:set-enabled', { enabled });
         setSettings((old) => ({ ...old, autoSaveFiles: next.autoSaveFiles }));
       } catch (error) {
         setSettings((old) => ({ ...old, autoSaveFiles: previous }));
@@ -277,7 +290,7 @@ export function App() {
     });
   };
   const save = async () => {
-    const next = await call<PublicSettings>('settings:save', {
+    const next = await call('settings:save', {
       settings: {
         apiKey,
         workspace: settings.workspace,
@@ -291,7 +304,7 @@ export function App() {
     setNotice('配置已保存在这台浏览器中');
   };
   const exportDiagnostics = async () => {
-    const r = await call<Result<unknown>>('session:diagnostics');
+    const r = await call('session:diagnostics');
     if (!r.ok) throw new Error(r.error);
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(r.value, null, 2)], {
@@ -359,11 +372,11 @@ export function App() {
             onApiKey={setApiKey} onSettings={setSettings} onSave={() => void act('save', save)}
             onTest={() => void act('test', async () => {
               await save();
-              const result = await call<Result<string>>('settings:test');
+              const result = await call('settings:test');
               if (!result.ok) throw new Error(result.error);
               setNotice(result.value);
             })} onForget={() => void act('forget', async () => {
-              const next = await call<PublicSettings>('settings:forget');
+              const next = await call('settings:forget');
               setSettings(next);
               setApiKey('');
               setNotice('本机凭据已移除');
@@ -461,7 +474,8 @@ export function App() {
                 disabled={!!busy || !candidate || !!candidate.sourceReason}
                 onClick={() =>
                   act('start', async () => {
-                    const s = await call<PlaybackSession>('session:start', {
+                    if (!candidate) return;
+                    const s = await call('session:start', {
                       candidate,
                       language,
                     });
@@ -493,9 +507,10 @@ export function App() {
         )}
         <LocalFilesView settings={settings} files={files} busy={busy} loaded={loaded} locale={locale}
           onToggle={toggleFiles} onShow={() => void act('files-show', async () => {
-            await call('files:show', { id: files.lastDownloadId });
+            if (files.lastDownloadId !== undefined)
+              await call('files:show', { id: files.lastDownloadId });
           })} onRetry={() => void act('files-retry', async () => {
-            setFiles(await call<LocalFileStatus>(files.error ? 'files:retry' : 'files:merge'));
+            setFiles(await call(files.error ? 'files:retry' : 'files:merge'));
           })} />
         {(error || session?.error) && (
           <div className="feedback error" role="alert">

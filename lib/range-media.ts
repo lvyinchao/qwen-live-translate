@@ -153,7 +153,7 @@ class SequentialFile {
           next = await this.reader.read();
         } catch (error) {
           if (this.controller.signal.aborted && !this.closed)
-            throw new Error(MEDIA_RANGE_ERRORS.timeout);
+            throw new Error(MEDIA_RANGE_ERRORS.timeout, { cause: error });
           throw error;
         } finally {
           clearTimeout(timer);
@@ -288,7 +288,7 @@ export class RangeMediaCache {
     } catch (error) {
       signal?.removeEventListener('abort', abort);
       if (controller.signal.aborted && !signal?.aborted)
-        throw new Error(MEDIA_RANGE_ERRORS.timeout);
+        throw new Error(MEDIA_RANGE_ERRORS.timeout, { cause: error });
       throw error;
     } finally {
       clearTimeout(timer);

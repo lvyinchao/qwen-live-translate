@@ -118,16 +118,18 @@ export function inspectVideos(mainOnly = false) {
     );
   else walk(document);
   const identityKey = Symbol.for('qvd.video.elementIdentity');
+  // Declared inline: this function is serialized into pages and cannot import.
+  type IdentifiedVideo = HTMLVideoElement & { [identityKey]?: string };
   const assigned = new Set(
     videos
-      .map((v) => (v as any)[identityKey] as string | undefined)
+      .map((v) => (v as IdentifiedVideo)[identityKey])
       .filter(Boolean),
   );
   const seen = new Set<string>();
   return videos.map((v, index) => {
     // Cloned/replaced media elements can inherit dataset attributes. IDs must
     // identify one element, otherwise a command may bind to an old player.
-    const known = (v as any)[identityKey] as string | undefined;
+    const known = (v as IdentifiedVideo)[identityKey];
     if (known) v.dataset.qvdId = known;
     else if (
       !v.dataset.qvdId ||
@@ -135,7 +137,7 @@ export function inspectVideos(mainOnly = false) {
       assigned.has(v.dataset.qvdId)
     )
       v.dataset.qvdId = crypto.randomUUID();
-    (v as any)[identityKey] = v.dataset.qvdId;
+    (v as IdentifiedVideo)[identityKey] = v.dataset.qvdId;
     seen.add(v.dataset.qvdId);
     const box = v.getBoundingClientRect();
     const style = getComputedStyle(v);

@@ -1,6 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { PlaybackEngine, type EngineDependencies } from '../lib/playback-engine';
 import { createBackgroundRpc } from '../lib/background-rpc';
+import type { BackgroundCall } from '../lib/messages';
+import { AppError } from '../lib/errors';
 import { bufferPolicy, preparationStatus } from '../lib/preparation';
 import type { TranslateWindowOptions } from '../lib/qwen';
 import { DEFAULT_SETTINGS, VOICE, type PlaybackSession, type TranslationSegment } from '../lib/types';
@@ -42,6 +44,7 @@ function fixture(options: {
   flush?: () => Promise<void>;
   translate?: EngineDependencies['translate'];
   now?: () => number;
+  sleep?: EngineDependencies['sleep'];
 } = {}) {
   const calls: { type: string; parameters: Record<string, unknown> }[] = [];
   const cache = { load: vi.fn(options.load ?? (async (_id, language) => ({
@@ -52,13 +55,13 @@ function fixture(options: {
   const translate = vi.fn(options.translate ?? (async () => []));
   const workers: Decoder[] = [];
   const engine = new PlaybackEngine({
-    cache, files, translate, now: options.now,
+    cache, files, translate, now: options.now, sleep: options.sleep,
     createWorker: () => { const worker = new Decoder(); workers.push(worker); return worker as unknown as Worker; },
-    background: async <T>(type: string, parameters: Record<string, unknown> = {}) => {
+    background: (async (type: string, parameters: Record<string, unknown> = {}) => {
       calls.push({ type, parameters: structuredClone(parameters) });
-      if (options.send) return await options.send(type, parameters) as T;
-      return (type === 'media:refresh' ? source : true) as T;
-    },
+      if (options.send) return await options.send(type, parameters);
+      return type === 'media:refresh' ? source : true;
+    }) as BackgroundCall,
   });
   const clock = async (position: number, extra: Record<string, unknown> = {}) => engine.clock({
     type: 'player:clock', sessionId: engine.session!.id, epoch: engine.session!.epoch,
@@ -406,7 +409,7 @@ it('keeps a completed first window alive when MV3 restart interrupts provider au
       throw new Error('A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received');
     return { ok: true, value: message.type === 'media:refresh' ? source : true };
   }, async () => {});
-  const f = fixture({ load: async () => ({ ranges: [], segments: [] }), send: rpc,
+  const f = fixture({ load: async () => ({ ranges: [], segments: [] }), send: rpc as never,
     translate: async (options) => {
       await options.beforeConnect();
       options.onEvent?.({ type: 'session.updated', session: { enable_voice_clone: true, voice_clone_options: { frequency: 'always' } } });
@@ -472,4 +475,30 @@ it('bounds verbose frontend stages separately so they cannot evict onset, comple
   expect(f.engine.diagnostics.droppedCriticalEvents).toBe(0);
   expect(f.engine.diagnostics.events.map((entry) => entry.kind ?? entry.type))
     .toEqual(['provider:voice-confirmed', 'start', 'end', 'terminal']);
+});
+
+it.each([
+  ['retries a coded transient provider failure', new AppError('provider-disconnected', '翻译连接提前断开（1006），本段未标记为完成'), 2],
+  ['does not retry an uncoded failure whose text merely resembles one', new Error('翻译连接提前断开（1006），本段未标记为完成'), 1],
+  ['does not retry a coded permanent provider failure', new AppError('provider-voice-clone', '模型未确认启用原音色复刻，已停止翻译'), 1],
+])('%s', async (_name, failure, attempts) => {
+  let calls = 0;
+  const sleep = vi.fn(async () => {});
+  const f = fixture({ sleep, load: async () => ({ ranges: [], segments: [] }),
+    translate: async (options) => {
+      if (++calls === 1) throw failure;
+      await options.beforeConnect();
+      options.onSegment(segment(5));
+      options.onProgress(30, 30);
+      await options.afterClose();
+      return [segment(5)];
+    },
+  });
+  const choice = session();
+  choice.candidate.duration = 30;
+  await f.engine.start(choice, settings).catch(() => {});
+  await settle();
+  expect(calls).toBe(attempts);
+  if (attempts > 1) expect(f.engine.session).toMatchObject({ phase: 'playing', readyThrough: 30 });
+  else expect(f.engine.session?.phase ?? 'error').toBe('error');
 });

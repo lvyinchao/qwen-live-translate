@@ -8,6 +8,7 @@ import {
 import { renderMono } from '../lib/audio';
 import { openSabrWindow } from '../lib/sabr';
 import { messageError } from '../lib/types';
+import type { DecodeRequest } from '../lib/messages';
 import { MEDIA_RANGE_ERRORS, RangeMediaCache } from '../lib/range-media';
 
 const mediaCache = new RangeMediaCache();
@@ -44,7 +45,7 @@ self.onmessage = (event) => {
   tasks.add(task);
   void task.then(() => tasks.delete(task), () => tasks.delete(task));
 };
-async function decode({ id, source, start, end, expectedDuration }: any) {
+async function decode({ id, source, start, end, expectedDuration }: DecodeRequest) {
   let input: Input | undefined;
   let sabr: ReturnType<typeof openSabrWindow> | undefined;
   const controller = new AbortController();
